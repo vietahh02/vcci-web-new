@@ -1,6 +1,6 @@
 /** /account/profile — "Hồ sơ doanh nghiệp của tôi": fill once after sign-up, reused for every event. */
 import { AnimatePresence, motion } from 'motion/react'
-import { ArrowLeft, ArrowRight, BadgeCheck, Check, CircleDashed, FileUp, Info, Lock, Plus, ShieldCheck, Trash2, X } from 'lucide-react'
+import { ArrowLeft, ArrowRight, BadgeCheck, Check, CircleDashed, Info, Lock, Plus, ShieldCheck, Trash2 } from 'lucide-react'
 import { useEffect, useMemo, type ReactNode } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { getEvent } from '@/api'
@@ -10,6 +10,8 @@ import { useI18n } from '@/lib/i18n'
 import { completion, OPTIONS, SECTIONS, sectionDone, useProfile, type CompanyProfile, type Opt, type SectionKey, type VerifyStatus } from '@/lib/profile'
 import { cn } from '@/lib/utils'
 import { tx, withKo } from '@/lib/tx'
+import { FileUpload, GalleryUpload, ImageUpload, UploadGuide } from '@/components/upload/Upload'
+import type { RuleKey } from '@/lib/upload'
 
 export default function MyProfile() {
   const { L } = useI18n()
@@ -108,6 +110,7 @@ export default function MyProfile() {
             <motion.div key={active} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.25 }} className="px-6 py-7 md:px-8">
               {active === 'general' && <GeneralForm p={profile} set={(v) => update('general', v)} />}
               {active === 'capability' && <CapabilityForm p={profile} set={(v) => update('capability', v)} />}
+              {active === 'media' && <MediaForm p={profile} set={(v) => update('media', v)} />}
               {active === 'exports' && <ExportsForm p={profile} set={(v) => update('exports', v)} />}
               {active === 'finance' && <FinanceForm p={profile} set={(v) => update('finance', v)} />}
               {active === 'needs' && <NeedsForm p={profile} set={(v) => update('needs', v)} />}
@@ -266,15 +269,24 @@ function CapabilityForm({ p, set }: FP<'capability'>) {
         <Field label={tx('% dành cho xuất khẩu', '% for export')} htmlFor="c-pct"><Input id="c-pct" inputMode="numeric" value={c.exportCapacityPct} onChange={(e) => set({ ...c, exportCapacityPct: e.target.value })} /></Field>
         <Field label={(tx('Đơn hàng tối thiểu (MOQ)', 'Minimum order (MOQ)')) + ' *'} htmlFor="c-moq"><Input id="c-moq" value={c.moq} onChange={(e) => set({ ...c, moq: e.target.value })} /></Field>
       </div>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Field label={tx('Diện tích nhà xưởng (m²)', 'Factory area (m²)', '공장 면적 (m²)')} htmlFor="c-area"><Input id="c-area" inputMode="numeric" value={c.factoryArea} onChange={(e) => set({ ...c, factoryArea: e.target.value })} /></Field>
+        <Field label={tx('Số dây chuyền sản xuất', 'Production lines', '생산 라인 수')} htmlFor="c-lines"><Input id="c-lines" inputMode="numeric" value={c.productionLines} onChange={(e) => set({ ...c, productionLines: e.target.value })} /></Field>
+      </div>
+      <Field label={tx('Quy trình kiểm soát chất lượng', 'Quality control process', '품질 관리 절차')} htmlFor="c-qc" hint={tx('Mô tả ngắn: kiểm tra đầu vào, trong chuyền, thành phẩm, tiêu chuẩn AQL…', 'Short description: incoming, in-line and final inspection, AQL standard…', '간단히: 입고·공정·출하 검사, AQL 기준 등')}>
+        <Textarea id="c-qc" className="min-h-20" value={c.qcProcess} onChange={(e) => set({ ...c, qcProcess: e.target.value })} />
+      </Field>
       <Q label={tx('Chứng nhận chất lượng, kỹ thuật, môi trường', 'Quality, technical & environmental certificates')} hint={tx('Ưu tiên chứng nhận thị trường châu Âu. Chứng nhận hết hạn sẽ tự ẩn khỏi hồ sơ công khai.', 'EU-market certificates first. Expired certificates are hidden from the public profile.')}>
         <div className="space-y-2">
           {c.certificates.map((cert, i) => (
-            <div key={i} className="grid items-center gap-2 rounded-xl border p-3 sm:grid-cols-[1.3fr_1fr_150px_auto_auto]">
-              <Input placeholder={tx('Tên chứng nhận', 'Certificate')} value={cert.name} onChange={(e) => { const l = [...c.certificates]; l[i] = { ...cert, name: e.target.value }; set({ ...c, certificates: l }) }} />
-              <Input placeholder={tx('Đơn vị cấp', 'Issuer')} value={cert.issuer} onChange={(e) => { const l = [...c.certificates]; l[i] = { ...cert, issuer: e.target.value }; set({ ...c, certificates: l }) }} />
-              <Input type="date" value={cert.expiry} onChange={(e) => { const l = [...c.certificates]; l[i] = { ...cert, expiry: e.target.value }; set({ ...c, certificates: l }) }} aria-label={tx('Hạn hiệu lực', 'Expiry')} />
-              <FilePick name={cert.file} onPick={(n) => { const l = [...c.certificates]; l[i] = { ...cert, file: n }; set({ ...c, certificates: l }) }} />
-              <button type="button" onClick={() => set({ ...c, certificates: c.certificates.filter((_, k) => k !== i) })} className="rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-destructive" aria-label="Remove"><Trash2 className="size-4" /></button>
+            <div key={i} className="space-y-2 rounded-xl border p-3">
+              <div className="grid items-center gap-2 sm:grid-cols-[1.3fr_1fr_160px_auto]">
+                <Input placeholder={tx('Tên chứng nhận', 'Certificate')} value={cert.name} onChange={(e) => { const l = [...c.certificates]; l[i] = { ...cert, name: e.target.value }; set({ ...c, certificates: l }) }} />
+                <Input placeholder={tx('Đơn vị cấp', 'Issuer')} value={cert.issuer} onChange={(e) => { const l = [...c.certificates]; l[i] = { ...cert, issuer: e.target.value }; set({ ...c, certificates: l }) }} />
+                <Input type="date" value={cert.expiry} onChange={(e) => { const l = [...c.certificates]; l[i] = { ...cert, expiry: e.target.value }; set({ ...c, certificates: l }) }} aria-label={tx('Hạn hiệu lực', 'Expiry')} />
+                <button type="button" onClick={() => set({ ...c, certificates: c.certificates.filter((_, k) => k !== i) })} className="rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-destructive" aria-label="Remove"><Trash2 className="size-4" /></button>
+              </div>
+              <FilePick rule="certificate" compact name={cert.file} preview={cert.preview} onPick={(n, pv) => { const l = [...c.certificates]; l[i] = { ...cert, file: n, preview: pv }; set({ ...c, certificates: l }) }} />
             </div>
           ))}
           <Button variant="outline" size="sm" onClick={() => set({ ...c, certificates: [...c.certificates, { name: '', issuer: '', expiry: '', file: '' }] })}><Plus /> {tx('Thêm chứng nhận', 'Add certificate')}</Button>
@@ -295,7 +307,7 @@ function ExportsForm({ p, set }: FP<'exports'>) {
       <Q label={tx('Khả năng truy xuất nguồn gốc dòng sản phẩm xuất khẩu', 'Traceability of export products')} required><Choice cols={1} options={OPTIONS.traceability} value={x.traceability} onChange={(v) => set({ ...x, traceability: v })} /></Q>
       <Q label={tx('Đã từng làm việc với doanh nghiệp Đức / châu Âu?', 'Worked with German / EU companies?')} required><Choice cols={3} options={OPTIONS.euExperience} value={x.euExperience} onChange={(v) => set({ ...x, euExperience: v })} /></Q>
       <Q label={tx('Bằng chứng xuất khẩu (không bắt buộc)', 'Export evidence (optional)')} hint={tx('Tờ khai hải quan, hợp đồng + invoice, B/L. VCCI có thể đối chiếu với dữ liệu C/O do VCCI cấp.', 'Customs declarations, contract + invoice, B/L. VCCI can cross-check against C/O it has issued.')}>
-        <FilePick name={x.evidence} onPick={(n) => set({ ...x, evidence: n })} wide />
+        <FilePick rule="evidence" name={x.evidence} onPick={(n) => set({ ...x, evidence: n })} />
       </Q>
     </div>
   )
@@ -335,7 +347,7 @@ function FinanceForm({ p, set }: FP<'finance'>) {
                 {r.status === 'VERIFIED' && <BadgeCheck className="size-3.5" />} {tx(STATUS_STYLE[r.status].vi, STATUS_STYLE[r.status].en)}
               </span>
             </div>
-            <div className="grid gap-3 md:grid-cols-[1fr_140px_1.3fr_auto]">
+            <div className="grid gap-3 md:grid-cols-[1fr_140px_1.3fr]">
               <Select value={r.band} onChange={(e) => row(i, { band: e.target.value })} aria-label={tx('Khoảng doanh thu', 'Revenue band')}>
                 <option value="">{tx('Khoảng doanh thu…', 'Revenue band…')}</option>
                 {OPTIONS.revenueBand.map((o) => <option key={o.value} value={o.value}>{L(o)}</option>)}
@@ -345,8 +357,8 @@ function FinanceForm({ p, set }: FP<'finance'>) {
                 <option value="">{tx('Loại chứng từ…', 'Evidence type…')}</option>
                 {OPTIONS.revenueProof.map((o) => <option key={o.value} value={o.value}>{L(o)}</option>)}
               </Select>
-              <FilePick name={r.proofFile} onPick={(n) => row(i, { proofFile: n })} />
             </div>
+            <div className="mt-3"><FilePick rule="finance" compact name={r.proofFile} onPick={(n) => row(i, { proofFile: n })} /></div>
           </div>
         ))}
       </div>
@@ -445,18 +457,49 @@ function ConsentForm({ p, set }: FP<'consent'>) {
   )
 }
 
-function FilePick({ name, onPick, wide }: { name: string; onPick: (n: string) => void; wide?: boolean }) {
+/** Single-file upload bound to a name (+ optional image preview), with format guidance and validation. */
+function FilePick({ name, preview, onPick, rule, compact }: { name: string; preview?: string; onPick: (n: string, preview?: string) => void; rule: RuleKey; compact?: boolean }) {
   useI18n()
-  return name ? (
-    <span className={cn('inline-flex h-10 items-center gap-2 rounded-lg bg-success-soft px-3 text-xs font-medium text-success', wide && 'w-full')}>
-      <Check className="size-3.5 shrink-0" /> <span className="max-w-40 truncate">{name}</span>
-      <button type="button" onClick={() => onPick('')} className="ml-auto opacity-70 hover:opacity-100" aria-label="Remove"><X className="size-3.5" /></button>
-    </span>
-  ) : (
-    <label className={cn('inline-flex h-10 cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed px-3 text-xs font-medium text-muted-foreground transition hover:border-primary hover:text-primary', wide && 'w-full py-6')}>
-      <FileUp className="size-4" /> {tx('Tải tệp', 'Upload')}
-      <input type="file" className="sr-only" onChange={(e) => e.target.files?.[0] && onPick(e.target.files[0].name)} />
-    </label>
+  return (
+    <FileUpload
+      rule={rule}
+      compact={compact}
+      value={name ? { id: name, name, kind: rule, size: 0, preview } : null}
+      onChange={(d) => onPick(d?.name ?? '', d?.preview)}
+    />
+  )
+}
+
+/* ---------------------------------------------------------------- photos & documents */
+function MediaForm({ p, set }: FP<'media'>) {
+  useI18n()
+  const m = p.media
+  return (
+    <div className="space-y-8">
+      <div className="grid gap-6 md:grid-cols-[160px_minmax(0,1fr)]">
+        <Q label={tx('Logo doanh nghiệp', 'Company logo', '기업 로고')} required>
+          <ImageUpload rule="logo" value={m.logo} onChange={(v) => set({ ...m, logo: v })} />
+        </Q>
+        <Q label={tx('Ảnh bìa trang doanh nghiệp', 'Profile cover image', '프로필 커버 이미지')}>
+          <ImageUpload rule="cover" value={m.cover} onChange={(v) => set({ ...m, cover: v })} />
+        </Q>
+      </div>
+      <Q label={tx('Ảnh nhà xưởng, dây chuyền, kho, phòng QC', 'Factory, production line, warehouse & QC photos', '공장·생산 라인·창고·QC 사진')} required hint={tx('Tối thiểu 3 ảnh. Ảnh đầu tiên là ảnh chính trên hồ sơ năng lực.', 'At least 3 photos. The first one is the main capability photo.', '최소 3장. 첫 번째 사진이 대표 사진입니다.')}>
+        <GalleryUpload value={m.gallery} onChange={(v) => set({ ...m, gallery: v })} />
+      </Q>
+      <Field label={tx('Video giới thiệu (YouTube / Vimeo)', 'Intro video (YouTube / Vimeo)', '소개 영상 (YouTube / Vimeo)')} htmlFor="m-video" hint={tx('Dán đường link, khuyến nghị 1–3 phút, có phụ đề tiếng Anh', 'Paste the link; 1–3 minutes with English subtitles recommended', '링크를 붙여넣으세요. 1–3분, 영어 자막 권장')}>
+        <Input id="m-video" value={m.video} onChange={(e) => set({ ...m, video: e.target.value })} placeholder="https://www.youtube.com/watch?v=…" />
+      </Field>
+      <Q label={tx('Hồ sơ năng lực / Catalogue (PDF)', 'Company profile / Catalogue (PDF)', '회사 소개서 / 카탈로그 (PDF)')}>
+        <div className="space-y-2">
+          {m.documents.map((d) => (
+            <FileUpload key={d.id} rule="brochure" compact value={d} onChange={(v) => set({ ...m, documents: v ? m.documents.map((x) => (x.id === d.id ? v : x)) : m.documents.filter((x) => x.id !== d.id) })} />
+          ))}
+          {m.documents.length < 4 && <FileUpload rule="brochure" value={null} onChange={(v) => v && set({ ...m, documents: [...m.documents, v] })} />}
+        </div>
+      </Q>
+      <UploadGuide keys={['logo', 'cover', 'gallery', 'brochure', 'certificate']} />
+    </div>
   )
 }
 

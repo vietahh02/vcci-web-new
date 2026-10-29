@@ -88,24 +88,37 @@ export const OPTIONS = {
 /* ---------------------------------------------------------------- data shape */
 export type VerifyStatus = 'SELF' | 'SUBMITTED' | 'VERIFIED'
 export interface RevenueRow { year: number; band: string; amount: string; proofType: string; proofFile: string; status: VerifyStatus }
-export interface Certificate { name: string; issuer: string; expiry: string; file: string }
+export interface Certificate { name: string; issuer: string; expiry: string; file: string; preview?: string }
+export interface DocFile { id: string; name: string; kind: string; size: number; preview?: string }
+export interface MediaItem { id: string; url: string; caption: string; kind: string }
+export interface Registration {
+  businessForm: string; businessType: string; industries: string[]; charterCapital: string; charterCurrency: string
+  totalRevenue: string; reportYear: string; employees: string; fax: string; website: string
+  country: string; province: string; address: string; email: string; phone: string
+  repName: string; repTitle: string; repEmail: string; repPhone: string
+  legalDocs: { license: DocFile | null; tax: DocFile | null }
+}
+export interface Media { logo: string; cover: string; gallery: MediaItem[]; video: string; documents: DocFile[] }
 export interface Attendee { id: string; name: string; title: string; email: string; phone: string }
 
 export interface CompanyProfile {
   general: { nameVi: string; nameEn: string; taxCode: string; ownership: string; foundedYear: string; channels: string; womenOwned: '' | 'YES' | 'NO'; factoryAddress: string; contactName: string; contactTitle: string; contactPhone: string; contactEmail: string }
-  capability: { sectors: string[]; mainProducts: string[]; servedIndustries: string; keyCustomers: string; supplyCapacity: string; oem: string; monthlyCapacity: string; exportCapacityPct: string; moq: string; certificates: Certificate[] }
+  capability: { sectors: string[]; mainProducts: string[]; servedIndustries: string; keyCustomers: string; supplyCapacity: string; oem: string; monthlyCapacity: string; exportCapacityPct: string; moq: string; factoryArea: string; productionLines: string; qcProcess: string; certificates: Certificate[] }
   exports: { exportShare: string; markets: string[]; modes: string[]; traceability: string; euExperience: string; evidence: string }
   finance: { revenues: RevenueRow[]; visibility: 'BAND' | 'HIDDEN' }
   needs: { partnerTypes: string[]; opportunities: string[]; targetMarkets: string[]; readiness: string; barriers: string[]; documents: string[]; note: string }
   attendees: Attendee[]
+  registration: Registration
+  media: Media
   consent: { dataUse: boolean; media: boolean }
 }
 
-export type SectionKey = 'general' | 'capability' | 'exports' | 'finance' | 'needs' | 'attendees' | 'consent'
+export type SectionKey = 'general' | 'capability' | 'media' | 'exports' | 'finance' | 'needs' | 'attendees' | 'consent'
 
 const SECTIONS_RAW: { key: SectionKey; title: Bilingual; hint: Bilingual }[] = [
   { key: 'general', title: { vi: 'Thông tin chung', en: 'General information' }, hint: { vi: 'Tên, loại hình sở hữu, kênh online, người liên hệ', en: 'Names, ownership, channels, contact' } },
   { key: 'capability', title: { vi: 'Sản phẩm & năng lực', en: 'Products & capability' }, hint: { vi: 'Sản phẩm chủ lực, công suất, MOQ, chứng nhận', en: 'Key products, capacity, MOQ, certificates' } },
+  { key: 'media', title: { vi: 'Hình ảnh & tài liệu', en: 'Photos & documents' }, hint: { vi: 'Logo, ảnh bìa, nhà xưởng, video, hồ sơ năng lực PDF', en: 'Logo, cover, factory photos, video, brochure PDF' } },
   { key: 'exports', title: { vi: 'Xuất nhập khẩu', en: 'Export experience' }, hint: { vi: 'Thị trường, hình thức, truy xuất nguồn gốc', en: 'Markets, modes, traceability' } },
   { key: 'finance', title: { vi: 'Doanh thu & xác minh', en: 'Revenue & verification' }, hint: { vi: 'Doanh thu 2–3 năm kèm chứng từ', en: '2–3 years of revenue with evidence' } },
   { key: 'needs', title: { vi: 'Nhu cầu hợp tác', en: 'Partnership needs' }, hint: { vi: 'Đối tác cần tìm, mức sẵn sàng, rào cản', en: 'Partners sought, readiness, barriers' } },
@@ -124,6 +137,7 @@ export function sectionDone(p: CompanyProfile, key: SectionKey): boolean {
     case 'needs': return p.needs.partnerTypes.length > 0 && p.needs.opportunities.length > 0 && !!p.needs.readiness
     case 'attendees': return p.attendees.some((a) => a.name && a.email)
     case 'consent': return p.consent.dataUse
+    case 'media': return !!p.media.logo && p.media.gallery.length >= 3
   }
 }
 
@@ -132,7 +146,7 @@ export const completion = (p: CompanyProfile) => Math.round((SECTIONS.filter((s)
 const thisYear = new Date().getFullYear()
 export const emptyProfile = (name = '', taxCode = ''): CompanyProfile => ({
   general: { nameVi: name, nameEn: '', taxCode, ownership: '', foundedYear: '', channels: '', womenOwned: '', factoryAddress: '', contactName: '', contactTitle: '', contactPhone: '', contactEmail: '' },
-  capability: { sectors: [], mainProducts: ['', '', ''], servedIndustries: '', keyCustomers: '', supplyCapacity: '', oem: '', monthlyCapacity: '', exportCapacityPct: '', moq: '', certificates: [] },
+  capability: { sectors: [], mainProducts: ['', '', ''], servedIndustries: '', keyCustomers: '', supplyCapacity: '', oem: '', monthlyCapacity: '', exportCapacityPct: '', moq: '', factoryArea: '', productionLines: '', qcProcess: '', certificates: [] },
   exports: { exportShare: '', markets: [], modes: [], traceability: '', euExperience: '', evidence: '' },
   finance: {
     revenues: [thisYear - 1, thisYear - 2, thisYear - 3].map((year) => ({ year, band: '', amount: '', proofType: '', proofFile: '', status: 'SELF' as VerifyStatus })),
@@ -140,16 +154,39 @@ export const emptyProfile = (name = '', taxCode = ''): CompanyProfile => ({
   },
   needs: { partnerTypes: [], opportunities: [], targetMarkets: [], readiness: '', barriers: [], documents: [], note: '' },
   attendees: [],
+  registration: {
+    businessForm: '', businessType: 'VN_EXPORTER', industries: [], charterCapital: '', charterCurrency: 'VND', totalRevenue: '', reportYear: String(new Date().getFullYear() - 1),
+    employees: '', fax: '', website: '', country: 'VN', province: '', address: '', email: '', phone: '', repName: '', repTitle: '', repEmail: '', repPhone: '',
+    legalDocs: { license: null, tax: null },
+  },
+  media: { logo: '', cover: '', gallery: [], video: '', documents: [] },
   consent: { dataUse: false, media: false },
 })
 
 /** Demo account used by "Đăng nhập" — about half complete so the gap-fill flow is visible. */
+const U = (id: string, w = 1200) => `https://images.unsplash.com/photo-${id}?w=${w}&q=70&auto=format`
 const demoProfile = (): CompanyProfile => {
   const p = emptyProfile('Công ty CP Nội thất Gỗ Phương Nam', '3700 884 512')
   p.general = { ...p.general, nameEn: 'Southwood Furniture JSC', ownership: 'DOMESTIC', foundedYear: '2006', channels: 'southwood.example.vn, linkedin.com/company/southwood', womenOwned: 'NO', contactName: 'Trần Minh Quân', contactTitle: 'Giám đốc xuất khẩu', contactPhone: '0912 000 111', contactEmail: 'export@southwood.example.vn' }
-  p.capability = { ...p.capability, sectors: ['FURNITURE'], mainProducts: ['Sofa khung gỗ sồi', 'Bộ bàn ăn gỗ keo', 'Nội thất ngoài trời'], supplyCapacity: 'LARGE', oem: 'YES', monthlyCapacity: '180 container, 70% xuất khẩu', exportCapacityPct: '70', moq: '1 container 40HQ', certificates: [{ name: 'FSC CoC', issuer: 'Control Union', expiry: `${thisYear + 1}-06-30`, file: 'FSC_CoC.pdf' }] }
+  p.capability = { ...p.capability, sectors: ['FURNITURE'], mainProducts: ['Sofa khung gỗ sồi', 'Bộ bàn ăn gỗ keo', 'Nội thất ngoài trời'], supplyCapacity: 'LARGE', oem: 'YES', monthlyCapacity: '180 container, 70% xuất khẩu', exportCapacityPct: '70', moq: '1 container 40HQ', factoryArea: '120.000', productionLines: '6', qcProcess: 'Kiểm tra nguyên liệu đầu vào (độ ẩm gỗ ≤ 12%), kiểm tra công đoạn tại từng chuyền, kiểm tra thành phẩm theo AQL 2.5 trước khi đóng container.', certificates: [{ name: 'FSC CoC', issuer: 'Control Union', expiry: `${thisYear + 1}-06-30`, file: 'FSC_CoC.jpg', preview: U('1586528116311-ad8dd3c8310d', 600) }] }
   p.attendees = [{ id: 'a1', name: 'Trần Minh Quân', title: 'Giám đốc xuất khẩu', email: 'quan.tm@southwood.example.vn', phone: '0912 000 111' }]
   p.finance.revenues[0] = { ...p.finance.revenues[0]!, band: '200_300', amount: '246', proofType: 'AUDITED', proofFile: `BCTC_kiem_toan_${thisYear - 1}.pdf`, status: 'VERIFIED' }
+  p.registration = {
+    ...p.registration, businessForm: 'JOINT_STOCK', businessType: 'VN_EXPORTER', industries: ['FURNITURE'], charterCapital: '150.000.000.000', charterCurrency: 'VND', totalRevenue: '246.000.000.000', reportYear: String(thisYear - 1),
+    employees: '1.000 – 2.000', website: 'southwood.example.vn', country: 'VN', province: 'Bình Dương', address: 'KCN VSIP II, TP. Thủ Dầu Một', email: 'hello@southwood.example.vn', phone: '+84 274 3 635 900',
+    repName: 'Nguyễn Văn Phương', repTitle: 'Tổng giám đốc', repEmail: 'ceo@southwood.example.vn', repPhone: '0903 111 222',
+    legalDocs: { license: { id: 'l1', name: 'GCN_DKDN_Southwood.pdf', kind: 'legal', size: 1_840_000 }, tax: null },
+  }
+  p.media = {
+    logo: '', cover: U('1519710164239-da123dc03ef4', 1600), video: '',
+    gallery: [
+      { id: 'm1', url: U('1581091226825-a6a2a5aee158'), caption: 'Xưởng CNC & lắp ráp khung', kind: 'LINE' },
+      { id: 'm2', url: U('1586528116311-ad8dd3c8310d'), caption: 'Kho thành phẩm 20.000 m²', kind: 'WAREHOUSE' },
+      { id: 'm3', url: U('1555041469-a586c61ea9bc'), caption: 'Showroom mẫu sofa', kind: 'OFFICE' },
+      { id: 'm4', url: U('1517248135467-4c7edcad34c4'), caption: 'Dự án nội thất nhà hàng', kind: 'PRODUCT' },
+    ],
+    documents: [{ id: 'd1', name: 'Southwood_Company_Profile_2026_EN.pdf', kind: 'brochure', size: 8_400_000, preview: U('1519710164239-da123dc03ef4', 600) }],
+  }
   return p
 }
 
@@ -160,7 +197,7 @@ export interface EventRegistration { eventId: string; at: string; attendees: Att
 type Ctx = {
   session: Session | null
   profile: CompanyProfile
-  signIn: (s?: Partial<Session>, fresh?: boolean) => void
+  signIn: (s?: Partial<Session>, fresh?: boolean, reg?: Partial<Registration>, extra?: { nameEn?: string; logo?: string }) => void
   signOut: () => void
   update: <K extends keyof CompanyProfile>(key: K, value: CompanyProfile[K]) => void
   registrations: EventRegistration[]
@@ -173,7 +210,17 @@ const KEY = 'vcci.profile.v1'
 function load(): { session: Session | null; profile: CompanyProfile; registrations: EventRegistration[] } {
   try {
     const raw = localStorage.getItem(KEY)
-    if (raw) return JSON.parse(raw)
+    if (raw) {
+      const st = JSON.parse(raw)
+      const e = emptyProfile()
+      st.profile = {
+        ...e, ...st.profile,
+        capability: { ...e.capability, ...st.profile?.capability },
+        registration: { ...e.registration, ...st.profile?.registration },
+        media: { ...e.media, ...st.profile?.media },
+      }
+      return st
+    }
   } catch {
     /* storage unavailable */
   }
@@ -194,11 +241,18 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
   const value = useMemo<Ctx>(
     () => ({
       ...state,
-      signIn: (s, fresh) =>
+      signIn: (s, fresh, reg, extra) =>
         setState((prev) => {
           if (fresh) {
             const name = s?.companyName ?? ''
-            return { ...prev, session: { companyName: name, taxCode: s?.taxCode ?? '' }, profile: emptyProfile(name, s?.taxCode ?? '') }
+            const p = emptyProfile(name, s?.taxCode ?? '')
+            if (reg) {
+              p.registration = { ...p.registration, ...reg }
+              p.general = { ...p.general, nameEn: extra?.nameEn ?? '', channels: reg.website ?? '', contactName: reg.repName ?? '', contactTitle: reg.repTitle ?? '', contactEmail: reg.repEmail ?? '', contactPhone: reg.repPhone ?? '' }
+              if (reg.industries?.length) p.capability = { ...p.capability, sectors: reg.industries }
+            }
+            if (extra?.logo) p.media = { ...p.media, logo: extra.logo }
+            return { ...prev, session: { companyName: name, taxCode: s?.taxCode ?? '' }, profile: p }
           }
           const p = prev.profile.general.nameVi ? prev.profile : demoProfile()
           return { ...prev, session: { companyName: p.general.nameVi, taxCode: p.general.taxCode }, profile: p }

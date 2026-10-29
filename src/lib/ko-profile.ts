@@ -126,6 +126,8 @@ export const KO: Record<string, string> = {
   'People you send to events': '행사에 자주 참석하는 인원',
   'Privacy & consent': '개인정보 & 동의',
   'Data and media consent': '데이터 및 촬영 동의',
+  'Photos & documents': '사진 & 자료',
+  'Logo, cover, factory photos, video, brochure PDF': '로고, 커버, 공장 사진, 영상, 소개서 PDF',
   // options
   '100% domestic capital': '100% 국내 자본', 'Partly foreign-owned': '외국인 투자 일부 포함', '100% foreign-owned': '100% 외국인 투자',
   'Premium food': '고품질 식품', 'Packaging & recycled materials': '포장재 & 재활용 소재', 'Natural cosmetics': '천연 화장품',
