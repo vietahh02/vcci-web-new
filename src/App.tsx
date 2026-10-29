@@ -13,6 +13,7 @@ import MyProfile from '@/pages/MyProfile'
 import About from '@/pages/About'
 import { Login, Register } from '@/pages/Auth'
 import EventDetail from '@/pages/EventDetail'
+import EventRegister from '@/pages/EventRegister'
 import Events from '@/pages/Events'
 import Home from '@/pages/Home'
 import LegalAI from '@/pages/LegalAI'
@@ -66,6 +67,7 @@ export default function App() {
                     <Route path="/requests/:id" element={<RequestDetail />} />
                     <Route path="/events" element={<Events />} />
                     <Route path="/events/:id" element={<EventDetail />} />
+                    <Route path="/events/:id/register" element={<EventRegister />} />
                     <Route path="/live/:id" element={<LiveRoom />} />
                     <Route path="/legal-ai" element={<LegalAI />} />
                     <Route path="/about" element={<About />} />
