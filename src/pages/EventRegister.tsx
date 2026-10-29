@@ -66,8 +66,13 @@ function RegisterFlow({ ev }: { ev: EventItem }) {
   const allDates = programme ? programme.phases.flatMap((p) => p.dates) : [ev.startDate.slice(0, 10)]
 
   const person = profile.attendees[0]
+  const [detailed, setDetailed] = useState(false)
+  const people = profile.attendees.length
+    ? profile.attendees
+    : [{ id: 'contact', name: profile.general.contactName, title: profile.general.contactTitle, email: profile.general.contactEmail, phone: profile.general.contactPhone }]
+  const [attendeeId, setAttendeeId] = useState(people[0]?.id ?? '')
   const [f, setF] = useState<Form>(() => ({
-    dates: allDates.slice(0, 1),
+    dates: session ? allDates : allDates.slice(0, 1),
     salutation: 'Mr.', firstName: person?.name.split(' ').slice(-1).join(' ') ?? '', lastName: person?.name.split(' ').slice(0, -1).join(' ') ?? '',
     jobTitle: person?.title ?? profile.general.contactTitle, department: '', email: person?.email ?? profile.general.contactEmail, country: 'VN', phone: person?.phone ?? profile.general.contactPhone,
     company: session ? profile.general.nameVi || session.companyName : '', taxCode: profile.general.taxCode, companyCountry: 'VN', city: '', website: profile.general.channels.split(',')[0]?.trim() ?? '',
@@ -78,8 +83,9 @@ function RegisterFlow({ ev }: { ev: EventItem }) {
   const region = useMemo(() => new Intl.DisplayNames([locale], { type: 'region' }), [locale])
   const interestOptions: Bilingual[] = programme ? programme.phases.flatMap((p) => p.categories) : categories.map((c) => c.categoryName)
 
-  const finish = () => {
-    if (session) register({ eventId: ev.id, attendees: [{ id: 'reg', name: `${f.lastName} ${f.firstName}`.trim(), title: f.jobTitle, email: f.email, phone: f.phone }], answers: f.answers })
+  const finish = (override: Partial<Form> = {}) => {
+    const g = { ...f, ...override }
+    if (session) register({ eventId: ev.id, attendees: [{ id: 'reg', name: `${g.lastName} ${g.firstName}`.trim(), title: g.jobTitle, email: g.email, phone: g.phone }], answers: g.answers })
     setStep(steps.length - 1)
     toast({ kind: 'success', title: t.events.doneTitle })
     window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -124,7 +130,79 @@ function RegisterFlow({ ev }: { ev: EventItem }) {
                 </div>
               )}
 
-              {step === 0 && !matchmaking && (
+              {/* Business account → no form, one-tap confirm from the profile */}
+              {step === 0 && !matchmaking && session && !detailed && (
+                <div className="rounded-2xl border bg-card">
+                  <div className="border-b px-6 py-5">
+                    <p className="flex items-center gap-2 text-lg font-bold"><BadgeCheck className="size-5 text-success" /> {tx('Đăng ký nhanh bằng tài khoản doanh nghiệp', 'Quick registration with your business account', '기업 계정으로 빠른 등록')}</p>
+                    <p className="mt-1 text-sm text-muted-foreground">{tx('Thông tin được lấy từ hồ sơ doanh nghiệp — không cần điền form.', 'Details come from your company profile — no form to fill.', '기업 프로필 정보를 사용하므로 양식을 작성할 필요가 없습니다.')}</p>
+                  </div>
+                  <div className="space-y-6 p-6">
+                    <div className="flex flex-wrap items-center gap-3 rounded-xl bg-muted/60 p-4">
+                      <div className="min-w-0 flex-1">
+                        <p className="font-semibold">{profile.general.nameVi || session.companyName}</p>
+                        <p className="text-xs text-muted-foreground">{tx('MST', 'Tax code', '사업자 번호')} {profile.general.taxCode || '—'} · {profile.general.contactEmail}</p>
+                      </div>
+                      <Link to={`/account/profile?return=${encodeURIComponent(`/events/${ev.id}/register`)}`} className="text-xs font-semibold text-primary">{tx('Sửa hồ sơ', 'Edit profile', '프로필 수정')}</Link>
+                    </div>
+
+                    <div>
+                      <p className="mb-2 text-sm font-semibold">{tx('Người tham dự', 'Attendee', '참석자')}</p>
+                      <div className="space-y-2">
+                        {people.map((a) => (
+                          <label key={a.id} className={cn('flex cursor-pointer items-center gap-3 rounded-xl border px-4 py-3 transition', attendeeId === a.id ? 'border-primary bg-primary-soft/60' : 'hover:border-primary/40')}>
+                            <input type="radio" name="attendee" className="size-4 accent-[var(--primary)]" checked={attendeeId === a.id} onChange={() => setAttendeeId(a.id)} />
+                            <span className="min-w-0">
+                              <span className="block text-sm font-medium">{a.name || '—'}</span>
+                              <span className="block truncate text-xs text-muted-foreground">{a.title} · {a.email}</span>
+                            </span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+
+                    {programme && (
+                      <div>
+                        <p className="mb-2 text-sm font-semibold">{tx('Ngày tham dự', 'Visit days', '참가일')}</p>
+                        <div className="flex flex-wrap gap-2">
+                          {programme.phases.flatMap((p) => p.dates.map((d) => ({ d, p }))).map(({ d, p }) => {
+                            const on = f.dates.includes(d)
+                            return (
+                              <button key={d} type="button" onClick={() => toggle('dates', d)} className={cn('inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-[13px] font-medium transition', on ? 'border-primary bg-primary text-primary-foreground' : 'hover:border-primary/50')}>
+                                {on && <Check className="size-3.5" />}
+                                {L(p.name)} · {formatDate(`${d}T12:00:00`, locale, { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' })}
+                              </button>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="flex flex-wrap items-center justify-between gap-3 border-t pt-5">
+                      <p className="text-sm text-muted-foreground">{t.events.fee}: <b className="text-foreground">{paid ? formatMoney(ev.participationFee, ev.participationFeeCurrency, locale) : t.common.free}</b></p>
+                      <div className="flex flex-wrap gap-2">
+                        <Button variant="ghost" onClick={() => setDetailed(true)}>{tx('Điền form chi tiết', 'Use the detailed form', '상세 양식 작성')}</Button>
+                        <Button
+                          size="lg"
+                          onClick={() => {
+                            if (!f.dates.length) return toast({ kind: 'info', title: tx('Chọn ít nhất 1 ngày tham dự', 'Choose at least one day', '참가일을 하나 이상 선택하세요') })
+                            const a = people.find((x) => x.id === attendeeId) ?? people[0]!
+                            const parts = a.name.trim().split(/\s+/)
+                            const override: Partial<Form> = { firstName: parts.slice(-1).join(' '), lastName: parts.slice(0, -1).join(' '), jobTitle: a.title, email: a.email, phone: a.phone, company: profile.general.nameVi || session.companyName, terms: true }
+                            setF((x) => ({ ...x, ...override }))
+                            if (paid) { setStep(1); window.scrollTo({ top: 0, behavior: 'smooth' }) } else finish(override)
+                          }}
+                        >
+                          {paid ? tx('Xác nhận & thanh toán', 'Confirm & pay', '확인 후 결제') : tx('Xác nhận đăng ký', 'Confirm registration', '등록 확인')} <ArrowRight />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* No business account (or chose the detailed form) → full registration form */}
+              {step === 0 && !matchmaking && (!session || detailed) && (
                 <form
                   className="space-y-6"
                   onSubmit={(e) => {
@@ -136,7 +214,7 @@ function RegisterFlow({ ev }: { ev: EventItem }) {
                   {session ? (
                     <p className="flex flex-wrap items-center gap-2 rounded-xl bg-success-soft px-4 py-3 text-sm text-success">
                       <BadgeCheck className="size-4" /> {tx('Đã điền sẵn từ hồ sơ doanh nghiệp. Kiểm tra lại trước khi gửi.', 'Pre-filled from your company profile. Please review before submitting.', '기업 프로필에서 자동 입력되었습니다. 제출 전에 확인하세요.')}
-                      <Link to={`/account/profile?return=${encodeURIComponent(`/events/${ev.id}/register`)}`} className="ml-auto font-semibold underline-offset-4 hover:underline">{tx('Sửa hồ sơ', 'Edit profile', '프로필 수정')}</Link>
+                      <button type="button" onClick={() => setDetailed(false)} className="ml-auto font-semibold underline-offset-4 hover:underline">← {tx('Đăng ký nhanh', 'Quick registration', '빠른 등록')}</button>
                     </p>
                   ) : (
                     <p className="flex flex-wrap items-center gap-2 rounded-xl bg-primary-soft px-4 py-3 text-sm text-primary">
@@ -284,10 +362,16 @@ function RegisterFlow({ ev }: { ev: EventItem }) {
                 </form>
               )}
 
-              {paid && step === 1 && <PaymentStep ev={ev} code={regCode} proof={proof} setProof={setProof} onBack={() => setStep(0)} onDone={finish} />}
+              {paid && step === 1 && <PaymentStep ev={ev} code={regCode} proof={proof} setProof={setProof} onBack={() => setStep(0)} onDone={() => finish()} />}
 
               {step === steps.length - 1 && step > 0 && (
                 <Badge ev={ev} code={regCode} name={matchmaking ? profile.general.contactName : `${f.salutation} ${f.lastName} ${f.firstName}`.trim()} title={matchmaking ? profile.general.contactTitle : f.jobTitle} company={matchmaking ? profile.general.nameVi : f.company} dates={matchmaking ? [] : f.dates} meetings={f.meetSlots.length} />
+              )}
+              {step === steps.length - 1 && step > 0 && !session && (
+                <div className="mx-auto mt-8 flex max-w-md flex-col items-center gap-3 rounded-2xl border bg-primary-soft/50 p-5 text-center">
+                  <p className="text-sm">{tx('Tạo tài khoản doanh nghiệp để lần sau đăng ký sự kiện chỉ với 1 chạm, không cần điền lại form.', 'Create a business account to register for future events in one tap — no forms.', '기업 계정을 만들면 다음 행사부터 양식 없이 원클릭으로 등록할 수 있습니다.')}</p>
+                  <Link to="/register" className={buttonClass('default')}>{tx('Tạo tài khoản doanh nghiệp', 'Create business account', '기업 계정 만들기')}</Link>
+                </div>
               )}
             </motion.div>
           </AnimatePresence>
