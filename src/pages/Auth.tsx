@@ -1,26 +1,24 @@
 import { AnimatePresence, motion } from 'motion/react'
-import { ArrowLeft, ArrowRight, Check, Eye, EyeOff, Globe, Quote, RefreshCw } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Check, Eye, EyeOff, Quote, RefreshCw } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
-import { useProfile } from '@/lib/profile'
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { categories } from '@/data/mock'
 import { Logo } from '@/components/brand'
 import { CountUp } from '@/components/effects'
+import { LangSwitcher } from '@/components/layout/LangSwitcher'
 import { useToast } from '@/components/ui/overlay'
 import { Button, Field, Input, Select } from '@/components/ui/primitives'
 import { useI18n } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
 
 function AuthShell({ children }: { children: ReactNode }) {
-  const { t, lang, setLang } = useI18n()
+  const { t } = useI18n()
   return (
     <div className="grid min-h-dvh lg:grid-cols-[1fr_1.05fr]">
       <div className="flex flex-col px-5 py-6 sm:px-10">
         <div className="flex items-center justify-between">
           <Logo />
-          <button onClick={() => setLang(lang === 'vi' ? 'en' : 'vi')} className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-semibold text-muted-foreground hover:bg-muted">
-            <Globe className="size-4" /> {lang.toUpperCase()}
-          </button>
+          <LangSwitcher />
         </div>
         <div className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center py-10">{children}</div>
         <p className="text-center text-xs text-muted-foreground">{t.footer.rights}</p>
@@ -47,11 +45,12 @@ function AuthShell({ children }: { children: ReactNode }) {
 }
 
 function PasswordInput({ id, placeholder }: { id: string; placeholder?: string }) {
+  const { t } = useI18n()
   const [show, setShow] = useState(false)
   return (
     <div className="relative">
       <Input id={id} type={show ? 'text' : 'password'} required minLength={8} placeholder={placeholder} className="pr-10" />
-      <button type="button" onClick={() => setShow((v) => !v)} className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1.5 text-muted-foreground hover:text-foreground" aria-label="Toggle password">
+      <button type="button" onClick={() => setShow((v) => !v)} className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1.5 text-muted-foreground hover:text-foreground" aria-label={t.ui.togglePassword}>
         {show ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
       </button>
     </div>
@@ -59,6 +58,7 @@ function PasswordInput({ id, placeholder }: { id: string; placeholder?: string }
 }
 
 function Captcha() {
+  const { t } = useI18n()
   const [code, setCode] = useState(() => Math.random().toString(36).slice(2, 7).toUpperCase())
   return (
     <div className="flex gap-2">
@@ -66,7 +66,7 @@ function Captcha() {
       <div className="relative grid h-10 w-28 select-none place-items-center overflow-hidden rounded-lg bg-[repeating-linear-gradient(45deg,var(--muted),var(--muted)_6px,var(--background)_6px,var(--background)_12px)] font-mono text-lg font-bold italic tracking-[0.25em] text-primary">
         {code}
       </div>
-      <button type="button" onClick={() => setCode(Math.random().toString(36).slice(2, 7).toUpperCase())} className="grid size-10 place-items-center rounded-lg border hover:bg-muted" aria-label="Refresh captcha">
+      <button type="button" onClick={() => setCode(Math.random().toString(36).slice(2, 7).toUpperCase())} className="grid size-10 place-items-center rounded-lg border hover:bg-muted" aria-label={t.ui.refreshCaptcha}>
         <RefreshCw className="size-4" />
       </button>
     </div>
@@ -78,8 +78,6 @@ export function Login() {
   const { t } = useI18n()
   const toast = useToast()
   const navigate = useNavigate()
-  const { signIn } = useProfile()
-  const [params] = useSearchParams()
   return (
     <AuthShell>
       <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
@@ -90,8 +88,7 @@ export function Login() {
           onSubmit={(e) => {
             e.preventDefault()
             toast({ kind: 'success', title: t.auth.loginTitle, description: t.common.demoNote })
-            signIn()
-            navigate(params.get('return') ?? '/account/profile')
+            navigate('/')
           }}
         >
           <Field label={t.auth.email} htmlFor="email"><Input id="email" type="email" required autoComplete="email" placeholder="export@company.vn" /></Field>
@@ -119,9 +116,6 @@ export function Register() {
   const [step, setStep] = useState(0)
   const [dir, setDir] = useState(1)
   const [done, setDone] = useState(false)
-  const [company, setCompany] = useState({ name: '', tax: '' })
-  const { signIn } = useProfile()
-  const navigate = useNavigate()
   const go = (n: number) => {
     setDir(n > step ? 1 : -1)
     setStep(n)
@@ -136,11 +130,7 @@ export function Register() {
           </motion.div>
           <h1 className="mt-6 text-2xl font-extrabold">{t.auth.submitted}</h1>
           <p className="mt-2 text-muted-foreground">{t.auth.submittedDesc}</p>
-          <div className="mt-8 flex flex-col items-center gap-3">
-            <button onClick={() => { signIn({ companyName: company.name, taxCode: company.tax }, true); navigate('/account/profile') }} className="inline-flex h-11 items-center gap-2 rounded-xl bg-primary px-5 font-semibold text-primary-foreground">Hoàn thiện hồ sơ năng lực <ArrowRight className="size-4" /></button>
-            <p className="max-w-sm text-xs text-muted-foreground">Khai một lần, dùng để đăng ký mọi sự kiện mà không phải điền lại. Có thể làm sau.</p>
-            <Link to="/" className="text-sm font-semibold text-primary">{t.common.home}</Link>
-          </div>
+          <Link to="/" className="mt-8 inline-flex h-11 items-center gap-2 rounded-xl bg-primary px-5 font-semibold text-primary-foreground">{t.common.home} <ArrowRight className="size-4" /></Link>
         </motion.div>
       ) : (
         <>
@@ -161,10 +151,6 @@ export function Register() {
             className="mt-6 overflow-hidden"
             onSubmit={(e) => {
               e.preventDefault()
-              if (step === 0) {
-                const f = e.currentTarget as HTMLFormElement
-                setCompany({ name: (f.querySelector('#bn') as HTMLInputElement)?.value ?? '', tax: (f.querySelector('#tax') as HTMLInputElement)?.value ?? '' })
-              }
               if (step < 2) go(step + 1)
               else setDone(true)
             }}

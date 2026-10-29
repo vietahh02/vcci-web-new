@@ -15,7 +15,7 @@ const ALL_CERTS = Array.from(new Set(products.flatMap((p) => p.certificates))).s
 const MOQ_STEPS = [0, 50, 500, 2000, 5000]
 
 export default function SearchPage() {
-  const { t, L, locale } = useI18n()
+  const { t, L, lang, locale } = useI18n()
   const [params, setParams] = useSearchParams()
   const keyword = params.get('q') ?? ''
   const categoryId = params.get('category') ?? ''
@@ -32,7 +32,7 @@ export default function SearchPage() {
     return () => {
       alive = false
     }
-  }, [keyword, categoryId, maxMoq, certs, sort])
+  }, [keyword, categoryId, maxMoq, certs, sort, lang])
 
   const cat = categories.find((c) => c.id === categoryId)
   const activeFilters = useMemo(() => [maxMoq ? `MOQ ≤ ${formatNumber(maxMoq, locale)}` : null, ...certs].filter(Boolean) as string[], [maxMoq, certs, locale])
@@ -84,7 +84,7 @@ export default function SearchPage() {
         <video className="absolute inset-0 -z-20 size-full object-cover" src="/video/product_search.mp4" poster="/video/product_search-poster.jpg" autoPlay muted loop playsInline aria-hidden />
         <div className="absolute inset-0 -z-10 bg-gradient-to-r from-navy via-navy/80 to-navy/20" />
         <div className="container-page flex h-full flex-col justify-center">
-          <nav aria-label="Breadcrumb" className="text-[13px] text-white/60">
+          <nav aria-label={t.ui.breadcrumb} className="text-[13px] text-white/60">
             <Link to="/" className="hover:text-white">{t.common.home}</Link> / {t.nav.products}{cat && ` / ${L(cat.categoryName)}`}
           </nav>
           <motion.h1 key={keyword + categoryId} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-2 text-3xl font-extrabold tracking-tight md:text-4xl">
@@ -156,7 +156,7 @@ export default function SearchPage() {
             <motion.div className="fixed inset-x-0 bottom-0 z-[81] max-h-[85dvh] overflow-y-auto rounded-t-3xl bg-popover p-5" initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} transition={{ type: 'spring', bounce: 0.1, duration: 0.45 }}>
               <div className="mb-4 flex items-center justify-between">
                 <p className="font-extrabold">{t.searchPage.filters}</p>
-                <button onClick={() => setFiltersOpen(false)} className="rounded-md p-1.5 hover:bg-muted" aria-label="Close"><X className="size-4" /></button>
+                <button onClick={() => setFiltersOpen(false)} className="rounded-md p-1.5 hover:bg-muted" aria-label={t.ui.close}><X className="size-4" /></button>
               </div>
               {filters}
             </motion.div>

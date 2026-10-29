@@ -15,7 +15,7 @@ import { cn } from '@/lib/utils'
 const TYPES: ('ALL' | BusinessType)[] = ['ALL', 'VN_EXPORTER', 'FOREIGN_IMPORTER', 'DISTRIBUTION_COMPANY', 'INVESTMENT_CONSULTING', 'LAW_FIRM']
 
 export default function Suppliers() {
-  const { t, L } = useI18n()
+  const { t, L, lang } = useI18n()
   const [params] = useSearchParams()
   const [q, setQ] = useState(params.get('q') ?? '')
   const [cat, setCat] = useState('')
@@ -31,11 +31,11 @@ export default function Suppliers() {
       alive = false
       clearTimeout(id)
     }
-  }, [q, cat, type])
+  }, [q, cat, type, lang])
 
   return (
     <div className="container-page pt-8">
-      <nav aria-label="Breadcrumb" className="text-[13px] text-muted-foreground">
+      <nav aria-label={t.ui.breadcrumb} className="text-[13px] text-muted-foreground">
         <Link to="/" className="hover:text-foreground">{t.common.home}</Link> / <span className="text-foreground">{t.nav.suppliers}</span>
       </nav>
       <div className="mt-4 grid gap-6 md:grid-cols-[minmax(0,1fr)_420px] md:items-end">

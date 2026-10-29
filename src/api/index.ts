@@ -1,11 +1,24 @@
 /**
  * Data access layer. Every function names the real VCCI portal endpoint it
- * stands in for; swap the mock body for `fetch(API_BASE + path)` to go live.
+ * stands in for; swap the mock body for `apiFetch(path)` to go live.
+ * BE localizes its content from the Accept-Language header, so those fields
+ * come back as plain strings in the active language.
  */
 import {
   businesses, categories, events, importRequests, products,
   type Business, type EventItem, type ImportRequest, type Product,
 } from '@/data/mock'
+import { currentLang } from '@/lib/i18n'
+
+const API_BASE = import.meta.env.VITE_API_BASE ?? ''
+
+export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
+  const headers = new Headers(init.headers)
+  headers.set('Accept-Language', currentLang())
+  const res = await fetch(API_BASE + path, { ...init, headers })
+  if (!res.ok) throw new Error(`${res.status} ${res.statusText} — ${path}`)
+  return res.json() as Promise<T>
+}
 
 const latency = (ms = 320) => new Promise((r) => setTimeout(r, ms + Math.random() * 180))
 
@@ -28,7 +41,7 @@ export async function searchProducts(q: ProductQuery = {}): Promise<Product[]> {
     if (q.maxMoq && p.moq > q.maxMoq) return false
     if (q.certificates?.length && !q.certificates.some((c) => p.certificates.includes(c))) return false
     if (q.keyword) {
-      const hay = norm(`${p.productName.vi} ${p.productName.en} ${p.industry} ${p.productCode}`)
+      const hay = norm(`${p.productName.vi} ${p.productName.en} ${p.productName.ko ?? ''} ${p.industry} ${p.productCode}`)
       if (!norm(q.keyword).split(/\s+/).every((w) => hay.includes(w))) return false
     }
     return true

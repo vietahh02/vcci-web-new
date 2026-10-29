@@ -103,6 +103,7 @@ export function SectionHeader({
 }
 
 export function PageHero({ title, sub, crumbs, children, image }: { title: string; sub?: string; crumbs?: { to?: string; label: string }[]; children?: ReactNode; image?: string }) {
+  const { t } = useI18n()
   return (
     <section className="relative isolate overflow-hidden bg-navy text-white">
       {image && <img src={image} alt="" className="absolute inset-0 -z-20 size-full animate-kenburns object-cover opacity-35" />}
@@ -111,7 +112,7 @@ export function PageHero({ title, sub, crumbs, children, image }: { title: strin
       <div className="absolute -right-24 -top-24 -z-10 size-96 animate-aurora rounded-full bg-primary/40 blur-3xl" />
       <div className="container-page py-12 md:py-16">
         {crumbs && (
-          <nav aria-label="Breadcrumb" className="mb-4 flex flex-wrap items-center gap-1.5 text-[13px] text-white/60">
+          <nav aria-label={t.ui.breadcrumb} className="mb-4 flex flex-wrap items-center gap-1.5 text-[13px] text-white/60">
             {crumbs.map((c, i) => (
               <span key={i} className="inline-flex items-center gap-1.5">
                 {c.to ? <Link to={c.to} className="hover:text-white">{c.label}</Link> : <span className="text-white/90">{c.label}</span>}

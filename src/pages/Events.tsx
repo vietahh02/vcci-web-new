@@ -13,13 +13,13 @@ import { useI18n } from '@/lib/i18n'
 import { formatDate, formatMoney, img } from '@/lib/utils'
 
 export default function Events() {
-  const { t } = useI18n()
+  const { t, lang } = useI18n()
   const [list, setList] = useState<EventItem[] | null>(null)
   const [type, setType] = useState<'ALL' | EventType>('ALL')
 
   useEffect(() => {
     searchEvents().then(setList)
-  }, [])
+  }, [lang])
 
   if (!list) return <div className="container-page py-10"><Skeleton className="h-[480px] rounded-3xl" /></div>
 
@@ -51,7 +51,6 @@ export default function Events() {
               { value: 'ALL', label: t.searchPage.all },
               { value: 'WEBINAR', label: t.events.type.WEBINAR },
               { value: 'LIVESTREAM', label: t.events.type.LIVESTREAM },
-              { value: 'MATCHMAKING', label: t.events.type.MATCHMAKING },
             ]}
           />
         </div>

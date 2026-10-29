@@ -1,23 +1,22 @@
 import * as DialogPrimitive from '@radix-ui/react-dialog'
 import { AnimatePresence, motion, useMotionValueEvent, useScroll } from 'motion/react'
-import { Bell, ChevronDown, ChevronRight, FilePlus2, Globe, LayoutGrid, Menu, MessageSquare, Moon, Phone, Sun } from 'lucide-react'
+import { Bell, ChevronDown, ChevronRight, FilePlus2, LayoutGrid, Menu, MessageSquare, Moon, Phone, Sun } from 'lucide-react'
 import { useState } from 'react'
 import { Link, NavLink, useLocation } from 'react-router-dom'
 import { categories } from '@/data/mock'
 import { categoryIcons, Logo } from '@/components/brand'
 import { LiveDot } from '@/components/effects'
+import { LangSwitcher } from '@/components/layout/LangSwitcher'
 import { SearchBar } from '@/components/layout/SearchBar'
 import { SheetContent, Tooltip } from '@/components/ui/overlay'
 import { buttonClass } from '@/components/ui/primitives'
 import { useI18n } from '@/lib/i18n'
 import { useTheme } from '@/lib/theme'
-import { completion, useProfile } from '@/lib/profile'
 import { cn, formatNumber, img } from '@/lib/utils'
 
 export function Header() {
-  const { t, lang, setLang } = useI18n()
+  const { t } = useI18n()
   const { theme, toggle } = useTheme()
-  const { session, profile } = useProfile()
   const { scrollY } = useScroll()
   const [scrolled, setScrolled] = useState(false)
   const [megaOpen, setMegaOpen] = useState(false)
@@ -63,7 +62,7 @@ export function Header() {
       {/* main bar */}
       <div className={cn('border-b transition-[background,box-shadow] duration-300', scrolled ? 'glass shadow-[0_8px_30px_-12px_rgb(8_8_46/0.18)]' : 'bg-background')}>
         <div className="container-page flex h-[68px] items-center gap-4 lg:gap-8">
-          <button className="-ml-2 rounded-lg p-2 hover:bg-muted lg:hidden" onClick={() => setMobileOpen(true)} aria-label="Menu">
+          <button className="-ml-2 rounded-lg p-2 hover:bg-muted lg:hidden" onClick={() => setMobileOpen(true)} aria-label={t.ui.menu}>
             <Menu className="size-5" />
           </button>
           <Logo />
@@ -86,39 +85,18 @@ export function Header() {
                 <span className="absolute right-2 top-2 size-2 rounded-full bg-primary ring-2 ring-background" />
               </button>
             </Tooltip>
-            <Tooltip content={lang === 'vi' ? 'English' : 'Tiếng Việt'}>
-              <button
-                onClick={() => setLang(lang === 'vi' ? 'en' : 'vi')}
-                className="inline-flex items-center gap-1 rounded-lg p-2.5 text-[13px] font-bold text-muted-foreground transition hover:bg-muted hover:text-foreground"
-                aria-label="Language"
-              >
-                <Globe className="size-[18px]" /> {lang.toUpperCase()}
-              </button>
-            </Tooltip>
-            <button onClick={toggle} className="rounded-lg p-2.5 text-muted-foreground transition hover:bg-muted hover:text-foreground" aria-label="Theme">
+            <LangSwitcher />
+            <button onClick={toggle} className="rounded-lg p-2.5 text-muted-foreground transition hover:bg-muted hover:text-foreground" aria-label={t.ui.theme}>
               <AnimatePresence mode="wait" initial={false}>
                 <motion.span key={theme} initial={{ rotate: -90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: 90, opacity: 0 }} transition={{ duration: 0.2 }} className="block">
                   {theme === 'dark' ? <Sun className="size-[18px]" /> : <Moon className="size-[18px]" />}
                 </motion.span>
               </AnimatePresence>
             </button>
-            {session ? (
-              <Link to="/account/profile" className="ml-2 flex items-center gap-2.5 rounded-xl py-1 pl-1 pr-3 transition hover:bg-muted" title={lang === 'vi' ? 'Hồ sơ doanh nghiệp của tôi' : 'My company profile'}>
-                <span className="relative grid size-9 place-items-center">
-                  <svg viewBox="0 0 36 36" className="absolute inset-0 -rotate-90">
-                    <circle cx="18" cy="18" r="16" fill="none" stroke="var(--border)" strokeWidth="3" />
-                    <circle cx="18" cy="18" r="16" fill="none" stroke="var(--primary)" strokeWidth="3" strokeLinecap="round" strokeDasharray={100.5} strokeDashoffset={100.5 - (100.5 * completion(profile)) / 100} />
-                  </svg>
-                  <span className="text-[10px] font-bold">{completion(profile)}%</span>
-                </span>
-                <span className="hidden max-w-40 truncate text-[13px] font-semibold xl:block">{profile.general.nameEn || session.companyName}</span>
-              </Link>
-            ) : (
-              <div className="ml-2 hidden items-center gap-2 lg:flex">
-                <Link to="/login" className={buttonClass('ghost', 'sm', 'h-9')}>{t.nav.login}</Link>
-                <Link to="/register" className={buttonClass('default', 'sm', 'h-9')}>{t.nav.register}</Link>
-              </div>
-            )}
+            <div className="ml-2 hidden items-center gap-2 lg:flex">
+              <Link to="/login" className={buttonClass('ghost', 'sm', 'h-9')}>{t.nav.login}</Link>
+              <Link to="/register" className={buttonClass('default', 'sm', 'h-9')}>{t.nav.register}</Link>
+            </div>
           </div>
         </div>
 

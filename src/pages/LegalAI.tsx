@@ -15,6 +15,10 @@ const ANSWERS = {
     text: 'Under EVFTA, roasted coffee (HS 0901.21) enters the EU duty-free from entry into force. To claim 0% duty a shipment must: (1) meet the rules of origin — the green beans must be wholly obtained in Vietnam; (2) carry a REX statement on origin or an EUR.1 certificate; (3) be shipped directly or prove no processing in a third country. Also check EUDR farm-level traceability requirements.',
     sources: ['EVFTA – Annex 2-A (EU tariff schedule)', 'Decree 116/2020/ND-CP', 'Circular 11/2020/TT-BCT on rules of origin'],
   },
+  ko: {
+    text: 'EVFTA에 따라 볶은 커피(HS 0901.21)는 협정 발효 즉시 EU 수입 관세가 철폐되었습니다. 0% 관세를 적용받으려면 화물이 다음을 충족해야 합니다: (1) 원산지 규정 — 생두가 베트남에서 완전 생산되어야 함; (2) REX 원산지 자율증명 또는 EUR.1 원산지증명서 구비; (3) 직접 운송 또는 제3국에서 가공되지 않았음을 증명. 또한 재배지 단위 추적성에 관한 EUDR 요건도 확인하시기 바랍니다.',
+    sources: ['EVFTA – 부속서 2-A (EU 관세 양허표)', '시행령 116/2020/ND-CP', '원산지 규정에 관한 시행규칙 11/2020/TT-BCT'],
+  },
 }
 
 export default function LegalAI() {
@@ -142,7 +146,7 @@ export default function LegalAI() {
               aria-label={t.legal.placeholder}
               className="max-h-40 min-h-11 flex-1 resize-none bg-transparent px-3 py-2.5 text-[15px] outline-none focus-visible:outline-none"
             />
-            <button type="submit" disabled={!text.trim() || thinking} className="grid size-11 place-items-center rounded-xl bg-primary text-primary-foreground transition hover:bg-primary-hover disabled:opacity-40" aria-label="Send">
+            <button type="submit" disabled={!text.trim() || thinking} className="grid size-11 place-items-center rounded-xl bg-primary text-primary-foreground transition hover:bg-primary-hover disabled:opacity-40" aria-label={t.ui.send}>
               <ArrowUp className="size-5" />
             </button>
           </div>

@@ -6,11 +6,10 @@ import { getEvent } from '@/api'
 import { events, type EventItem } from '@/data/mock'
 import { SectionHeader } from '@/components/brand'
 import { SponsorVerticalBanner } from '@/components/sponsor'
-import { ProfileRegistration } from '@/components/event/ProfileRegistration'
 import { EventCard } from '@/components/cards'
 import { Countdown, LiveDot, Reveal } from '@/components/effects'
 import { Dialog, DialogContent, useToast } from '@/components/ui/overlay'
-import { Badge, Button, buttonClass, Progress } from '@/components/ui/primitives'
+import { Badge, Button, buttonClass, Field, Input, Progress } from '@/components/ui/primitives'
 import NotFound from '@/pages/NotFound'
 import { useI18n } from '@/lib/i18n'
 import { cn, formatDate, formatMoney, formatNumber, img } from '@/lib/utils'
@@ -82,7 +81,6 @@ export default function EventDetail() {
 
       <div className="container-page mt-12 grid gap-10 lg:grid-cols-[1fr_380px]">
         <section>
-          <ProgramInfo ev={ev} />
           <h2 className="text-xl font-extrabold">{t.events.agenda}</h2>
           <ol className="relative mt-6 space-y-4 border-l-2 border-dashed border-border pl-6">
             {ev.agendaOptions.map((a, i) => (
@@ -97,7 +95,7 @@ export default function EventDetail() {
                 <span className="absolute -left-[33px] top-5 grid size-4 place-items-center rounded-full bg-background ring-2 ring-primary">
                   <span className="size-1.5 rounded-full bg-primary" />
                 </span>
-                <p className="font-mono text-xs font-semibold text-primary">{a.agendaStartTime}{a.agendaEndTime && ` – ${a.agendaEndTime}`}</p>
+                <p className="font-mono text-xs font-semibold text-primary">{a.agendaStartTime} – {a.agendaEndTime}</p>
                 <p className="mt-1 font-semibold">{L(a.agendaTitle)}</p>
                 {a.speaker && <p className="mt-1 text-sm text-muted-foreground">{a.speaker}</p>}
               </motion.li>
@@ -118,74 +116,6 @@ export default function EventDetail() {
 
       <RegisterDialog ev={ev} open={regOpen} onOpenChange={setRegOpen} />
     </>
-  )
-}
-
-/** B2B programme details sourced from VCCI event forms: series, partner, market, eligibility, deadline, speakers, contact. */
-function ProgramInfo({ ev }: { ev: EventItem }) {
-  const { L, lang, locale } = useI18n()
-  const vi = lang === 'vi'
-  const facts = [
-    ev.series && { k: vi ? 'Chuỗi chương trình' : 'Series', v: L(ev.series) },
-    ev.partner && { k: vi ? 'Đơn vị phối hợp' : 'In partnership with', v: L(ev.partner) },
-    ev.targetMarket && { k: vi ? 'Thị trường mục tiêu' : 'Target market', v: L(ev.targetMarket) },
-    ev.registrationDeadline && { k: vi ? 'Hạn đăng ký' : 'Registration deadline', v: `${formatDate(ev.registrationDeadline, locale)}${vi ? ' (đóng sớm khi đủ chỉ tiêu)' : ' (may close early)'}` },
-    ev.quota && { k: vi ? 'Chỉ tiêu' : 'Quota', v: `${formatNumber(ev.quota, locale)} ${vi ? 'doanh nghiệp' : 'companies'}` },
-  ].filter(Boolean) as { k: string; v: string }[]
-  if (!facts.length && !ev.speakers && !ev.eligibility && !ev.topics && !ev.contact) return null
-
-  return (
-    <div className="mb-12 space-y-10">
-      {facts.length > 0 && (
-        <dl className="grid gap-x-8 gap-y-5 border-y py-6 sm:grid-cols-2">
-          {facts.map((f) => (
-            <div key={f.k}>
-              <dt className="text-xs text-muted-foreground">{f.k}</dt>
-              <dd className="mt-1 font-semibold">{f.v}</dd>
-            </div>
-          ))}
-        </dl>
-      )}
-      {ev.eligibility && (
-        <div>
-          <h2 className="text-xl font-extrabold">{vi ? 'Đối tượng & tiêu chí tham gia' : 'Who should apply'}</h2>
-          <ul className="mt-4 space-y-2.5">
-            {ev.eligibility.map((e) => <li key={e.en} className="flex gap-2.5 text-[15px]"><Check className="mt-0.5 size-4 shrink-0 text-success" /> {L(e)}</li>)}
-          </ul>
-        </div>
-      )}
-      {ev.topics && (
-        <div>
-          <h2 className="text-xl font-extrabold">{vi ? 'Nội dung chính' : 'Key topics'}</h2>
-          <ul className="mt-4 space-y-2.5">
-            {ev.topics.map((e) => <li key={e.en} className="flex gap-2.5 text-[15px]"><span className="mt-2 size-1.5 shrink-0 rounded-full bg-primary" /> {L(e)}</li>)}
-          </ul>
-        </div>
-      )}
-      {ev.speakers && (
-        <div>
-          <h2 className="text-xl font-extrabold">{vi ? 'Diễn giả' : 'Speakers'}</h2>
-          <div className="mt-4 grid gap-4 sm:grid-cols-2">
-            {ev.speakers.map((s) => (
-              <div key={s.name} className="flex gap-4 rounded-2xl border p-4">
-                <span className="grid size-14 shrink-0 place-items-center rounded-full bg-gradient-to-br from-primary to-navy text-base font-bold text-white">{s.name.split(' ').slice(-2).map((w) => w[0]).join('')}</span>
-                <div className="min-w-0">
-                  <p className="font-bold">{s.name}</p>
-                  <p className="text-sm text-primary">{L(s.title)}</p>
-                  <p className="mt-0.5 text-sm text-muted-foreground">{L(s.org)}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-      {ev.contact && (
-        <div className="rounded-2xl bg-muted/60 p-5 text-sm">
-          <p className="font-semibold">{vi ? 'Thông tin liên hệ' : 'Contact'}</p>
-          <p className="mt-1.5 text-muted-foreground">{ev.contact.name} · {vi ? 'ĐT/Zalo' : 'Phone/Zalo'}: {ev.contact.phone} · {ev.contact.email}</p>
-        </div>
-      )}
-    </div>
   )
 }
 
@@ -232,7 +162,15 @@ function RegisterDialog({ ev, open, onOpenChange }: { ev: EventItem; open: boole
         <AnimatePresence mode="wait">
           <motion.div key={step} initial={{ opacity: 0, x: 24 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -24 }} transition={{ duration: 0.25 }}>
             {step === 0 && (
-              <ProfileRegistration ev={ev} onDone={() => { setStep(1); if (!paid) toast({ kind: 'success', title: t.events.doneTitle }) }} />
+              <form className="space-y-4 p-6" onSubmit={(e) => { e.preventDefault(); setStep(1); if (!paid) toast({ kind: 'success', title: t.events.doneTitle }) }}>
+                <Field label={t.events.company} htmlFor="r-co"><Input id="r-co" required defaultValue="Southwood Furniture JSC" /></Field>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Field label={t.events.contactName} htmlFor="r-name"><Input id="r-name" required /></Field>
+                  <Field label={t.auth.repPhone} htmlFor="r-phone"><Input id="r-phone" type="tel" required /></Field>
+                </div>
+                <Field label={t.auth.email} htmlFor="r-mail"><Input id="r-mail" type="email" required /></Field>
+                <div className="flex justify-end"><Button type="submit">{t.common.next} <ArrowRight /></Button></div>
+              </form>
             )}
             {paid && step === 1 && (
               <div className="p-6">
@@ -254,7 +192,7 @@ function RegisterDialog({ ev, open, onOpenChange }: { ev: EventItem; open: boole
                         <dt className="text-xs text-muted-foreground">{k}</dt>
                         <dd className="flex items-center gap-1.5 text-right font-semibold">
                           {v}
-                          <button type="button" onClick={() => { void navigator.clipboard?.writeText(v!).catch(() => {}); toast({ kind: 'info', title: 'Copied', description: v }) }} className="text-muted-foreground hover:text-primary" aria-label="Copy"><Copy className="size-3.5" /></button>
+                          <button type="button" onClick={() => { void navigator.clipboard?.writeText(v!).catch(() => {}); toast({ kind: 'info', title: t.ui.copied, description: v }) }} className="text-muted-foreground hover:text-primary" aria-label={t.ui.copy}><Copy className="size-3.5" /></button>
                         </dd>
                       </div>
                     ))}

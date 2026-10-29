@@ -138,8 +138,8 @@ export default function LiveRoom() {
               <div className="absolute inset-x-0 bottom-0 flex items-center gap-3 px-4 py-3">
                 <span className="inline-flex items-center gap-1.5 text-xs font-bold text-live"><LiveDot /> LIVE</span>
                 <div className="h-1 flex-1 overflow-hidden rounded-full bg-white/20"><div className="h-full w-full bg-live" /></div>
-                <button className="rounded p-1 text-white/80 hover:text-white" aria-label="Volume"><Volume2 className="size-4" /></button>
-                <button className="rounded p-1 text-white/80 hover:text-white" aria-label="Fullscreen"><Maximize2 className="size-4" /></button>
+                <button className="rounded p-1 text-white/80 hover:text-white" aria-label={t.ui.volume}><Volume2 className="size-4" /></button>
+                <button className="rounded p-1 text-white/80 hover:text-white" aria-label={t.ui.fullscreen}><Maximize2 className="size-4" /></button>
               </div>
             </div>
 
@@ -215,13 +215,13 @@ export default function LiveRoom() {
                 onSubmit={(e) => {
                   e.preventDefault()
                   if (!text.trim()) return
-                  setMsgs((p) => [...p, { id: Date.now(), name: 'Bạn', country: 'VN', text, me: true }])
+                  setMsgs((p) => [...p, { id: Date.now(), name: t.ui.you, country: 'VN', text, me: true }])
                   setText('')
                 }}
               >
                 <input value={text} onChange={(e) => setText(e.target.value)} placeholder={t.live.say} aria-label={t.live.say} className="h-10 min-w-0 flex-1 rounded-lg bg-white/10 px-3 text-sm text-white outline-none placeholder:text-white/40 focus:ring-2 focus:ring-primary" />
-                <button type="button" onClick={react} className="grid size-10 place-items-center rounded-lg bg-white/10 text-live hover:bg-white/15" aria-label="React"><Heart className="size-4" /></button>
-                <button type="submit" className="grid size-10 place-items-center rounded-lg bg-primary hover:bg-primary-hover" aria-label="Send"><Send className="size-4" /></button>
+                <button type="button" onClick={react} className="grid size-10 place-items-center rounded-lg bg-white/10 text-live hover:bg-white/15" aria-label={t.ui.react}><Heart className="size-4" /></button>
+                <button type="submit" className="grid size-10 place-items-center rounded-lg bg-primary hover:bg-primary-hover" aria-label={t.ui.send}><Send className="size-4" /></button>
               </form>
             </div>
           </aside>

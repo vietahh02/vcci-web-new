@@ -82,7 +82,7 @@ export function SearchBar({ size = 'md', className, autoFocusKey }: { size?: 'md
           <select
             value={scope}
             onChange={(e) => setScope(e.target.value as Scope)}
-            aria-label="Scope"
+            aria-label={t.ui.scope}
             className="mr-1 hidden h-full shrink-0 cursor-pointer rounded-xl bg-muted pl-3 pr-2 text-xs font-semibold text-foreground outline-none md:block"
           >
             {scopes.map((s) => (

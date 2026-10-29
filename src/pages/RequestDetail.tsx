@@ -17,14 +17,14 @@ import { formatDate, formatMoney, formatNumber } from '@/lib/utils'
 
 export default function RequestDetail() {
   const { id = '' } = useParams()
-  const { t, L, locale } = useI18n()
+  const { t, L, lang, locale } = useI18n()
   const r = getImportRequest(id)
   const [quoteOpen, setQuoteOpen] = useState(false)
   const [matches, setMatches] = useState<Product[]>([])
 
   useEffect(() => {
     if (r) searchProducts({ categoryId: r.categoryId }).then((p) => setMatches(p.slice(0, 4)))
-  }, [r])
+  }, [r, lang])
 
   if (!r) return <NotFound />
   const cat = getCategory(r.categoryId)
@@ -32,7 +32,7 @@ export default function RequestDetail() {
 
   return (
     <div className="container-page pt-6">
-      <nav aria-label="Breadcrumb" className="mb-5 flex flex-wrap items-center gap-1.5 text-[13px] text-muted-foreground">
+      <nav aria-label={t.ui.breadcrumb} className="mb-5 flex flex-wrap items-center gap-1.5 text-[13px] text-muted-foreground">
         <Link to="/" className="hover:text-foreground">{t.common.home}</Link> / <Link to="/requests" className="hover:text-foreground">{t.nav.requests}</Link> / <span className="text-foreground">{r.requestCode}</span>
       </nav>
 
@@ -122,7 +122,7 @@ function QuoteSheet({ open, onOpenChange, to, subject }: { open: boolean; onOpen
               <Field label="BCC" htmlFor="q-bcc"><Input id="q-bcc" type="email" /></Field>
             </div>
             <Field label={t.requests.subject} htmlFor="q-sub"><Input id="q-sub" defaultValue={subject} required /></Field>
-            <Field label={t.requests.content} htmlFor="q-body"><Textarea id="q-body" className="min-h-36" required placeholder="FOB price, lead time, payment terms, validity…" /></Field>
+            <Field label={t.requests.content} htmlFor="q-body"><Textarea id="q-body" className="min-h-36" required placeholder={t.ui.quotePh} /></Field>
             <div>
               <p className="mb-1.5 text-[13px] font-semibold">{t.requests.attachments}</p>
               <label
@@ -142,7 +142,7 @@ function QuoteSheet({ open, onOpenChange, to, subject }: { open: boolean; onOpen
                   {files.map((f, i) => (
                     <motion.li key={f + i} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }} className="flex items-center gap-2 rounded-lg bg-muted px-3 py-2 text-xs">
                       <Paperclip className="size-3.5" /> <span className="flex-1 truncate">{f}</span>
-                      <button type="button" onClick={() => setFiles((x) => x.filter((_, k) => k !== i))} aria-label="Remove"><X className="size-3.5" /></button>
+                      <button type="button" onClick={() => setFiles((x) => x.filter((_, k) => k !== i))} aria-label={t.ui.remove}><X className="size-3.5" /></button>
                     </motion.li>
                   ))}
                 </AnimatePresence>

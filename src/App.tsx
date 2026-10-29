@@ -8,8 +8,6 @@ import { Header } from '@/components/layout/Header'
 import { ToastProvider, TooltipProvider } from '@/components/ui/overlay'
 import { I18nProvider } from '@/lib/i18n'
 import { ThemeProvider } from '@/lib/theme'
-import { ProfileProvider } from '@/lib/profile'
-import MyProfile from '@/pages/MyProfile'
 import About from '@/pages/About'
 import { Login, Register } from '@/pages/Auth'
 import EventDetail from '@/pages/EventDetail'
@@ -40,7 +38,6 @@ export default function App() {
   return (
     <ThemeProvider>
       <I18nProvider>
-      <ProfileProvider>
         <MotionConfig reducedMotion="user">
           <TooltipProvider>
             <ToastProvider>
@@ -71,7 +68,6 @@ export default function App() {
                     <Route path="/about" element={<About />} />
                     <Route path="/login" element={<Login />} />
                     <Route path="/register" element={<Register />} />
-                    <Route path="/account/profile" element={<MyProfile />} />
                     <Route path="*" element={<NotFound />} />
                   </Routes>
                 </motion.main>
@@ -81,7 +77,6 @@ export default function App() {
             </ToastProvider>
           </TooltipProvider>
         </MotionConfig>
-      </ProfileProvider>
       </I18nProvider>
     </ThemeProvider>
   )

@@ -317,8 +317,8 @@ export function Testimonials() {
             ))}
           </div>
           <div className="mt-6 flex justify-center gap-3">
-            <button onClick={() => scroll(-1)} className="grid size-11 place-items-center rounded-full border border-white/20 bg-white/5 backdrop-blur transition hover:bg-white/15" aria-label="Previous"><ChevronLeft className="size-5" /></button>
-            <button onClick={() => scroll(1)} className="grid size-11 place-items-center rounded-full border border-white/20 bg-white/5 backdrop-blur transition hover:bg-white/15" aria-label="Next"><ChevronRight className="size-5" /></button>
+            <button onClick={() => scroll(-1)} className="grid size-11 place-items-center rounded-full border border-white/20 bg-white/5 backdrop-blur transition hover:bg-white/15" aria-label={t.ui.previous}><ChevronLeft className="size-5" /></button>
+            <button onClick={() => scroll(1)} className="grid size-11 place-items-center rounded-full border border-white/20 bg-white/5 backdrop-blur transition hover:bg-white/15" aria-label={t.ui.next}><ChevronRight className="size-5" /></button>
           </div>
         </div>
       </div>

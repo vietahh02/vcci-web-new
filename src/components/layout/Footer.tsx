@@ -58,7 +58,7 @@ export function Footer() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="email@company.com"
-              aria-label="Email"
+              aria-label={t.supplier.email}
               className="h-10 min-w-0 flex-1 rounded-lg border bg-background px-3 text-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/12"
             />
             <button type="submit" className="inline-flex h-10 items-center gap-1 rounded-lg bg-primary px-3 text-sm font-semibold text-primary-foreground hover:bg-primary-hover" aria-label={t.footer.subscribe}>

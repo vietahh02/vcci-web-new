@@ -62,7 +62,7 @@ export function ChatWidget() {
                   <p className="font-bold">{t.chat.title}</p>
                   <p className="flex items-center gap-1.5 text-xs text-white/70"><span className="size-1.5 rounded-full bg-emerald-400" /> {t.chat.online}</p>
                 </div>
-                <button onClick={() => setOpen(false)} className="rounded-md p-1.5 hover:bg-white/10" aria-label="Close"><X className="size-4" /></button>
+                <button onClick={() => setOpen(false)} className="rounded-md p-1.5 hover:bg-white/10" aria-label={t.ui.close}><X className="size-4" /></button>
               </div>
               <div className="relative mt-3 inline-flex rounded-lg bg-white/10 p-0.5">
                 {(['support', 'b2b'] as const).map((c) => (
@@ -111,7 +111,7 @@ export function ChatWidget() {
               className="flex items-center gap-2 border-t p-3"
             >
               <input value={text} onChange={(e) => setText(e.target.value)} placeholder={t.chat.say} aria-label={t.chat.say} className="h-10 flex-1 rounded-xl border bg-background px-3 text-sm outline-none focus:border-primary" />
-              <button type="submit" className="grid size-10 place-items-center rounded-xl bg-primary text-primary-foreground transition hover:bg-primary-hover active:scale-95" aria-label="Send">
+              <button type="submit" className="grid size-10 place-items-center rounded-xl bg-primary text-primary-foreground transition hover:bg-primary-hover active:scale-95" aria-label={t.ui.send}>
                 <Send className="size-4" />
               </button>
             </form>
@@ -128,7 +128,7 @@ export function ChatWidget() {
               exit={{ opacity: 0, scale: 0.6 }}
               onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
               className="grid size-11 place-items-center rounded-full border bg-background shadow-lg transition hover:-translate-y-0.5"
-              aria-label="Back to top"
+              aria-label={t.ui.backToTop}
             >
               <ArrowUp className="size-4" />
             </motion.button>

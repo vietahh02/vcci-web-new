@@ -13,7 +13,7 @@ import { useI18n } from '@/lib/i18n'
 import { cn, daysLeft, formatDate, formatMoney, formatNumber } from '@/lib/utils'
 
 export default function Requests() {
-  const { t, L, locale } = useI18n()
+  const { t, L, lang, locale } = useI18n()
   const [params] = useSearchParams()
   const [cat, setCat] = useState('')
   const [list, setList] = useState<ImportRequest[] | null>(null)
@@ -27,7 +27,7 @@ export default function Requests() {
     return () => {
       alive = false
     }
-  }, [cat])
+  }, [cat, lang])
 
   useEffect(() => {
     if (params.get('post') === '1') setTimeout(() => formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 400)
@@ -40,7 +40,7 @@ export default function Requests() {
       <section className="relative overflow-hidden border-b bg-gradient-to-br from-gold-soft/80 via-background to-primary-soft/60">
         <div className="container-page grid gap-10 py-12 lg:grid-cols-[minmax(0,1fr)_460px] lg:py-16">
           <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} className="lg:pt-6">
-            <nav aria-label="Breadcrumb" className="text-[13px] text-muted-foreground">
+            <nav aria-label={t.ui.breadcrumb} className="text-[13px] text-muted-foreground">
               <Link to="/" className="hover:text-foreground">{t.common.home}</Link> / <span className="text-foreground">{t.nav.requests}</span>
             </nav>
             <h1 className="mt-4 text-4xl font-extrabold tracking-tight text-balance md:text-5xl">{t.requests.title}</h1>
@@ -141,14 +141,14 @@ function PostForm() {
             toast({ kind: 'success', title: t.requests.posted })
           }}
         >
-          <Field label={t.requests.name} htmlFor="pr-name" className="sm:col-span-2"><Input id="pr-name" required placeholder="Frozen shrimp HOSO 26/30" /></Field>
+          <Field label={t.requests.name} htmlFor="pr-name" className="sm:col-span-2"><Input id="pr-name" required placeholder={t.ui.requestNamePh} /></Field>
           <Field label={t.requests.category} htmlFor="pr-cat">
             <Select id="pr-cat" required defaultValue="">
               <option value="" disabled>—</option>
               {categories.map((c) => <option key={c.id} value={c.id}>{L(c.categoryName)}</option>)}
             </Select>
           </Field>
-          <Field label={t.requests.address} htmlFor="pr-addr"><Input id="pr-addr" required placeholder="Busan Port" /></Field>
+          <Field label={t.requests.address} htmlFor="pr-addr"><Input id="pr-addr" required placeholder={t.ui.addressPh} /></Field>
           <div className="grid grid-cols-[minmax(0,1fr)_88px] gap-2">
             <Field label={t.requests.quantity} htmlFor="pr-qty"><Input id="pr-qty" type="number" min={1} required /></Field>
             <Field label={t.requests.unit} htmlFor="pr-unit"><Select id="pr-unit" defaultValue="MT"><option>MT</option><option>kg</option><option>pcs</option><option>set</option></Select></Field>

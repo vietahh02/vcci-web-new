@@ -5,6 +5,7 @@ import * as TooltipPrimitive from '@radix-ui/react-tooltip'
 import { AnimatePresence, motion } from 'motion/react'
 import { CheckCircle2, Info, X } from 'lucide-react'
 import { createContext, useCallback, useContext, useState, type ReactNode } from 'react'
+import { useI18n } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
 
 /* ---------------------------------------------------------------- Dialog */
@@ -23,6 +24,7 @@ export function DialogContent({
   title: string
   description?: string
 }) {
+  const { t } = useI18n()
   return (
     <DialogPrimitive.Portal>
       <DialogPrimitive.Overlay className="fixed inset-0 z-[80] bg-navy/55 backdrop-blur-[3px] data-[state=open]:animate-[fade-in_.2s_ease-out]" />
@@ -41,7 +43,7 @@ export function DialogContent({
               <DialogPrimitive.Description className="sr-only">{title}</DialogPrimitive.Description>
             )}
           </div>
-          <DialogPrimitive.Close className="-mr-2 rounded-md p-2 text-muted-foreground transition hover:bg-muted hover:text-foreground" aria-label="Close">
+          <DialogPrimitive.Close className="-mr-2 rounded-md p-2 text-muted-foreground transition hover:bg-muted hover:text-foreground" aria-label={t.ui.close}>
             <X className="size-4" />
           </DialogPrimitive.Close>
         </div>
@@ -65,6 +67,7 @@ export function SheetContent({
   side?: 'right' | 'left'
   className?: string
 }) {
+  const { t } = useI18n()
   return (
     <DialogPrimitive.Portal>
       <DialogPrimitive.Overlay className="fixed inset-0 z-[80] bg-navy/50 backdrop-blur-[2px] data-[state=open]:animate-[fade-in_.2s_ease-out]" />
@@ -82,7 +85,7 @@ export function SheetContent({
               {description ?? title}
             </DialogPrimitive.Description>
           </div>
-          <DialogPrimitive.Close className="-mr-2 rounded-md p-2 text-muted-foreground hover:bg-muted" aria-label="Close">
+          <DialogPrimitive.Close className="-mr-2 rounded-md p-2 text-muted-foreground hover:bg-muted" aria-label={t.ui.close}>
             <X className="size-4" />
           </DialogPrimitive.Close>
         </div>

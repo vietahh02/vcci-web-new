@@ -122,7 +122,7 @@ function Hero() {
             </StaggerItem>
           ))}
         </Stagger>
-        <button onClick={toggleVideo} className="hidden size-11 shrink-0 place-items-center rounded-full border border-white/25 bg-white/10 backdrop-blur transition hover:bg-white/20 md:grid" aria-label={playing ? 'Pause video' : 'Play video'}>
+        <button onClick={toggleVideo} className="hidden size-11 shrink-0 place-items-center rounded-full border border-white/25 bg-white/10 backdrop-blur transition hover:bg-white/20 md:grid" aria-label={playing ? t.ui.pauseVideo : t.ui.playVideo}>
           {playing ? <Pause className="size-4" /> : <Play className="size-4" />}
         </button>
       </div>
@@ -240,7 +240,7 @@ function SourcingDock() {
             <Input className="mt-3 h-9" placeholder={t.home.dock.whatNeed} value={need} onChange={(e) => setNeed(e.target.value)} aria-label={t.home.dock.whatNeed} />
             <div className="mt-2 grid grid-cols-[1fr_90px] gap-2">
               <Input className="h-9" type="number" min={1} placeholder={t.home.dock.qty} value={qty} onChange={(e) => setQty(e.target.value)} aria-label={t.home.dock.qty} />
-              <Select className="h-9" aria-label="Unit" defaultValue="MT">
+              <Select className="h-9" aria-label={t.common.unit} defaultValue="MT">
                 <option>MT</option><option>kg</option><option>pcs</option><option>set</option>
               </Select>
             </div>

@@ -15,12 +15,18 @@ import { cn, formatMoney, formatNumber, img } from '@/lib/utils'
 
 export default function ProductDetail() {
   const { id = '' } = useParams()
+  const { lang } = useI18n()
   const [product, setProduct] = useState<Product | null | undefined>(undefined)
 
   useEffect(() => {
     setProduct(undefined)
     getProduct(id).then(setProduct)
   }, [id])
+
+  // refetch BE-localized content on language switch, without the skeleton flash
+  useEffect(() => {
+    getProduct(id).then(setProduct)
+  }, [lang]) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (product === undefined) return <DetailSkeleton />
   if (product === null) return <NotFound />
@@ -40,7 +46,7 @@ function ProductView({ product }: { product: Product }) {
 
   return (
     <div className="container-page pt-6">
-      <nav aria-label="Breadcrumb" className="mb-5 flex flex-wrap items-center gap-1.5 text-[13px] text-muted-foreground">
+      <nav aria-label={t.ui.breadcrumb} className="mb-5 flex flex-wrap items-center gap-1.5 text-[13px] text-muted-foreground">
         <Link to="/" className="hover:text-foreground">{t.common.home}</Link> /
         <Link to="/search" className="hover:text-foreground">{t.nav.products}</Link> /
         {category && <><Link to={`/search?category=${category.id}`} className="hover:text-foreground">{L(category.categoryName)}</Link> /</>}
@@ -160,7 +166,7 @@ function ProductView({ product }: { product: Product }) {
                 {tab === 'specs' && (
                   <dl className="divide-y rounded-xl border">
                     {[
-                      { label: 'Mã sản phẩm / Code', value: product.productCode },
+                      { label: t.ui.productCode, value: product.productCode },
                       { label: t.searchPage.category, value: category ? L(category.categoryName) : product.industry },
                       { label: t.common.origin, value: product.origin },
                       { label: t.common.unit, value: product.unit },
