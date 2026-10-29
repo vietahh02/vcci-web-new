@@ -97,7 +97,7 @@ export default function EventDetail() {
                 </span>
                 <p className="font-mono text-xs font-semibold text-primary">{a.agendaStartTime} – {a.agendaEndTime}</p>
                 <p className="mt-1 font-semibold">{L(a.agendaTitle)}</p>
-                {a.speaker && <p className="mt-1 text-sm text-muted-foreground">{a.speaker}</p>}
+                {a.speaker && <p className="mt-1 text-sm text-muted-foreground">{L(a.speaker)}</p>}
               </motion.li>
             ))}
           </ol>
