@@ -1,7 +1,9 @@
 import { AnimatePresence, motion } from 'motion/react'
 import { ArrowLeft, ArrowRight, Check, Eye, EyeOff, Quote, RefreshCw } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { useProfile } from '@/lib/profile'
+import { tx } from '@/lib/tx'
 import { categories } from '@/data/mock'
 import { Logo } from '@/components/brand'
 import { CountUp } from '@/components/effects'
@@ -78,6 +80,8 @@ export function Login() {
   const { t } = useI18n()
   const toast = useToast()
   const navigate = useNavigate()
+  const { signIn } = useProfile()
+  const [params] = useSearchParams()
   return (
     <AuthShell>
       <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
@@ -88,7 +92,8 @@ export function Login() {
           onSubmit={(e) => {
             e.preventDefault()
             toast({ kind: 'success', title: t.auth.loginTitle, description: t.common.demoNote })
-            navigate('/')
+            signIn()
+            navigate(params.get('return') ?? '/account/profile')
           }}
         >
           <Field label={t.auth.email} htmlFor="email"><Input id="email" type="email" required autoComplete="email" placeholder="export@company.vn" /></Field>
@@ -116,6 +121,9 @@ export function Register() {
   const [step, setStep] = useState(0)
   const [dir, setDir] = useState(1)
   const [done, setDone] = useState(false)
+  const [company, setCompany] = useState({ name: '', tax: '' })
+  const { signIn } = useProfile()
+  const navigate = useNavigate()
   const go = (n: number) => {
     setDir(n > step ? 1 : -1)
     setStep(n)
@@ -130,7 +138,13 @@ export function Register() {
           </motion.div>
           <h1 className="mt-6 text-2xl font-extrabold">{t.auth.submitted}</h1>
           <p className="mt-2 text-muted-foreground">{t.auth.submittedDesc}</p>
-          <Link to="/" className="mt-8 inline-flex h-11 items-center gap-2 rounded-xl bg-primary px-5 font-semibold text-primary-foreground">{t.common.home} <ArrowRight className="size-4" /></Link>
+          <div className="mt-8 flex flex-col items-center gap-3">
+            <button onClick={() => { signIn({ companyName: company.name, taxCode: company.tax }, true); navigate('/account/profile') }} className="inline-flex h-11 items-center gap-2 rounded-xl bg-primary px-5 font-semibold text-primary-foreground">
+              {tx('Hoàn thiện hồ sơ năng lực', 'Complete your capability profile', '역량 프로필 완성하기')} <ArrowRight className="size-4" />
+            </button>
+            <p className="max-w-sm text-xs text-muted-foreground">{tx('Khai một lần, dùng để đăng ký mọi sự kiện mà không phải điền lại. Có thể làm sau.', 'Fill it once and register for any event without retyping. You can do this later.', '한 번 입력하면 다시 입력하지 않고 모든 행사에 신청할 수 있습니다. 나중에 해도 됩니다.')}</p>
+            <Link to="/" className="text-sm font-semibold text-primary">{t.common.home}</Link>
+          </div>
         </motion.div>
       ) : (
         <>
@@ -151,6 +165,10 @@ export function Register() {
             className="mt-6 overflow-hidden"
             onSubmit={(e) => {
               e.preventDefault()
+              if (step === 0) {
+                const f = e.currentTarget as HTMLFormElement
+                setCompany({ name: (f.querySelector('#bn') as HTMLInputElement)?.value ?? '', tax: (f.querySelector('#tax') as HTMLInputElement)?.value ?? '' })
+              }
               if (step < 2) go(step + 1)
               else setDone(true)
             }}

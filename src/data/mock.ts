@@ -5,6 +5,7 @@
  * All companies and people here are fictional.
  */
 import type { Bilingual } from '@/lib/i18n'
+import type { SectionKey } from '@/lib/profile'
 
 export const IMG = {
   coffeeBeans: '1447933601403-0c6688de566e',
@@ -572,7 +573,7 @@ export const importRequests: ImportRequest[] = [
 ]
 
 /* ------------------------------------------------------------ events */
-export type EventType = 'WEBINAR' | 'LIVESTREAM'
+export type EventType = 'WEBINAR' | 'LIVESTREAM' | 'MATCHMAKING'
 export type EventStatus = 'UPCOMING' | 'ONGOING' | 'ENDED'
 
 export interface EventAgendaOption { agendaStartTime: string; agendaEndTime: string; agendaTitle: Bilingual; speaker?: Bilingual | string }
@@ -597,9 +598,93 @@ export interface EventItem {
   location: Bilingual
   agendaOptions: EventAgendaOption[]
   viewers?: number
+  /** B2B extensions (from VCCI event forms) */
+  series?: Bilingual
+  partner?: Bilingual
+  targetMarket?: Bilingual
+  eligibility?: Bilingual[]
+  requiredSections?: SectionKey[]
+  registrationDeadline?: string
+  quota?: number
+  contact?: { name: string; phone: string; email: string; zalo?: string }
+  speakers?: { name: string; title: Bilingual; org: Bilingual }[]
+  topics?: Bilingual[]
+  questions?: { id: string; label: Bilingual; options?: Bilingual[] }[]
 }
 
 export const events: EventItem[] = [
+  {
+    id: 'e-giz-eu', eventType: 'MATCHMAKING', eventStatus: 'UPCOMING', coverImage: IMG.handshake,
+    title: { vi: 'Kết nối giao thương doanh nghiệp Việt Nam – CHLB Đức & châu Âu', en: 'Vietnam – Germany & EU Business Matchmaking', ko: '베트남 – 독일 & 유럽 비즈니스 매칭' },
+    introduction: {
+      vi: 'VCCI xét chọn hồ sơ và chắp mối trực tuyến doanh nghiệp Việt Nam với doanh nghiệp Đức, châu Âu phù hợp. Thực hiện với sự hỗ trợ của Tổ chức Hợp tác Quốc tế Đức (GIZ).',
+      en: 'VCCI screens profiles and arranges online meetings between Vietnamese companies and suitable German and EU partners, supported by GIZ.',
+      ko: 'VCCI가 기업 프로필을 심사하여 베트남 기업과 적합한 독일·유럽 기업 간 온라인 미팅을 주선합니다. 독일국제협력공사(GIZ)의 지원으로 진행됩니다.',
+    },
+    startDate: day(34, 9), endDate: day(150, 17), startTime: '09:00', endTime: '17:00', industry: ['Food', 'Packaging', 'Cosmetics', 'Handicraft', 'Machinery', 'Electronics'],
+    participationFee: 0, participationFeeCurrency: 'VND', registeredSlots: 64, maxSlots: 100,
+    organizedBy: { vi: 'VCCI', en: 'VCCI', ko: 'VCCI' }, location: { vi: 'Trực tuyến (chắp mối 1-1)', en: 'Online (1-on-1 meetings)', ko: '온라인 (1:1 미팅)' },
+    partner: { vi: 'Tổ chức Hợp tác Quốc tế Đức (GIZ)', en: 'Deutsche Gesellschaft für Internationale Zusammenarbeit (GIZ)', ko: '독일국제협력공사 (GIZ)' },
+    targetMarket: { vi: 'CHLB Đức & châu Âu', en: 'Germany & EU', ko: '독일 & 유럽' },
+    registrationDeadline: day(32, 23), quota: 100,
+    eligibility: [
+      { vi: 'Doanh nghiệp Việt Nam có sản phẩm thuộc 6 lĩnh vực ưu tiên', en: 'Vietnamese companies in the 6 priority sectors', ko: '6대 우선 분야의 제품을 보유한 베트남 기업' },
+      { vi: 'Có năng lực cung ứng cho đơn hàng xuất khẩu', en: 'Able to supply export orders', ko: '수출 주문에 대한 공급 능력 보유' },
+      { vi: 'Hồ sơ năng lực và nhu cầu hợp tác đầy đủ trên VCCI Trade Hub', en: 'Complete capability and needs profile on VCCI Trade Hub', ko: 'VCCI Trade Hub에 역량 및 협력 수요 프로필을 완성한 기업' },
+    ],
+    requiredSections: ['general', 'capability', 'exports', 'finance', 'needs', 'consent'],
+    contact: { name: 'Chị Thành', phone: '0912 933 834', email: 'thanhltk@vcci.com.vn', zalo: '0912 933 834' },
+    agendaOptions: [
+      { agendaStartTime: 'B1', agendaEndTime: '', agendaTitle: { vi: 'Đăng ký & hoàn thiện hồ sơ (đến hạn đăng ký)', en: 'Registration & profile completion (until deadline)', ko: '신청 및 프로필 완성 (신청 마감일까지)' } },
+      { agendaStartTime: 'B2', agendaEndTime: '', agendaTitle: { vi: 'VCCI & GIZ xét chọn, ghép đối tác phù hợp', en: 'VCCI & GIZ screen and match partners', ko: 'VCCI & GIZ 심사 및 파트너 매칭' } },
+      { agendaStartTime: 'B3', agendaEndTime: '', agendaTitle: { vi: 'Gặp gỡ trực tuyến 1-1 (12/2026 – 03/2027)', en: 'Online 1-on-1 meetings (Dec 2026 – Mar 2027)', ko: '온라인 1:1 미팅 (2026년 12월 – 2027년 3월)' } },
+      { agendaStartTime: 'B4', agendaEndTime: '', agendaTitle: { vi: 'Theo dõi kết quả & hỗ trợ sau kết nối', en: 'Follow-up & post-meeting support', ko: '결과 모니터링 및 매칭 후 지원' } },
+    ],
+    questions: [
+      { id: 'q-expect', label: { vi: 'Đề xuất hoặc nhu cầu cụ thể khi trao đổi với doanh nghiệp Đức, châu Âu', en: 'Specific proposals or needs for German / EU partners', ko: '독일·유럽 기업과의 협의를 위한 구체적 제안 또는 요구 사항' } },
+    ],
+  },
+  {
+    id: 'e-eu-talk18', eventType: 'WEBINAR', eventStatus: 'UPCOMING', coverImage: IMG.discussion,
+    title: { vi: 'Tiếp cận thị trường châu Âu: Các yêu cầu và khuyến nghị cho doanh nghiệp', en: 'Entering the EU market: requirements and recommendations', ko: '유럽 시장 진출: 기업을 위한 요건과 권고' },
+    introduction: {
+      vi: 'Buổi trò chuyện trực tuyến về cơ hội và yêu cầu của thị trường châu Âu, kinh nghiệm thực tiễn đáp ứng yêu cầu nhà mua hàng, cùng gợi ý cho doanh nghiệp.',
+      en: 'An online talk on EU market opportunities and requirements, practical experience meeting buyer demands, and recommendations.',
+      ko: '유럽 시장의 기회와 요건, 바이어 요구 충족을 위한 실무 경험, 기업을 위한 제언을 다루는 온라인 대담입니다.',
+    },
+    startDate: day(1, 20), endDate: day(1, 22), startTime: '20:00', endTime: '22:00', industry: ['Multi-industry'],
+    participationFee: 0, participationFeeCurrency: 'VND', registeredSlots: 268, maxSlots: 500,
+    organizedBy: { vi: 'VCCI', en: 'VCCI', ko: 'VCCI' }, location: { vi: 'Trực tuyến qua Zoom', en: 'Online via Zoom', ko: 'Zoom 온라인' },
+    series: { vi: 'Trò chuyện Doanh nghiệp số 18', en: 'Business Talk #18', ko: '기업 대담 제18회' },
+    targetMarket: { vi: 'Liên minh châu Âu', en: 'European Union', ko: '유럽연합' },
+    requiredSections: ['general', 'attendees', 'consent'],
+    contact: { name: 'Ban Tổ chức', phone: '0912 933 834', email: 'thanhltk@vcci.com.vn' },
+    topics: [
+      { vi: 'Cơ hội và yêu cầu của thị trường châu Âu', en: 'EU market opportunities and requirements', ko: '유럽 시장의 기회와 요건' },
+      { vi: 'Kinh nghiệm thực tiễn tiếp cận thị trường, đáp ứng yêu cầu nhà mua hàng', en: 'Practical experience meeting buyer requirements', ko: '시장 진출 및 바이어 요구 충족 실무 경험' },
+      { vi: 'Một số gợi ý cho doanh nghiệp', en: 'Recommendations for businesses', ko: '기업을 위한 제언' },
+    ],
+    speakers: [
+      { name: 'Nguyễn Thị Hoàng Thúy', title: { vi: 'Tham tán Thương mại', en: 'Trade Counsellor', ko: '상무참사관' }, org: { vi: 'Thương vụ Việt Nam tại Thụy Điển (kiêm Đan Mạch, Na Uy, Iceland, Latvia)', en: 'Vietnam Trade Office in Sweden (also DK, NO, IS, LV)', ko: '주스웨덴 베트남 무역대표부 (덴마크·노르웨이·아이슬란드·라트비아 겸임)' } },
+      { name: 'Trần Văn Hiếu', title: { vi: 'Nhà sáng lập kiêm CEO', en: 'Founder & CEO', ko: '창업자 겸 CEO' }, org: { vi: 'Công ty DACE', en: 'DACE', ko: 'DACE' } },
+    ],
+    agendaOptions: [
+      { agendaStartTime: '20:00', agendaEndTime: '20:45', agendaTitle: { vi: 'Cơ hội và yêu cầu của thị trường châu Âu', en: 'EU opportunities and requirements', ko: '유럽 시장의 기회와 요건' }, speaker: 'Nguyễn Thị Hoàng Thúy' },
+      { agendaStartTime: '20:45', agendaEndTime: '21:30', agendaTitle: { vi: 'Kinh nghiệm thực tiễn đáp ứng nhà mua hàng', en: 'Meeting buyer requirements in practice', ko: '바이어 요구 충족 실무 경험' }, speaker: 'Trần Văn Hiếu' },
+      { agendaStartTime: '21:30', agendaEndTime: '22:00', agendaTitle: { vi: 'Hỏi đáp', en: 'Q&A', ko: '질의응답' } },
+    ],
+    questions: [
+      {
+        id: 'q-expect', label: { vi: 'Kỳ vọng lớn nhất sau buổi trò chuyện', en: 'Your main expectation', ko: '이번 대담에 대한 가장 큰 기대' },
+        options: [
+          { vi: 'Nắm được quy định, yêu cầu của thị trường châu Âu', en: 'Understand EU rules and requirements', ko: '유럽 시장의 규정과 요건 파악' },
+          { vi: 'Tìm đầu mối hỗ trợ, cơ hội hợp tác', en: 'Find support contacts and partners', ko: '지원 창구 및 협력 기회 발굴' },
+          { vi: 'Được diễn giả tư vấn vướng mắc cụ thể', en: 'Get advice on specific issues', ko: '연사에게 구체적인 애로 사항 자문' },
+        ],
+      },
+      { id: 'q-speaker', label: { vi: 'Câu hỏi dành cho diễn giả', en: 'Question for the speakers', ko: '연사에게 하는 질문' } },
+    ],
+  },
   {
     id: 'e-krfood', eventType: 'LIVESTREAM', eventStatus: 'ONGOING', coverImage: IMG.stage,
     title: { vi: 'Livestream kết nối giao thương Việt Nam – Hàn Quốc ngành thực phẩm 2026', en: 'Vietnam – Korea Food Trade Matching Livestream 2026', ko: '2026 베트남–한국 식품 무역 매칭 라이브' },

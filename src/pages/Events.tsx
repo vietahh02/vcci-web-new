@@ -51,6 +51,7 @@ export default function Events() {
               { value: 'ALL', label: t.searchPage.all },
               { value: 'WEBINAR', label: t.events.type.WEBINAR },
               { value: 'LIVESTREAM', label: t.events.type.LIVESTREAM },
+              { value: 'MATCHMAKING', label: t.events.type.MATCHMAKING },
             ]}
           />
         </div>
