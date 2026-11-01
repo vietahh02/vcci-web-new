@@ -12,7 +12,7 @@ export function Logo({ className, compact }: { className?: string; compact?: boo
     <Link to="/" className={cn('flex items-center gap-2.5', className)} aria-label="VCCI Trade Hub">
       <img src="/imgs/lg1.png" alt="VCCI" className="h-7 w-auto dark:brightness-125 md:h-8" />
       {!compact && (
-        <span className="hidden border-l border-border pl-2.5 leading-none sm:block">
+        <span className="hidden whitespace-nowrap border-l border-border pl-2.5 leading-none sm:block">
           <span className="block text-[13px] font-extrabold tracking-tight text-foreground">TRADE HUB</span>
           <span className="block text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">B2B Portal</span>
         </span>

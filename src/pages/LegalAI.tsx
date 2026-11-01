@@ -129,7 +129,7 @@ export default function LegalAI() {
             e.preventDefault()
             ask(text)
           }}
-          className="container-page max-w-4xl"
+          className="container-page max-w-4xl max-sm:pr-[84px] sm:max-xl:pr-[96px]"
         >
           <div className="border-spin flex items-end gap-2 rounded-2xl border bg-card p-2 shadow-xl shadow-navy/10">
             <textarea

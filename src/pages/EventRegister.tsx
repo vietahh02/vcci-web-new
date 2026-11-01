@@ -8,15 +8,19 @@ import { AnimatePresence, motion } from 'motion/react'
 import { ArrowLeft, ArrowRight, BadgeCheck, CalendarDays, CalendarPlus, Check, Copy, FileUp, Gift, Handshake, Info, MapPin, Printer, Sparkles, Ticket, Users } from 'lucide-react'
 import { useMemo, useState, type ReactNode } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { getEvent } from '@/api'
+import { invalidate, liveApi, USE_MOCK, useEvent } from '@/api'
+import type { RegistrationResult } from '@/api/adapters/event'
+import { ErrorBlock, LoadingBlock } from '@/components/ui/StateViews'
 import { categories, type EventItem } from '@/data/mock'
-import { getProgramme } from '@/data/schedules'
+import { useEventProgramme } from '@/api/eventApi'
 import { ProfileRegistration } from '@/components/event/ProfileRegistration'
 import { Confetti, FakeQr } from '@/components/event/visuals'
 import { useToast } from '@/components/ui/overlay'
-import { Button, buttonClass, Field, Input, Select, Textarea } from '@/components/ui/primitives'
+import { Button, buttonClass, Field, Input, Textarea } from '@/components/ui/primitives'
+import { Select } from '@/components/ui/select'
 import NotFound from '@/pages/NotFound'
 import { useI18n, type Bilingual } from '@/lib/i18n'
+import { markRegistered } from '@/lib/eventUser'
 import { useProfile } from '@/lib/profile'
 import { tx } from '@/lib/tx'
 import { cn, formatDate, formatMoney, img } from '@/lib/utils'
@@ -42,12 +46,14 @@ type Form = {
   salutation: string; firstName: string; lastName: string; jobTitle: string; department: string; email: string; country: string; phone: string
   company: string; taxCode: string; companyCountry: string; city: string; website: string; businessType: string; staff: string; volume: string
   interests: string[]; role: string; purposes: string[]; meetSlots: string[]; answers: Record<string, string>
-  news: boolean; terms: boolean
+  news: boolean; terms: boolean; publicListing: boolean
 }
 
 export default function EventRegister() {
   const { id = '' } = useParams()
-  const ev = getEvent(id)
+  const { data: ev, loading, error, reload } = useEvent(id)
+  if (loading) return <LoadingBlock />
+  if (error) return <ErrorBlock error={error} onRetry={reload} />
   if (!ev) return <NotFound />
   return <RegisterFlow ev={ev} />
 }
@@ -56,13 +62,18 @@ function RegisterFlow({ ev }: { ev: EventItem }) {
   const { t, L, locale } = useI18n()
   const toast = useToast()
   const { session, profile, register } = useProfile()
-  const programme = getProgramme(ev.id)
+  const programme = useEventProgramme(ev).data ?? null
   const paid = ev.participationFee > 0
   const matchmaking = ev.eventType === 'MATCHMAKING'
   const steps = [tx('Thông tin đăng ký', 'Registration details', '등록 정보'), ...(paid ? [tx('Thanh toán', 'Payment', '결제')] : []), tx('Thẻ tham dự', 'Your badge', '참가 배지')]
   const [step, setStep] = useState(0)
   const [proof, setProof] = useState<string | null>(null)
-  const regCode = useMemo(() => `VCCI-${ev.id.replace('e-', '').toUpperCase()}-${String(Math.abs([...ev.id].reduce((h, c) => (h * 31 + c.charCodeAt(0)) | 0, 7)) % 100000).padStart(5, '0')}`, [ev.id])
+  const [proofFile, setProofFile] = useState<File | null>(null)
+  const [reg, setReg] = useState<RegistrationResult | null>(null)
+  const [busy, setBusy] = useState(false)
+  const mockCode = useMemo(() => `VCCI-${ev.id.replace('e-', '').toUpperCase()}-${String(Math.abs([...ev.id].reduce((h, c) => (h * 31 + c.charCodeAt(0)) | 0, 7)) % 100000).padStart(5, '0')}`, [ev.id])
+  // live: the registration code is issued by the BE (also the bank-transfer memo)
+  const regCode = reg?.regCode || mockCode
   const allDates = programme ? programme.phases.flatMap((p) => p.dates) : [ev.startDate.slice(0, 10)]
 
   const person = profile.attendees[0]
@@ -76,15 +87,50 @@ function RegisterFlow({ ev }: { ev: EventItem }) {
     salutation: 'Mr.', firstName: person?.name.split(' ').slice(-1).join(' ') ?? '', lastName: person?.name.split(' ').slice(0, -1).join(' ') ?? '',
     jobTitle: person?.title ?? profile.general.contactTitle, department: '', email: person?.email ?? profile.general.contactEmail, country: 'VN', phone: person?.phone ?? profile.general.contactPhone,
     company: session ? profile.general.nameVi || session.companyName : '', taxCode: profile.general.taxCode, companyCountry: 'VN', city: '', website: profile.general.channels.split(',')[0]?.trim() ?? '',
-    businessType: '', staff: '', volume: '', interests: [], role: '', purposes: [], meetSlots: [], answers: {}, news: true, terms: false,
+    businessType: '', staff: '', volume: '', interests: [], role: '', purposes: [], meetSlots: [], answers: {}, news: true, terms: false, publicListing: false,
   }))
   const set = <K extends keyof Form>(k: K, v: Form[K]) => setF((x) => ({ ...x, [k]: v }))
   const toggle = (k: 'dates' | 'interests' | 'purposes' | 'meetSlots', v: string) => setF((x) => ({ ...x, [k]: x[k].includes(v) ? x[k].filter((y) => y !== v) : [...x[k], v] }))
   const region = useMemo(() => new Intl.DisplayNames([locale], { type: 'region' }), [locale])
   const interestOptions: Bilingual[] = programme ? programme.phases.flatMap((p) => p.categories) : categories.map((c) => c.categoryName)
 
+  const fail = (err: Error) => {
+    setBusy(false)
+    toast({ kind: 'info', title: err.message })
+  }
+  /** Leave step 0: live mode creates the registration on the BE first (its code is needed for payment), mock keeps the local flow. */
+  const proceed = (override: Partial<Form> = {}, via?: { answers: Record<string, string>; attendeeIds: string[] }) => {
+    if (USE_MOCK) {
+      if (paid) { setStep(1); window.scrollTo({ top: 0, behavior: 'smooth' }) } else finish(override)
+      return
+    }
+    const g = { ...f, ...override }
+    const profileMode = matchmaking || (!!session && !detailed)
+    setBusy(true)
+    liveApi.registerForEvent({
+      eventId: ev.id,
+      mode: profileMode ? 'PROFILE' : 'FORM',
+      idempotencyKey: `${ev.id}-${crypto.randomUUID()}`,
+      ...(profileMode
+        ? { attendeeIds: via?.attendeeIds ?? [attendeeId], answers: via?.answers ?? g.answers }
+        : { form: { ...g, companyCountry: g.companyCountry, terms: g.terms } as unknown as Record<string, unknown>, answers: g.answers }),
+    }).then((r) => {
+      setBusy(false)
+      setReg(r)
+      if (r.needPayment && paid) { setStep(1); window.scrollTo({ top: 0, behavior: 'smooth' }) } else finish(override)
+    }, fail)
+  }
+  /** Payment step "submit": upload the receipt to the registration (live), then show the badge. */
+  const submitPayment = () => {
+    if (USE_MOCK || !reg || !proofFile) return finish()
+    setBusy(true)
+    liveApi.uploadRegistrationPayment(reg.id, proofFile, reg.accessToken).then(() => { setBusy(false); finish() }, fail)
+  }
+
   const finish = (override: Partial<Form> = {}) => {
     const g = { ...f, ...override }
+    markRegistered(ev.id)
+    if (!USE_MOCK) { invalidate('ev:'); invalidate('events'); invalidate('myreg'); invalidate('evpart:') }
     if (session) register({ eventId: ev.id, attendees: [{ id: 'reg', name: `${g.lastName} ${g.firstName}`.trim(), title: g.jobTitle, email: g.email, phone: g.phone }], answers: g.answers })
     setStep(steps.length - 1)
     toast({ kind: 'success', title: t.events.doneTitle })
@@ -126,7 +172,7 @@ function RegisterFlow({ ev }: { ev: EventItem }) {
             <motion.div key={step} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.25 }}>
               {step === 0 && matchmaking && (
                 <div className="rounded-2xl border bg-card">
-                  <ProfileRegistration ev={ev} onDone={() => (paid ? setStep(1) : finish())} />
+                  <ProfileRegistration ev={ev} onDone={(info) => proceed({}, info)} />
                 </div>
               )}
 
@@ -190,7 +236,7 @@ function RegisterFlow({ ev }: { ev: EventItem }) {
                             const parts = a.name.trim().split(/\s+/)
                             const override: Partial<Form> = { firstName: parts.slice(-1).join(' '), lastName: parts.slice(0, -1).join(' '), jobTitle: a.title, email: a.email, phone: a.phone, company: profile.general.nameVi || session.companyName, terms: true }
                             setF((x) => ({ ...x, ...override }))
-                            if (paid) { setStep(1); window.scrollTo({ top: 0, behavior: 'smooth' }) } else finish(override)
+                            proceed(override)
                           }}
                         >
                           {paid ? tx('Xác nhận & thanh toán', 'Confirm & pay', '확인 후 결제') : tx('Xác nhận đăng ký', 'Confirm registration', '등록 확인')} <ArrowRight />
@@ -208,7 +254,7 @@ function RegisterFlow({ ev }: { ev: EventItem }) {
                   onSubmit={(e) => {
                     e.preventDefault()
                     if (!f.dates.length) return toast({ kind: 'info', title: tx('Chọn ít nhất 1 ngày tham dự', 'Choose at least one day', '참가일을 하나 이상 선택하세요') })
-                    if (paid) { setStep(1); window.scrollTo({ top: 0, behavior: 'smooth' }) } else finish()
+                    proceed()
                   }}
                 >
                   {session ? (
@@ -253,7 +299,7 @@ function RegisterFlow({ ev }: { ev: EventItem }) {
                   <Section n={2} title={tx('Thông tin người đăng ký', 'Your details', '등록자 정보')}>
                     <div className="grid gap-4 sm:grid-cols-[120px_1fr_1fr]">
                       <Field label={tx('Danh xưng', 'Title', '호칭')} htmlFor="r-sal">
-                        <Select id="r-sal" value={f.salutation} onChange={(e) => set('salutation', e.target.value)}>{SALUTATIONS.map((o) => <option key={o.value} value={o.value}>{L(o)}</option>)}</Select>
+                        <Select id="r-sal" value={f.salutation} onValueChange={(v) => set('salutation', v)} options={SALUTATIONS.map((o) => ({ value: o.value, label: L(o) }))} />
                       </Field>
                       <Field label={tx('Họ', 'Last name', '성') + ' *'} htmlFor="r-ln"><Input id="r-ln" required value={f.lastName} onChange={(e) => set('lastName', e.target.value)} /></Field>
                       <Field label={tx('Tên', 'First name', '이름') + ' *'} htmlFor="r-fn"><Input id="r-fn" required value={f.firstName} onChange={(e) => set('firstName', e.target.value)} /></Field>
@@ -261,17 +307,12 @@ function RegisterFlow({ ev }: { ev: EventItem }) {
                     <div className="mt-4 grid gap-4 sm:grid-cols-2">
                       <Field label={tx('Chức danh', 'Job title', '직함') + ' *'} htmlFor="r-jt"><Input id="r-jt" required value={f.jobTitle} onChange={(e) => set('jobTitle', e.target.value)} /></Field>
                       <Field label={tx('Bộ phận', 'Department', '부서')} htmlFor="r-dep">
-                        <Select id="r-dep" value={f.department} onChange={(e) => set('department', e.target.value)}>
-                          <option value="">—</option>
-                          {DEPARTMENTS.map((o) => <option key={o.value} value={o.value}>{L(o)}</option>)}
-                        </Select>
+                        <Select id="r-dep" value={f.department} onValueChange={(v) => set('department', v)} options={[{ value: '', label: '—' }, ...DEPARTMENTS.map((o) => ({ value: o.value, label: L(o) }))]} />
                       </Field>
                       <Field label="Email *" htmlFor="r-em" hint={tx('Thẻ tham dự và link tham gia gửi về email này', 'Your badge and joining link are sent here', '참가 배지와 참여 링크가 이 이메일로 발송됩니다')}><Input id="r-em" type="email" required value={f.email} onChange={(e) => set('email', e.target.value)} /></Field>
                       <Field label={tx('Điện thoại di động', 'Mobile', '휴대폰') + ' *'} htmlFor="r-ph">
                         <div className="flex gap-2">
-                          <Select aria-label={tx('Mã quốc gia', 'Country code', '국가 번호')} className="w-28 shrink-0" value={f.country} onChange={(e) => set('country', e.target.value)}>
-                            {COUNTRIES.map((c) => <option key={c} value={c}>{c} {DIAL[c]}</option>)}
-                          </Select>
+                          <Select aria-label={tx('Mã quốc gia', 'Country code', '국가 번호')} className="w-28 shrink-0" value={f.country} onValueChange={(v) => set('country', v)} options={COUNTRIES.map((c) => ({ value: c, label: `${c} ${DIAL[c]}` }))} />
                           <Input id="r-ph" type="tel" required value={f.phone} onChange={(e) => set('phone', e.target.value)} />
                         </div>
                       </Field>
@@ -282,9 +323,7 @@ function RegisterFlow({ ev }: { ev: EventItem }) {
                     <div className="grid gap-4 sm:grid-cols-2">
                       <Field label={tx('Tên doanh nghiệp', 'Company name', '기업명') + ' *'} htmlFor="r-co" className="sm:col-span-2"><Input id="r-co" required value={f.company} onChange={(e) => set('company', e.target.value)} /></Field>
                       <Field label={tx('Quốc gia / khu vực', 'Country / region', '국가 / 지역') + ' *'} htmlFor="r-cc">
-                        <Select id="r-cc" value={f.companyCountry} onChange={(e) => set('companyCountry', e.target.value)}>
-                          {COUNTRIES.map((c) => <option key={c} value={c}>{region.of(c)}</option>)}
-                        </Select>
+                        <Select id="r-cc" value={f.companyCountry} onValueChange={(v) => set('companyCountry', v)} options={COUNTRIES.map((c) => ({ value: c, label: region.of(c) }))} />
                       </Field>
                       <Field label={tx('Tỉnh / Thành phố', 'City', '도시')} htmlFor="r-city"><Input id="r-city" value={f.city} onChange={(e) => set('city', e.target.value)} /></Field>
                       <Field label="Website" htmlFor="r-web"><Input id="r-web" value={f.website} onChange={(e) => set('website', e.target.value)} placeholder="www.company.com" /></Field>
@@ -294,10 +333,10 @@ function RegisterFlow({ ev }: { ev: EventItem }) {
                     <Chips options={BUSINESS_TYPES} value={f.businessType ? [f.businessType] : []} onToggle={(v) => set('businessType', v)} single />
                     <div className="mt-5 grid gap-4 sm:grid-cols-2">
                       <Field label={tx('Quy mô nhân sự', 'Number of employees', '직원 수')} htmlFor="r-staff">
-                        <Select id="r-staff" value={f.staff} onChange={(e) => set('staff', e.target.value)}><option value="">—</option>{STAFF.map((s) => <option key={s}>{s}</option>)}</Select>
+                        <Select id="r-staff" value={f.staff} onValueChange={(v) => set('staff', v)} options={[{ value: '', label: '—' }, ...STAFF.map((s) => ({ value: s, label: s }))]} />
                       </Field>
                       <Field label={tx('Kim ngạch mua hàng hằng năm', 'Annual purchasing volume', '연간 구매 규모')} htmlFor="r-vol">
-                        <Select id="r-vol" value={f.volume} onChange={(e) => set('volume', e.target.value)}><option value="">—</option>{VOLUME.map((o) => <option key={o.value} value={o.value}>{L(o)}</option>)}</Select>
+                        <Select id="r-vol" value={f.volume} onValueChange={(v) => set('volume', v)} options={[{ value: '', label: '—' }, ...VOLUME.map((o) => ({ value: o.value, label: L(o) }))]} />
                       </Field>
                     </div>
                   </Section>
@@ -348,6 +387,10 @@ function RegisterFlow({ ev }: { ev: EventItem }) {
                       {tx('Nhận thông tin về sự kiện, cơ hội giao thương từ VCCI và đối tác.', 'Send me event updates and trade opportunities from VCCI and partners.', 'VCCI 및 파트너의 행사 소식과 무역 기회를 받겠습니다.')}
                     </label>
                     <label className="mt-3 flex cursor-pointer gap-3 text-sm">
+                      <input type="checkbox" className="mt-0.5 size-4 accent-[var(--primary)]" checked={f.publicListing} onChange={(e) => set('publicListing', e.target.checked)} />
+                      {tx('Tôi đồng ý công khai tên doanh nghiệp, loại hình và nhu cầu/cung ứng của tôi trong danh sách tham dự của sự kiện. Thông tin liên hệ chỉ chia sẻ sau khi hai bên kết nối.', 'I agree to publicly list my company name, business type and supply/demand needs in the event attendee list. Contact details are shared only after both sides connect.', '행사 참가자 목록에 회사명, 업종, 수요/공급 정보를 공개하는 데 동의합니다. 연락처는 양측이 연결된 후에만 공유됩니다.')}
+                    </label>
+                    <label className="mt-3 flex cursor-pointer gap-3 text-sm">
                       <input type="checkbox" required className="mt-0.5 size-4 accent-[var(--primary)]" checked={f.terms} onChange={(e) => set('terms', e.target.checked)} />
                       <span>{tx('Tôi đồng ý với Điều khoản tham dự, Chính sách bảo mật và cho phép Ban tổ chức chụp ảnh, ghi hình tại sự kiện.', 'I agree to the Terms of Attendance and Privacy Policy and allow photos and recordings at the event.', '참가 약관 및 개인정보 처리방침에 동의하며, 행사 중 사진·영상 촬영을 허용합니다.')} *</span>
                     </label>
@@ -362,7 +405,7 @@ function RegisterFlow({ ev }: { ev: EventItem }) {
                 </form>
               )}
 
-              {paid && step === 1 && <PaymentStep ev={ev} code={regCode} proof={proof} setProof={setProof} onBack={() => setStep(0)} onDone={() => finish()} />}
+              {paid && step === 1 && <PaymentStep ev={ev} code={regCode} proof={proof} setProof={setProof} setProofFile={setProofFile} busy={busy} onBack={() => setStep(0)} onDone={submitPayment} />}
 
               {step === steps.length - 1 && step > 0 && (
                 <Badge ev={ev} code={regCode} name={matchmaking ? profile.general.contactName : `${f.salutation} ${f.lastName} ${f.firstName}`.trim()} title={matchmaking ? profile.general.contactTitle : f.jobTitle} company={matchmaking ? profile.general.nameVi : f.company} dates={matchmaking ? [] : f.dates} meetings={f.meetSlots.length} />
@@ -413,43 +456,54 @@ function Chips({ options, value, onToggle, single }: { options: (Bilingual & { v
   )
 }
 
-function PaymentStep({ ev, code, proof, setProof, onBack, onDone }: { ev: EventItem; code: string; proof: string | null; setProof: (v: string | null) => void; onBack: () => void; onDone: () => void }) {
+function PaymentStep({ ev, code, proof, setProof, setProofFile, busy, onBack, onDone }: { ev: EventItem; code: string; proof: string | null; setProof: (v: string | null) => void; setProofFile: (f: File | null) => void; busy: boolean; onBack: () => void; onDone: () => void }) {
   const { t, locale } = useI18n()
   const toast = useToast()
+  // live: the event's own payment account (GET /api/event/{id}.bankInfo); sample account only in mock mode
+  const info = USE_MOCK ? { bank: 'Sao Viet Bank – CN Hà Nội', accountNo: '1903 6688 2026', accountName: '', qrContent: undefined } : ev.bankInfo
+  const rows: [string, string][] = info ? [
+    [t.events.bank, info.bank],
+    [t.events.account, info.accountNo],
+    ...(info.accountName ? [[tx('Chủ tài khoản', 'Account name', '예금주'), info.accountName] as [string, string]] : []),
+    [t.events.amount, formatMoney(ev.participationFee, ev.participationFeeCurrency, locale)],
+    [t.events.memo, code],
+  ] : []
   return (
     <div className="rounded-2xl border bg-card p-6">
       <p className="text-lg font-bold">{t.events.payTitle}</p>
       <p className="text-sm text-muted-foreground">{t.events.payDesc}</p>
+      {!info ? (
+        <p className="mt-5 rounded-xl bg-muted p-4 text-sm" role="status">
+          {tx('Sự kiện chưa công bố tài khoản nhận thanh toán. Vui lòng liên hệ Ban Tổ chức để được hướng dẫn chuyển khoản', 'The organizers have not published a payment account yet. Please contact them for transfer instructions', '결제 계좌가 아직 공개되지 않았습니다. 주최 측에 문의해 주세요')}
+          {ev.contact ? ` — ${[ev.contact.name, ev.contact.phone, ev.contact.email].filter(Boolean).join(' · ')}` : ''}. {tx('Mã đăng ký của bạn', 'Your registration code', '등록 코드')}: <b>{code}</b>
+        </p>
+      ) : (
       <div className="mt-5 grid gap-6 sm:grid-cols-[200px_1fr]">
         <div className="relative grid aspect-square place-items-center rounded-xl border bg-white p-3">
-          <FakeQr seed={code} />
+          <FakeQr seed={info.qrContent || code} />
           <motion.span className="absolute inset-x-3 h-0.5 bg-primary/70 shadow-[0_0_12px_var(--primary)]" animate={{ top: ['12%', '88%', '12%'] }} transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }} />
         </div>
         <dl className="space-y-2.5 text-sm">
-          {[
-            [t.events.bank, 'Sao Viet Bank – CN Hà Nội'],
-            [t.events.account, '1903 6688 2026'],
-            [t.events.amount, formatMoney(ev.participationFee, ev.participationFeeCurrency, locale)],
-            [t.events.memo, code],
-          ].map(([k, v]) => (
+          {rows.map(([k, v]) => (
             <div key={k} className="flex items-center justify-between gap-2 rounded-lg bg-muted px-3 py-2.5">
               <dt className="text-xs text-muted-foreground">{k}</dt>
               <dd className="flex items-center gap-1.5 text-right font-semibold">
                 {v}
-                <button type="button" onClick={() => { void navigator.clipboard?.writeText(v!).catch(() => {}); toast({ kind: 'info', title: t.ui.copied, description: v }) }} className="text-muted-foreground hover:text-primary" aria-label={t.ui.copy}><Copy className="size-3.5" /></button>
+                <button type="button" onClick={() => { void navigator.clipboard?.writeText(v).catch(() => {}); toast({ kind: 'info', title: t.ui.copied, description: v }) }} className="text-muted-foreground hover:text-primary" aria-label={t.ui.copy}><Copy className="size-3.5" /></button>
               </dd>
             </div>
           ))}
         </dl>
       </div>
+      )}
       <label className={cn('mt-6 flex cursor-pointer items-center gap-3 rounded-xl border-2 border-dashed p-4 transition', proof ? 'border-success bg-success-soft' : 'hover:border-primary/50')}>
         {proof ? <Check className="size-5 text-success" /> : <FileUp className="size-5 text-primary" />}
         <span className="text-sm font-medium">{proof ?? t.events.uploadProof}</span>
-        <input type="file" accept="image/*,application/pdf" className="sr-only" onChange={(e) => setProof(e.target.files?.[0]?.name ?? null)} />
+        <input type="file" accept="image/*,application/pdf" className="sr-only" onChange={(e) => { setProof(e.target.files?.[0]?.name ?? null); setProofFile(e.target.files?.[0] ?? null) }} />
       </label>
       <div className="mt-6 flex justify-between">
         <Button variant="ghost" onClick={onBack}><ArrowLeft /> {t.common.back}</Button>
-        <Button disabled={!proof} onClick={onDone}>{t.common.submit} <ArrowRight /></Button>
+        <Button disabled={!proof || busy} onClick={onDone}>{t.common.submit} <ArrowRight /></Button>
       </div>
     </div>
   )

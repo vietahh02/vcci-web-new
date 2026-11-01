@@ -3,9 +3,10 @@ import { AnimatePresence, motion } from 'motion/react'
 import { ArrowLeft, ArrowRight, BadgeCheck, Check, CircleDashed, Info, Lock, Plus, ShieldCheck, Trash2 } from 'lucide-react'
 import { useEffect, useMemo, type ReactNode } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { getEvent } from '@/api'
+import { liveApi, USE_MOCK, useEvent } from '@/api'
 import { useToast } from '@/components/ui/overlay'
-import { Button, buttonClass, Field, Input, Select, Textarea } from '@/components/ui/primitives'
+import { Button, buttonClass, Field, Input, Textarea } from '@/components/ui/primitives'
+import { Select } from '@/components/ui/select'
 import { useI18n } from '@/lib/i18n'
 import { completion, OPTIONS, SECTIONS, sectionDone, useProfile, type CompanyProfile, type Opt, type SectionKey, type VerifyStatus } from '@/lib/profile'
 import { cn } from '@/lib/utils'
@@ -15,13 +16,13 @@ import type { RuleKey } from '@/lib/upload'
 
 export default function MyProfile() {
   const { L } = useI18n()
-  const { session, profile, update } = useProfile()
+  const { session, profile, update, remoteStatus, loadRemote } = useProfile()
   const [params, setParams] = useSearchParams()
   const navigate = useNavigate()
   const toast = useToast()
   const active = (params.get('section') as SectionKey) || firstIncomplete(profile)
   const returnTo = params.get('return')
-  const returnEvent = returnTo?.startsWith('/events/') ? getEvent(returnTo.split('/')[2] ?? '') : null
+  const returnEvent = useEvent(returnTo?.startsWith('/events/') ? (returnTo.split('/')[2] ?? '') : '').data ?? null
   const pct = completion(profile)
   const idx = SECTIONS.findIndex((s) => s.key === active)
 
@@ -36,10 +37,15 @@ export default function MyProfile() {
     next.set('section', key)
     setParams(next, { replace: true })
   }
-  const saveAndNext = () => {
+  const proceed = () => {
     toast({ kind: 'success', title: tx('Đã lưu', 'Saved'), description: L(SECTIONS[idx]!.title) })
     if (idx < SECTIONS.length - 1) go(SECTIONS[idx + 1]!.key)
     else if (returnTo) navigate(returnTo)
+  }
+  // live: PUT /api/me/profile/{section}; the BE accepts incomplete data (BR-PRF-01) and computes completion
+  const saveAndNext = () => {
+    if (USE_MOCK) return proceed()
+    liveApi.saveProfileSection(active, profile[active]).then(proceed, (err: Error) => toast({ kind: 'info', title: err.message }))
   }
 
   return (
@@ -56,6 +62,23 @@ export default function MyProfile() {
           </div>
           <ProgressRing value={pct} label={tx('hoàn thiện', 'complete')} />
         </div>
+        {!USE_MOCK && remoteStatus && remoteStatus.orgStatus !== 'APPROVED' && (
+          <div className={cn('border-t', remoteStatus.orgStatus === 'REJECTED' ? 'bg-destructive/10' : 'bg-gold-soft/60')}>
+            <div className="container-page flex flex-wrap items-center justify-between gap-3 py-3 text-sm">
+              <span className="flex items-center gap-2">
+                <Info className="size-4" />
+                {remoteStatus.orgStatus === 'REJECTED'
+                  ? <>{tx('Hồ sơ doanh nghiệp bị từ chối', 'Your company registration was rejected', '기업 등록이 거절되었습니다')}{remoteStatus.statusReason ? <>: <b>{remoteStatus.statusReason}</b></> : null}</>
+                  : tx('Hồ sơ đang chờ VCCI duyệt. Bạn vẫn có thể hoàn thiện hồ sơ năng lực.', 'Your registration is awaiting VCCI approval. You can keep completing your profile.', 'VCCI 승인 대기 중입니다. 프로필은 계속 작성할 수 있습니다.')}
+              </span>
+              {remoteStatus.orgStatus === 'REJECTED' && (
+                <Button size="sm" onClick={() => liveApi.resubmitProfile().then(() => loadRemote(), (err: Error) => toast({ kind: 'info', title: err.message }))}>
+                  {tx('Chỉnh sửa xong, nộp lại', 'Resubmit for review', '수정 후 재제출')}
+                </Button>
+              )}
+            </div>
+          </div>
+        )}
         {returnEvent && (
           <div className="border-t bg-gold-soft/60">
             <div className="container-page flex flex-wrap items-center justify-between gap-3 py-3 text-sm">
@@ -66,9 +89,9 @@ export default function MyProfile() {
         )}
       </section>
 
-      <div className="container-page mt-8 grid gap-8 lg:grid-cols-[280px_minmax(0,1fr)]">
+      <div className="container-page mt-8 grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[280px_minmax(0,1fr)] lg:gap-8">
         {/* section nav */}
-        <nav className="lg:sticky lg:top-32 lg:self-start">
+        <nav className="min-w-0 lg:sticky lg:top-32 lg:self-start">
           <ol className="no-scrollbar flex gap-2 overflow-x-auto lg:flex-col lg:gap-1">
             {SECTIONS.map((s, i) => {
               const done = sectionDone(profile, s.key)
@@ -94,8 +117,8 @@ export default function MyProfile() {
 
         {/* active section */}
         <div className="min-w-0 rounded-2xl border bg-card">
-          <div className="flex items-start justify-between gap-4 border-b px-6 py-5 md:px-8">
-            <div>
+          <div className="flex items-start justify-between gap-4 border-b px-4 py-4 sm:px-6 sm:py-5 md:px-8">
+            <div className="min-w-0">
               <h2 className="text-xl font-bold">{L(SECTIONS[idx]!.title)}</h2>
               <p className="mt-0.5 text-sm text-muted-foreground">{L(SECTIONS[idx]!.hint)}</p>
             </div>
@@ -107,7 +130,7 @@ export default function MyProfile() {
           </div>
 
           <AnimatePresence mode="wait">
-            <motion.div key={active} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.25 }} className="px-6 py-7 md:px-8">
+            <motion.div key={active} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.25 }} className="px-4 py-6 sm:px-6 sm:py-7 md:px-8">
               {active === 'general' && <GeneralForm p={profile} set={(v) => update('general', v)} />}
               {active === 'capability' && <CapabilityForm p={profile} set={(v) => update('capability', v)} />}
               {active === 'media' && <MediaForm p={profile} set={(v) => update('media', v)} />}
@@ -119,7 +142,7 @@ export default function MyProfile() {
             </motion.div>
           </AnimatePresence>
 
-          <div className="flex items-center justify-between gap-3 border-t px-6 py-4 md:px-8">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t px-4 py-4 sm:px-6 md:px-8">
             <Button variant="ghost" disabled={idx === 0} onClick={() => go(SECTIONS[idx - 1]!.key)}><ArrowLeft /> {tx('Phần trước', 'Previous')}</Button>
             <Button onClick={saveAndNext}>
               {idx < SECTIONS.length - 1 ? (tx('Lưu & tiếp tục', 'Save & continue')) : returnTo ? (tx('Lưu & quay lại đăng ký', 'Save & back to registration')) : (tx('Lưu', 'Save'))} <ArrowRight />
@@ -286,7 +309,7 @@ function CapabilityForm({ p, set }: FP<'capability'>) {
                 <Input type="date" value={cert.expiry} onChange={(e) => { const l = [...c.certificates]; l[i] = { ...cert, expiry: e.target.value }; set({ ...c, certificates: l }) }} aria-label={tx('Hạn hiệu lực', 'Expiry')} />
                 <button type="button" onClick={() => set({ ...c, certificates: c.certificates.filter((_, k) => k !== i) })} className="rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-destructive" aria-label="Remove"><Trash2 className="size-4" /></button>
               </div>
-              <FilePick rule="certificate" compact name={cert.file} preview={cert.preview} onPick={(n, pv) => { const l = [...c.certificates]; l[i] = { ...cert, file: n, preview: pv }; set({ ...c, certificates: l }) }} />
+              <FilePick rule="certificate" compact name={cert.file} preview={cert.preview} onPick={(n, pv, fid) => { const l = [...c.certificates]; l[i] = { ...cert, file: n, preview: pv, fileId: fid }; set({ ...c, certificates: l }) }} />
             </div>
           ))}
           <Button variant="outline" size="sm" onClick={() => set({ ...c, certificates: [...c.certificates, { name: '', issuer: '', expiry: '', file: '' }] })}><Plus /> {tx('Thêm chứng nhận', 'Add certificate')}</Button>
@@ -348,17 +371,17 @@ function FinanceForm({ p, set }: FP<'finance'>) {
               </span>
             </div>
             <div className="grid gap-3 md:grid-cols-[1fr_140px_1.3fr]">
-              <Select value={r.band} onChange={(e) => row(i, { band: e.target.value })} aria-label={tx('Khoảng doanh thu', 'Revenue band')}>
-                <option value="">{tx('Khoảng doanh thu…', 'Revenue band…')}</option>
-                {OPTIONS.revenueBand.map((o) => <option key={o.value} value={o.value}>{L(o)}</option>)}
-              </Select>
+              <Select value={r.band} onValueChange={(band) => row(i, { band })} aria-label={tx('Khoảng doanh thu', 'Revenue band')} placeholder={tx('Khoảng doanh thu…', 'Revenue band…')} options={[{ value: '', label: '—' }, ...OPTIONS.revenueBand.map((o) => ({ value: o.value, label: L(o) }))]} />
               <Input placeholder={tx('Số chính xác (tỷ đ)', 'Exact (VND bn)')} inputMode="decimal" value={r.amount} onChange={(e) => row(i, { amount: e.target.value })} />
-              <Select value={r.proofType} onChange={(e) => row(i, { proofType: e.target.value })} aria-label={tx('Loại chứng từ', 'Evidence type')}>
-                <option value="">{tx('Loại chứng từ…', 'Evidence type…')}</option>
-                {OPTIONS.revenueProof.map((o) => <option key={o.value} value={o.value}>{L(o)}</option>)}
-              </Select>
+              <Select value={r.proofType} onValueChange={(proofType) => row(i, { proofType })} aria-label={tx('Loại chứng từ', 'Evidence type')} placeholder={tx('Loại chứng từ…', 'Evidence type…')} options={[{ value: '', label: '—' }, ...OPTIONS.revenueProof.map((o) => ({ value: o.value, label: L(o) }))]} />
             </div>
-            <div className="mt-3"><FilePick rule="finance" compact name={r.proofFile} onPick={(n) => row(i, { proofFile: n })} /></div>
+            {r.status === 'SELF' && r.reviewReason && (
+              <p className="mt-3 rounded-lg border border-red-200 bg-red-50 p-2.5 text-xs text-red-700">
+                {tx('VCCI từ chối chứng từ', 'VCCI rejected the evidence', 'VCCI가 증빙을 거절했습니다')}: <b>{r.reviewReason}</b> — {tx('tải chứng từ mới rồi lưu để gửi xác minh lại.', 'upload a new document and save to resubmit.', '새 증빙을 올리고 저장하면 재제출됩니다.')}
+              </p>
+            )}
+            {r.status === 'SUBMITTED' && <p className="mt-3 text-xs text-muted-foreground">{tx('Đang chờ VCCI thẩm định chứng từ.', 'Waiting for VCCI to review the evidence.', 'VCCI 검토 대기 중입니다.')}</p>}
+            <div className="mt-3"><FilePick rule="finance" compact name={r.proofFile} onPick={(n, _pv, fid) => row(i, { proofFile: n, proofFileId: fid, reviewReason: null })} /></div>
           </div>
         ))}
       </div>
@@ -409,7 +432,7 @@ function AttendeesForm({ p, set }: FP<'attendees'>) {
   const patch = (i: number, k: keyof (typeof list)[number], v: string) => { const l = [...list]; l[i] = { ...l[i]!, [k]: v }; set(l) }
   return (
     <div className="space-y-4">
-      <p className="text-sm text-muted-foreground">{tx('Khi đăng ký sự kiện, bạn chỉ cần tick chọn người tham dự. Link tham dự (Zoom/Jitsi) gửi tới email từng người.', 'When registering, just tick who attends. Join links go to each person’s email.')}</p>
+      <p className="text-sm text-muted-foreground">{tx('Khi đăng ký sự kiện, bạn chỉ cần tick chọn người tham dự. Nút vào xem trực tiếp hiện trên trang sự kiện; nhắc lịch gửi tới email từng người.', 'When registering, just tick who attends. The live-watch button appears on the event page; reminders go to each person’s email.')}</p>
       <AnimatePresence initial={false}>
         {list.map((a, i) => (
           <motion.div key={a.id} initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
@@ -458,14 +481,14 @@ function ConsentForm({ p, set }: FP<'consent'>) {
 }
 
 /** Single-file upload bound to a name (+ optional image preview), with format guidance and validation. */
-function FilePick({ name, preview, onPick, rule, compact }: { name: string; preview?: string; onPick: (n: string, preview?: string) => void; rule: RuleKey; compact?: boolean }) {
+function FilePick({ name, preview, onPick, rule, compact }: { name: string; preview?: string; onPick: (n: string, preview?: string, fileId?: string) => void; rule: RuleKey; compact?: boolean }) {
   useI18n()
   return (
     <FileUpload
       rule={rule}
       compact={compact}
       value={name ? { id: name, name, kind: rule, size: 0, preview } : null}
-      onChange={(d) => onPick(d?.name ?? '', d?.preview)}
+      onChange={(d) => onPick(d?.name ?? '', d ? (d.url && /\.(png|jpe?g|webp)$/i.test(d.name) ? d.url : USE_MOCK ? d.preview : undefined) : undefined, d?.fileId)}
     />
   )
 }

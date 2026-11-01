@@ -6,8 +6,18 @@
  */
 import type { Bilingual } from '@/lib/i18n'
 import type { SectionKey } from '@/lib/profile'
+import { withComputedStatus } from '@/lib/eventStatus'
 
 export const IMG = {
+  /** online-themed (video call / laptop) covers for events */
+  videoCall: '1588196749597-9ff075ee6b5b',
+  onlineLaptop: '1516321318423-f06f85e504b3',
+  workLaptop: '1554200876-56c2f25224fa',
+  cheerLaptop: '1576267423445-b2e0074d68a4',
+  remoteCall: '1598257006458-087169a1f08d',
+  dealLaptop: '1600880292203-757bb62b4baf',
+  webcamChat: '1603202662706-62ead3176b8f',
+  laptopDesk: '1593642632823-8f785ba67e45',
   coffeeBeans: '1447933601403-0c6688de566e',
   latte: '1495474472287-4d71bcdd2085',
   rice: '1586201375761-83865001e31c',
@@ -300,6 +310,8 @@ export interface Product {
   productName: Bilingual
   categoryId: string
   organizationId: string
+  /** localized seller name when the BE provides it (live mode) */
+  organizationName?: string
   industry: string
   description: Bilingual
   productImages: string[]
@@ -573,7 +585,8 @@ export const importRequests: ImportRequest[] = [
 ]
 
 /* ------------------------------------------------------------ events */
-export type EventType = 'WEBINAR' | 'LIVESTREAM' | 'MATCHMAKING'
+export type EventType = 'WEBINAR' | 'LIVESTREAM' | 'MATCHMAKING' | 'SHOW' | 'CONFERENCE' | 'TRADE_MISSION' | 'TRAINING' | 'SUPPORT_1TO1'
+export type EventFormat = 'ONLINE' | 'OFFLINE' | 'HYBRID'
 export type EventStatus = 'UPCOMING' | 'ONGOING' | 'ENDED'
 
 export interface EventAgendaOption { agendaStartTime: string; agendaEndTime: string; agendaTitle: Bilingual; speaker?: Bilingual | string }
@@ -596,7 +609,15 @@ export interface EventItem {
   maxSlots: number
   organizedBy: Bilingual
   location: Bilingual
+  /** ONLINE / OFFLINE / HYBRID — defaults to ONLINE when omitted. Show Hub is always ONLINE. */
+  format?: EventFormat
+  /** Optional label for the online room; VCCI events stream on the VCCI platform itself. */
+  platform?: string
   agendaOptions: EventAgendaOption[]
+  /** Live mode: payment account of this event (GET /api/event/{id}.bankInfo) */
+  bankInfo?: { bank: string; accountNo: string; accountName: string; qrContent?: string }
+  /** Live mode: the signed-in organisation's active registration for this event */
+  myRegistration?: { id: string; status: string }
   viewers?: number
   /** B2B extensions (from VCCI event forms) */
   series?: Bilingual
@@ -612,7 +633,7 @@ export interface EventItem {
   questions?: { id: string; label: Bilingual; options?: Bilingual[] }[]
 }
 
-export const events: EventItem[] = [
+const rawEvents: EventItem[] = [
   {
     id: 'e-giz-eu', eventType: 'MATCHMAKING', eventStatus: 'UPCOMING', coverImage: IMG.handshake,
     title: { vi: 'Kết nối giao thương doanh nghiệp Việt Nam – CHLB Đức & châu Âu', en: 'Vietnam – Germany & EU Business Matchmaking', ko: '베트남 – 독일 & 유럽 비즈니스 매칭' },
@@ -654,24 +675,39 @@ export const events: EventItem[] = [
     },
     startDate: day(1, 20), endDate: day(1, 22), startTime: '20:00', endTime: '22:00', industry: ['Multi-industry'],
     participationFee: 0, participationFeeCurrency: 'VND', registeredSlots: 268, maxSlots: 500,
-    organizedBy: { vi: 'VCCI', en: 'VCCI', ko: 'VCCI' }, location: { vi: 'Trực tuyến qua Zoom', en: 'Online via Zoom', ko: 'Zoom 온라인' },
+    organizedBy: { vi: 'VCCI', en: 'VCCI', ko: 'VCCI' }, location: { vi: 'Trực tuyến — phát trực tiếp trên hệ thống VCCI', en: 'Online — live on the VCCI platform', ko: '온라인 — VCCI 플랫폼 라이브' },
     series: { vi: 'Trò chuyện Doanh nghiệp số 18', en: 'Business Talk #18', ko: '기업 대담 제18회' },
     targetMarket: { vi: 'Liên minh châu Âu', en: 'European Union', ko: '유럽연합' },
     requiredSections: ['general', 'attendees', 'consent'],
     contact: { name: 'Ban Tổ chức', phone: '0912 933 834', email: 'thanhltk@vcci.com.vn' },
+    partner: { vi: 'Thương vụ Việt Nam tại Thụy Điển và Hiệp hội Doanh nghiệp xuất khẩu', en: 'Vietnam Trade Office in Sweden and the Exporters Association' },
+    registrationDeadline: day(1, 12), quota: 500,
+    eligibility: [
+      { vi: 'Doanh nghiệp đã hoặc đang chuẩn bị xuất khẩu sang EU', en: 'Companies exporting or preparing to export to the EU' },
+      { vi: 'Doanh nghiệp là hội viên VCCI được ưu tiên đặt câu hỏi trực tiếp', en: 'VCCI members get priority for live questions' },
+      { vi: 'Đại diện phụ trách xuất khẩu, tuân thủ hoặc chất lượng', en: 'Representatives in charge of export, compliance or quality' },
+    ],
     topics: [
-      { vi: 'Cơ hội và yêu cầu của thị trường châu Âu', en: 'EU market opportunities and requirements', ko: '유럽 시장의 기회와 요건' },
-      { vi: 'Kinh nghiệm thực tiễn tiếp cận thị trường, đáp ứng yêu cầu nhà mua hàng', en: 'Practical experience meeting buyer requirements', ko: '시장 진출 및 바이어 요구 충족 실무 경험' },
-      { vi: 'Một số gợi ý cho doanh nghiệp', en: 'Recommendations for businesses', ko: '기업을 위한 제언' },
+      { vi: 'Cơ hội và yêu cầu của thị trường châu Âu', en: 'EU market opportunities and requirements' },
+      { vi: 'Quy định bền vững mới: EUDR, CBAM, thẩm định chuỗi cung ứng', en: 'New sustainability rules: EUDR, CBAM, supply-chain due diligence' },
+      { vi: 'Kinh nghiệm thực tiễn tiếp cận thị trường, đáp ứng yêu cầu nhà mua hàng', en: 'Practical experience meeting buyer requirements' },
+      { vi: 'Chuẩn bị hồ sơ chứng nhận và truy xuất nguồn gốc', en: 'Preparing certification and traceability documents' },
+      { vi: 'Một số gợi ý cho doanh nghiệp', en: 'Recommendations for businesses' },
     ],
     speakers: [
-      { name: 'Nguyễn Thị Hoàng Thúy', title: { vi: 'Tham tán Thương mại', en: 'Trade Counsellor', ko: '상무참사관' }, org: { vi: 'Thương vụ Việt Nam tại Thụy Điển (kiêm Đan Mạch, Na Uy, Iceland, Latvia)', en: 'Vietnam Trade Office in Sweden (also DK, NO, IS, LV)', ko: '주스웨덴 베트남 무역대표부 (덴마크·노르웨이·아이슬란드·라트비아 겸임)' } },
-      { name: 'Trần Văn Hiếu', title: { vi: 'Nhà sáng lập kiêm CEO', en: 'Founder & CEO', ko: '창업자 겸 CEO' }, org: { vi: 'Công ty DACE', en: 'DACE', ko: 'DACE' } },
+      { name: 'Nguyễn Thị Hoàng Thúy', title: { vi: 'Tham tán Thương mại', en: 'Trade Counsellor' }, org: { vi: 'Thương vụ Việt Nam tại Thụy Điển', en: 'Vietnam Trade Office in Sweden' } },
+      { name: 'Trần Văn Hiếu', title: { vi: 'Nhà sáng lập kiêm CEO', en: 'Founder & CEO' }, org: { vi: 'Công ty DACE', en: 'DACE' } },
+      { name: 'Lars Eriksson', title: { vi: 'Giám đốc thu mua', en: 'Head of Sourcing' }, org: { vi: 'Nordic Retail Group (minh hoạ)', en: 'Nordic Retail Group (sample)' } },
+      { name: 'Phạm Thu Hà', title: { vi: 'Chuyên gia tuân thủ xuất khẩu', en: 'Export Compliance Specialist' }, org: { vi: 'Trung tâm WTO và Hội nhập – VCCI', en: 'VCCI Center for WTO & Integration' } },
     ],
     agendaOptions: [
-      { agendaStartTime: '20:00', agendaEndTime: '20:45', agendaTitle: { vi: 'Cơ hội và yêu cầu của thị trường châu Âu', en: 'EU opportunities and requirements', ko: '유럽 시장의 기회와 요건' }, speaker: 'Nguyễn Thị Hoàng Thúy' },
-      { agendaStartTime: '20:45', agendaEndTime: '21:30', agendaTitle: { vi: 'Kinh nghiệm thực tiễn đáp ứng nhà mua hàng', en: 'Meeting buyer requirements in practice', ko: '바이어 요구 충족 실무 경험' }, speaker: 'Trần Văn Hiếu' },
-      { agendaStartTime: '21:30', agendaEndTime: '22:00', agendaTitle: { vi: 'Hỏi đáp', en: 'Q&A', ko: '질의응답' } },
+      { agendaStartTime: '19:45', agendaEndTime: '20:00', agendaTitle: { vi: 'Mở phòng & kiểm tra kết nối', en: 'Room opens & connection check' } },
+      { agendaStartTime: '20:00', agendaEndTime: '20:10', agendaTitle: { vi: 'Khai mạc, giới thiệu chương trình', en: 'Opening and programme overview' }, speaker: { vi: 'VCCI', en: 'VCCI' } },
+      { agendaStartTime: '20:10', agendaEndTime: '20:45', agendaTitle: { vi: 'Cơ hội và yêu cầu của thị trường châu Âu', en: 'EU opportunities and requirements' }, speaker: { vi: 'Nguyễn Thị Hoàng Thúy', en: 'Nguyen Thi Hoang Thuy' } },
+      { agendaStartTime: '20:45', agendaEndTime: '21:10', agendaTitle: { vi: 'Nhà mua hàng châu Âu cần gì ở nhà cung cấp Việt Nam', en: 'What EU buyers expect from Vietnamese suppliers' }, speaker: { vi: 'Lars Eriksson', en: 'Lars Eriksson' } },
+      { agendaStartTime: '21:10', agendaEndTime: '21:30', agendaTitle: { vi: 'Kinh nghiệm thực tiễn đáp ứng nhà mua hàng', en: 'Meeting buyer requirements in practice' }, speaker: { vi: 'Trần Văn Hiếu', en: 'Tran Van Hieu' } },
+      { agendaStartTime: '21:30', agendaEndTime: '21:50', agendaTitle: { vi: 'Hỏi đáp trực tiếp', en: 'Live Q&A' }, speaker: { vi: 'Phạm Thu Hà', en: 'Pham Thu Ha' } },
+      { agendaStartTime: '21:50', agendaEndTime: '22:00', agendaTitle: { vi: 'Tổng kết và giới thiệu chương trình kết nối tiếp theo', en: 'Wrap-up and next matchmaking programme' } },
     ],
     questions: [
       {
@@ -689,14 +725,37 @@ export const events: EventItem[] = [
     id: 'e-krfood', eventType: 'LIVESTREAM', eventStatus: 'ONGOING', coverImage: IMG.stage,
     title: { vi: 'Livestream kết nối giao thương Việt Nam – Hàn Quốc ngành thực phẩm 2026', en: 'Vietnam – Korea Food Trade Matching Livestream 2026', ko: '2026 베트남–한국 식품 무역 매칭 라이브' },
     introduction: { vi: '30 doanh nghiệp xuất khẩu giới thiệu sản phẩm trực tiếp tới 120 nhà nhập khẩu Hàn Quốc, kết hợp phiên B2B 1-1 sau livestream.', en: '30 Vietnamese exporters pitch live to 120 Korean importers, followed by 1-on-1 B2B matching sessions.', ko: '베트남 수출기업 30곳이 한국 수입업체 120곳에 제품을 실시간 소개하고, 이어서 1:1 B2B 매칭 세션이 진행됩니다.' },
-    startDate: day(0, 9), endDate: day(0, 17), startTime: '09:00', endTime: '17:00', industry: ['Food', 'Seafood'],
+    startDate: day(0, 0), endDate: day(1, 0), startTime: '09:00', endTime: '17:00', industry: ['Food', 'Seafood'],
     participationFee: 0, participationFeeCurrency: 'VND', registeredSlots: 30, maxSlots: 30,
     organizedBy: { vi: 'VCCI & KOTRA Hà Nội', en: 'VCCI & KOTRA Hanoi', ko: 'VCCI & KOTRA 하노이' }, location: { vi: 'Trực tuyến', en: 'Online', ko: '온라인' }, viewers: 2486,
+    series: { vi: 'Tuần lễ giao thương Việt – Hàn 2026', en: 'Vietnam–Korea Trade Week 2026' },
+    partner: { vi: 'KOTRA Hà Nội và Hiệp hội Nhập khẩu Thực phẩm Hàn Quốc', en: 'KOTRA Hanoi and the Korea Food Importers Association' },
+    targetMarket: { vi: 'Hàn Quốc', en: 'South Korea' },
+    quota: 30,
+    contact: { name: 'Ban Tổ chức', phone: '0912 933 834', email: 'thanhltk@vcci.com.vn' },
+    eligibility: [
+      { vi: 'Doanh nghiệp Việt Nam có sản phẩm thực phẩm đã đạt tiêu chuẩn xuất khẩu', en: 'Vietnamese food companies with export-ready products' },
+      { vi: 'Có chứng nhận an toàn thực phẩm (HACCP, ISO 22000 hoặc tương đương)', en: 'Hold food-safety certification (HACCP, ISO 22000 or equivalent)' },
+      { vi: 'Có người trình bày bằng tiếng Anh hoặc tiếng Hàn', en: 'A presenter who speaks English or Korean' },
+    ],
+    topics: [
+      { vi: 'Xu hướng tiêu dùng thực phẩm tại Hàn Quốc', en: 'Food consumption trends in Korea' },
+      { vi: 'Quy định nhập khẩu và nhãn mác thực phẩm', en: 'Import and food-labelling rules' },
+      { vi: 'Trình diễn sản phẩm trực tiếp trước nhà nhập khẩu', en: 'Live product pitches to importers' },
+      { vi: 'Kết nối B2B 1-1 sau livestream', en: '1-on-1 B2B matching after the stream' },
+    ],
+    speakers: [
+      { name: 'Kim Ji-won', title: { vi: 'Giám đốc xúc tiến thương mại', en: 'Trade Promotion Director' }, org: { vi: 'KOTRA Hà Nội (minh hoạ)', en: 'KOTRA Hanoi (sample)' } },
+      { name: 'Vũ Thanh Hương', title: { vi: 'Phó ban Hợp tác quốc tế', en: 'Deputy Head, International Cooperation' }, org: { vi: 'VCCI', en: 'VCCI' } },
+      { name: 'Park Min-ho', title: { vi: 'Giám đốc thu mua thực phẩm', en: 'Food Purchasing Director' }, org: { vi: 'Seoul Fresh Mart (minh hoạ)', en: 'Seoul Fresh Mart (sample)' } },
+    ],
     agendaOptions: [
-      { agendaStartTime: '09:00', agendaEndTime: '09:30', agendaTitle: { vi: 'Khai mạc & tổng quan thị trường Hàn Quốc', en: 'Opening & Korean market outlook', ko: '개회 & 한국 시장 전망' }, speaker: 'VCCI' },
-      { agendaStartTime: '09:30', agendaEndTime: '12:00', agendaTitle: { vi: 'Showcase: nông sản & cà phê', en: 'Showcase: produce & coffee', ko: '쇼케이스: 농산물 & 커피' } },
-      { agendaStartTime: '13:30', agendaEndTime: '16:00', agendaTitle: { vi: 'Showcase: thuỷ sản & thực phẩm chế biến', en: 'Showcase: seafood & processed food', ko: '쇼케이스: 수산물 & 가공식품' } },
-      { agendaStartTime: '16:00', agendaEndTime: '17:00', agendaTitle: { vi: 'Kết nối B2B 1-1', en: '1-on-1 B2B matching', ko: '1:1 B2B 매칭' } },
+      { agendaStartTime: '09:00', agendaEndTime: '09:30', agendaTitle: { vi: 'Khai mạc & tổng quan thị trường Hàn Quốc', en: 'Opening & Korean market outlook' }, speaker: { vi: 'VCCI', en: 'VCCI' } },
+      { agendaStartTime: '09:30', agendaEndTime: '10:00', agendaTitle: { vi: 'Quy định nhập khẩu và nhãn mác thực phẩm Hàn Quốc', en: 'Korean import and labelling rules' }, speaker: { vi: 'Kim Ji-won', en: 'Kim Ji-won' } },
+      { agendaStartTime: '10:00', agendaEndTime: '12:00', agendaTitle: { vi: 'Showcase: nông sản & cà phê', en: 'Showcase: produce & coffee' } },
+      { agendaStartTime: '13:30', agendaEndTime: '14:00', agendaTitle: { vi: 'Nhà nhập khẩu cần gì ở nhà cung cấp Việt Nam', en: 'What importers look for in Vietnamese suppliers' }, speaker: { vi: 'Park Min-ho', en: 'Park Min-ho' } },
+      { agendaStartTime: '14:00', agendaEndTime: '16:00', agendaTitle: { vi: 'Showcase: thuỷ sản & thực phẩm chế biến', en: 'Showcase: seafood & processed food' } },
+      { agendaStartTime: '16:00', agendaEndTime: '17:00', agendaTitle: { vi: 'Kết nối B2B 1-1', en: '1-on-1 B2B matching' } },
     ],
   },
   {
@@ -705,11 +764,35 @@ export const events: EventItem[] = [
     introduction: { vi: 'Chuyên gia thương mại phân tích quy tắc xuất xứ, lộ trình thuế và các rào cản kỹ thuật mới của EU năm 2027.', en: 'Trade experts unpack rules of origin, tariff schedules and new EU technical barriers for 2027.', ko: '무역 전문가가 원산지 규정, 관세 일정, 2027년 EU의 새로운 기술 장벽을 분석합니다.' },
     startDate: day(6, 14), endDate: day(6, 17), startTime: '14:00', endTime: '17:00', industry: ['Agriculture'],
     participationFee: 0, participationFeeCurrency: 'VND', registeredSlots: 412, maxSlots: 500,
-    organizedBy: { vi: 'Trung tâm WTO và Hội nhập – VCCI', en: 'VCCI Center for WTO & Integration', ko: 'VCCI WTO·통합 센터' }, location: { vi: 'Zoom/Jitsi trực tuyến', en: 'Online (Jitsi)', ko: '온라인 (Jitsi)' },
+    organizedBy: { vi: 'Trung tâm WTO và Hội nhập – VCCI', en: 'VCCI Center for WTO & Integration', ko: 'VCCI WTO·통합 센터' }, location: { vi: 'Trực tuyến — phát trực tiếp trên hệ thống VCCI', en: 'Online — live on the VCCI platform', ko: '온라인 — VCCI 플랫폼 라이브' },
+    series: { vi: 'Chuỗi hội thảo Hội nhập FTA 2026', en: 'FTA Integration Webinar Series 2026' },
+    partner: { vi: 'Bộ Công Thương và Phái đoàn EU tại Việt Nam', en: 'Ministry of Industry and Trade and the EU Delegation to Vietnam' },
+    targetMarket: { vi: 'Liên minh châu Âu', en: 'European Union' },
+    registrationDeadline: day(5, 17), quota: 500,
+    contact: { name: 'Ban Tổ chức', phone: '0912 933 834', email: 'thanhltk@vcci.com.vn' },
+    eligibility: [
+      { vi: 'Doanh nghiệp xuất khẩu nông sản, thực phẩm sang EU', en: 'Agri-food exporters selling to the EU' },
+      { vi: 'Cán bộ phụ trách chứng từ xuất xứ và xuất nhập khẩu', en: 'Staff handling origin documents and customs' },
+      { vi: 'Hợp tác xã, hiệp hội ngành hàng nông sản', en: 'Cooperatives and agri-food associations' },
+    ],
+    topics: [
+      { vi: 'Quy tắc xuất xứ và hồ sơ C/O mẫu EUR.1', en: 'Rules of origin and EUR.1 certificates' },
+      { vi: 'Lộ trình cắt giảm thuế theo EVFTA cho nông sản', en: 'EVFTA tariff reduction schedule for agri-food' },
+      { vi: 'Quy định chống phá rừng EUDR và truy xuất nguồn gốc', en: 'EUDR and traceability requirements' },
+      { vi: 'Hàng rào kỹ thuật mới của EU năm 2027', en: 'New EU technical barriers in 2027' },
+    ],
+    speakers: [
+      { name: 'TS. Nguyễn Minh An', title: { vi: 'Chuyên gia thương mại quốc tế', en: 'International Trade Expert' }, org: { vi: 'Trung tâm WTO và Hội nhập – VCCI', en: 'VCCI Center for WTO & Integration' } },
+      { name: 'ThS. Lê Hải Yến', title: { vi: 'Chuyên gia tiêu chuẩn nông sản', en: 'Agri-food Standards Expert' }, org: { vi: 'Viện Chính sách và Chiến lược NN&PTNT (minh hoạ)', en: 'Institute of Policy and Strategy for Agriculture (sample)' } },
+      { name: 'Marta Lindqvist', title: { vi: 'Cố vấn thương mại', en: 'Trade Adviser' }, org: { vi: 'EU Business Support Desk (minh hoạ)', en: 'EU Business Support Desk (sample)' } },
+    ],
     agendaOptions: [
-      { agendaStartTime: '14:00', agendaEndTime: '14:45', agendaTitle: { vi: 'Quy tắc xuất xứ & C/O mẫu EUR.1', en: 'Rules of origin & EUR.1 certificates', ko: '원산지 규정 & EUR.1 원산지증명서' }, speaker: { vi: 'TS. Nguyễn Minh An', en: 'Dr. Nguyen Minh An', ko: '응우옌 민 안 박사' } },
-      { agendaStartTime: '14:45', agendaEndTime: '15:30', agendaTitle: { vi: 'Quy định chống phá rừng EUDR', en: 'EU Deforestation Regulation (EUDR)', ko: 'EU 산림전용방지규정 (EUDR)' }, speaker: { vi: 'ThS. Lê Hải Yến', en: 'Le Hai Yen, MSc', ko: '레 하이 옌 석사' } },
-      { agendaStartTime: '15:45', agendaEndTime: '17:00', agendaTitle: { vi: 'Hỏi đáp cùng doanh nghiệp', en: 'Q&A with businesses', ko: '기업 질의응답' } },
+      { agendaStartTime: '13:45', agendaEndTime: '14:00', agendaTitle: { vi: 'Mở phòng & kiểm tra kết nối', en: 'Room opens & connection check' } },
+      { agendaStartTime: '14:00', agendaEndTime: '14:45', agendaTitle: { vi: 'Quy tắc xuất xứ & C/O mẫu EUR.1', en: 'Rules of origin & EUR.1 certificates' }, speaker: { vi: 'TS. Nguyễn Minh An', en: 'Dr. Nguyen Minh An' } },
+      { agendaStartTime: '14:45', agendaEndTime: '15:30', agendaTitle: { vi: 'Quy định chống phá rừng EUDR', en: 'EU Deforestation Regulation (EUDR)' }, speaker: { vi: 'ThS. Lê Hải Yến', en: 'Le Hai Yen, MSc' } },
+      { agendaStartTime: '15:30', agendaEndTime: '15:45', agendaTitle: { vi: 'Nghỉ giải lao', en: 'Break' } },
+      { agendaStartTime: '15:45', agendaEndTime: '16:20', agendaTitle: { vi: 'Góc nhìn từ nhà nhập khẩu EU', en: 'The EU importer perspective' }, speaker: { vi: 'Marta Lindqvist', en: 'Marta Lindqvist' } },
+      { agendaStartTime: '16:20', agendaEndTime: '17:00', agendaTitle: { vi: 'Hỏi đáp cùng doanh nghiệp', en: 'Q&A with businesses' } },
     ],
   },
   {
@@ -719,10 +802,33 @@ export const events: EventItem[] = [
     startDate: day(12, 9), endDate: day(14, 17), startTime: '09:00', endTime: '17:00', industry: ['Furniture'],
     participationFee: 1500000, participationFeeCurrency: 'VND', registeredSlots: 31, maxSlots: 40,
     organizedBy: { vi: 'VCCI chi nhánh TP.HCM', en: 'VCCI Ho Chi Minh City Branch', ko: 'VCCI 호찌민시 지부' }, location: { vi: 'Trực tuyến + Bình Dương', en: 'Online + Binh Duong', ko: '온라인 + 빈즈엉' },
+    series: { vi: 'Vietnam Furniture Sourcing Week 2026', en: 'Vietnam Furniture Sourcing Week 2026' },
+    partner: { vi: 'Hiệp hội Gỗ và Lâm sản Bình Dương', en: 'Binh Duong Timber and Forest Products Association' },
+    targetMarket: { vi: 'Hoa Kỳ, châu Âu, Nhật Bản', en: 'United States, Europe, Japan' },
+    registrationDeadline: day(10, 17), quota: 40,
+    contact: { name: 'Ban Tổ chức', phone: '0912 933 834', email: 'thanhltk@vcci.com.vn' },
+    eligibility: [
+      { vi: 'Nhà nhập khẩu, thương hiệu nội thất và đơn vị thu mua quốc tế', en: 'International importers, furniture brands and sourcing offices' },
+      { vi: 'Nhà máy nội thất Việt Nam có năng lực xuất khẩu', en: 'Vietnamese furniture factories ready to export' },
+      { vi: 'Ưu tiên nhà máy có chứng nhận FSC hoặc CARB', en: 'Priority for FSC or CARB-certified factories' },
+    ],
+    topics: [
+      { vi: 'Tham quan showroom và dây chuyền sản xuất trực tuyến', en: 'Virtual tours of showrooms and production lines' },
+      { vi: 'Năng lực OEM/ODM, MOQ và thời gian giao hàng', en: 'OEM/ODM capacity, MOQ and lead times' },
+      { vi: 'Chứng nhận gỗ hợp pháp và yêu cầu thị trường Mỹ, EU', en: 'Legal timber certification and US/EU requirements' },
+      { vi: 'Đặt lịch gặp nhà máy ngay trên nền tảng', en: 'Book factory meetings on the platform' },
+    ],
+    speakers: [
+      { name: 'Nguyễn Đức Thịnh', title: { vi: 'Chủ tịch', en: 'Chairman' }, org: { vi: 'Hiệp hội Gỗ và Lâm sản Bình Dương (minh hoạ)', en: 'Binh Duong Timber Association (sample)' } },
+      { name: 'Emily Carter', title: { vi: 'Giám đốc thu mua', en: 'Head of Buying' }, org: { vi: 'Atlantic Home Imports (minh hoạ)', en: 'Atlantic Home Imports (sample)' } },
+    ],
     agendaOptions: [
-      { agendaStartTime: '09:00', agendaEndTime: '11:30', agendaTitle: { vi: 'Ngày 1: Nội thất phòng khách', en: 'Day 1: Living room', ko: '1일차: 거실 가구' } },
-      { agendaStartTime: '09:00', agendaEndTime: '11:30', agendaTitle: { vi: 'Ngày 2: Nội thất ngoài trời', en: 'Day 2: Outdoor', ko: '2일차: 아웃도어 가구' } },
-      { agendaStartTime: '09:00', agendaEndTime: '11:30', agendaTitle: { vi: 'Ngày 3: Nội thất khách sạn', en: 'Day 3: Hospitality', ko: '3일차: 호텔 가구' } },
+      { agendaStartTime: '09:00', agendaEndTime: '09:30', agendaTitle: { vi: 'Ngày 1: Khai mạc & giới thiệu ngành nội thất Việt Nam', en: 'Day 1: Opening & Vietnam furniture industry overview' }, speaker: { vi: 'Nguyễn Đức Thịnh', en: 'Nguyen Duc Thinh' } },
+      { agendaStartTime: '09:30', agendaEndTime: '11:30', agendaTitle: { vi: 'Ngày 1: Nội thất phòng khách', en: 'Day 1: Living room' } },
+      { agendaStartTime: '09:00', agendaEndTime: '10:00', agendaTitle: { vi: 'Ngày 2: Yêu cầu thị trường Mỹ và EU từ góc nhìn nhà nhập khẩu', en: 'Day 2: US and EU requirements from a buyer view' }, speaker: { vi: 'Emily Carter', en: 'Emily Carter' } },
+      { agendaStartTime: '10:00', agendaEndTime: '11:30', agendaTitle: { vi: 'Ngày 2: Nội thất ngoài trời', en: 'Day 2: Outdoor' } },
+      { agendaStartTime: '09:00', agendaEndTime: '11:30', agendaTitle: { vi: 'Ngày 3: Nội thất khách sạn', en: 'Day 3: Hospitality' } },
+      { agendaStartTime: '14:00', agendaEndTime: '16:00', agendaTitle: { vi: 'Ngày 3: Gặp nhà máy 1-1', en: 'Day 3: 1-on-1 factory meetings' } },
     ],
   },
   {
@@ -732,9 +838,33 @@ export const events: EventItem[] = [
     startDate: day(19, 9), endDate: day(19, 11), startTime: '09:00', endTime: '11:30', industry: ['Machinery', 'Steel'],
     participationFee: 500000, participationFeeCurrency: 'VND', registeredSlots: 186, maxSlots: 300,
     organizedBy: { vi: 'VCCI & Hiệp hội Thép Việt Nam', en: 'VCCI & Vietnam Steel Association', ko: 'VCCI & 베트남 철강협회' }, location: { vi: 'Trực tuyến', en: 'Online', ko: '온라인' },
+    series: { vi: 'Chuỗi hội thảo Chuyển đổi xanh xuất khẩu', en: 'Green Export Transition Webinar Series' },
+    partner: { vi: 'Hiệp hội Thép Việt Nam', en: 'Vietnam Steel Association' },
+    targetMarket: { vi: 'Liên minh châu Âu', en: 'European Union' },
+    registrationDeadline: day(17, 17), quota: 300,
+    contact: { name: 'Ban Tổ chức', phone: '0912 933 834', email: 'thanhltk@vcci.com.vn' },
+    eligibility: [
+      { vi: 'Doanh nghiệp xuất khẩu thép, nhôm, xi măng, phân bón sang EU', en: 'Exporters of steel, aluminium, cement and fertiliser to the EU' },
+      { vi: 'Doanh nghiệp cung ứng nguyên liệu cho nhà xuất khẩu', en: 'Suppliers of inputs to exporters' },
+      { vi: 'Cán bộ môi trường, kế toán, tuân thủ', en: 'Environment, accounting and compliance staff' },
+    ],
+    topics: [
+      { vi: 'Cơ chế CBAM giai đoạn chính thức và nghĩa vụ của nhà nhập khẩu EU', en: 'CBAM definitive period and EU importer obligations' },
+      { vi: 'Cách kê khai phát thải nhúng theo sản phẩm', en: 'Reporting embedded emissions per product' },
+      { vi: 'Chuẩn bị dữ liệu carbon và thẩm định bên thứ ba', en: 'Preparing carbon data and third-party verification' },
+      { vi: 'Chiến lược giữ thị phần tại EU', en: 'Strategies to protect EU market share' },
+    ],
+    speakers: [
+      { name: 'Hoàng Quốc Bảo', title: { vi: 'Chuyên gia khí hậu và thương mại', en: 'Climate and Trade Expert' }, org: { vi: 'Hiệp hội Thép Việt Nam (minh hoạ)', en: 'Vietnam Steel Association (sample)' } },
+      { name: 'Đỗ Thanh Mai', title: { vi: 'Chuyên gia kiểm kê khí nhà kính', en: 'GHG Inventory Specialist' }, org: { vi: 'Trung tâm Tư vấn Phát thải (minh hoạ)', en: 'Emissions Advisory Center (sample)' } },
+      { name: 'Jonas Becker', title: { vi: 'Chuyên gia chính sách CBAM', en: 'CBAM Policy Expert' }, org: { vi: 'EU Green Trade Desk (minh hoạ)', en: 'EU Green Trade Desk (sample)' } },
+    ],
     agendaOptions: [
-      { agendaStartTime: '09:00', agendaEndTime: '10:00', agendaTitle: { vi: 'Cơ chế CBAM giai đoạn chính thức', en: 'CBAM definitive period', ko: 'CBAM 본격 시행 단계' }, speaker: { vi: 'Chuyên gia EU', en: 'EU expert', ko: 'EU 전문가' } },
-      { agendaStartTime: '10:00', agendaEndTime: '11:30', agendaTitle: { vi: 'Thực hành tính phát thải', en: 'Hands-on emissions calculation', ko: '배출량 산정 실습' } },
+      { agendaStartTime: '08:45', agendaEndTime: '09:00', agendaTitle: { vi: 'Mở phòng & kiểm tra kết nối', en: 'Room opens & connection check' } },
+      { agendaStartTime: '09:00', agendaEndTime: '09:50', agendaTitle: { vi: 'Cơ chế CBAM giai đoạn chính thức', en: 'CBAM definitive period' }, speaker: { vi: 'Jonas Becker', en: 'Jonas Becker' } },
+      { agendaStartTime: '09:50', agendaEndTime: '10:30', agendaTitle: { vi: 'Thực hành tính phát thải theo sản phẩm', en: 'Hands-on emissions calculation per product' }, speaker: { vi: 'Đỗ Thanh Mai', en: 'Do Thanh Mai' } },
+      { agendaStartTime: '10:30', agendaEndTime: '11:00', agendaTitle: { vi: 'Chiến lược của ngành thép và nhôm Việt Nam', en: 'Strategy for Vietnamese steel and aluminium' }, speaker: { vi: 'Hoàng Quốc Bảo', en: 'Hoang Quoc Bao' } },
+      { agendaStartTime: '11:00', agendaEndTime: '11:30', agendaTitle: { vi: 'Hỏi đáp', en: 'Q&A' } },
     ],
   },
   {
@@ -752,10 +882,91 @@ export const events: EventItem[] = [
     introduction: { vi: 'Hơn 600 lượt kết nối B2B giữa doanh nghiệp Việt Nam và nhà phân phối từ 9 nước ASEAN.', en: 'Over 600 B2B meetings between Vietnamese firms and distributors from 9 ASEAN countries.', ko: '베트남 기업과 아세안 9개국 유통업체 간 600건 이상의 B2B 미팅.' },
     startDate: day(-24, 9), endDate: day(-24, 17), startTime: '09:00', endTime: '17:00', industry: ['Multi-industry'],
     participationFee: 0, participationFeeCurrency: 'VND', registeredSlots: 220, maxSlots: 220,
-    organizedBy: { vi: 'VCCI', en: 'VCCI', ko: 'VCCI' }, location: { vi: 'Hà Nội + trực tuyến', en: 'Hanoi + online', ko: '하노이 + 온라인' },
+    organizedBy: { vi: 'VCCI', en: 'VCCI', ko: 'VCCI' }, location: { vi: 'Trực tuyến', en: 'Online', ko: '온라인' },
     agendaOptions: [{ agendaStartTime: '09:00', agendaEndTime: '17:00', agendaTitle: { vi: 'Toàn bộ phiên', en: 'Full session', ko: '전체 세션' } }],
   },
+  /* ---- sample events modelled on the VCCI events page (vcci.com.vn/su-kien-vcci): one per format/type */
+  {
+    id: 'e-forum-fx', eventType: 'CONFERENCE', eventStatus: 'UPCOMING', coverImage: IMG.hall, format: 'ONLINE',
+    title: { vi: 'Diễn đàn trực tuyến: Biến động tỷ giá, lãi suất và giá năng lượng — kịch bản cuối năm 2026', en: 'Online forum: FX, interest-rate and energy-price volatility — year-end 2026 scenarios' },
+    introduction: { vi: 'Phân tích kịch bản vĩ mô và gợi ý phòng ngừa rủi ro tài chính cho doanh nghiệp xuất nhập khẩu trong quý IV/2026.', en: 'Macro scenarios and hedging ideas for importers and exporters in Q4 2026.' },
+    startDate: day(2, 13), endDate: day(2, 17), startTime: '13:00', endTime: '17:00', industry: ['Finance', 'Multi-industry'],
+    participationFee: 0, participationFeeCurrency: 'VND', registeredSlots: 142, maxSlots: 200, registrationDeadline: day(1, 17),
+    organizedBy: { vi: 'Viện Phát triển Doanh nghiệp (VCCI)', en: 'VCCI Enterprise Development Institute' }, location: { vi: 'Trực tuyến — phát trực tiếp trên hệ thống VCCI', en: 'Online — live on the VCCI platform' },
+    contact: { name: 'Ban Tổ chức', phone: '024 3577 0632', email: 'sukien@vcci.example.vn' },
+    agendaOptions: [
+      { agendaStartTime: '13:00', agendaEndTime: '13:30', agendaTitle: { vi: 'Mở phòng & kiểm tra kết nối', en: 'Room opens & connection check' } },
+      { agendaStartTime: '13:30', agendaEndTime: '15:00', agendaTitle: { vi: 'Kịch bản tỷ giá, lãi suất cuối năm', en: 'Year-end FX and rate scenarios' } },
+      { agendaStartTime: '15:20', agendaEndTime: '17:00', agendaTitle: { vi: 'Toạ đàm: phòng ngừa rủi ro cho doanh nghiệp', en: 'Panel: hedging for businesses' } },
+    ],
+  },
+  {
+    id: 'e-ieae-tour', eventType: 'TRADE_MISSION', eventStatus: 'UPCOMING', coverImage: IMG.factory, format: 'ONLINE',
+    title: { vi: 'Tham quan trực tuyến Triển lãm IEAE Hanoi 2026', en: 'Online tour of IEAE Hanoi 2026' },
+    introduction: { vi: 'Tham quan trực tuyến triển lãm quốc tế về thiết bị và công nghệ cùng cán bộ VCCI dẫn đường, kết nối trực tiếp với nhà cung cấp qua phòng họp ảo.', en: 'A guided online tour of the international equipment and technology exhibition, with live supplier meetings in virtual rooms.' },
+    startDate: day(9, 9), endDate: day(9, 16), startTime: '09:00', endTime: '16:00', industry: ['Machinery', 'Electronics'],
+    participationFee: 0, participationFeeCurrency: 'VND', registeredSlots: 38, maxSlots: 60, registrationDeadline: day(6, 17),
+    organizedBy: { vi: 'Trung tâm Hỗ trợ DNNVV (VCCI)', en: 'VCCI SME Support Center' }, location: { vi: 'Trực tuyến — phát trực tiếp trên hệ thống VCCI', en: 'Online — live on the VCCI platform' },
+    contact: { name: 'Ban Tổ chức', phone: '024 3577 0632', email: 'sukien@vcci.example.vn' },
+    agendaOptions: [
+      { agendaStartTime: '08:00', agendaEndTime: '', agendaTitle: { vi: 'Mở phòng & hướng dẫn tham quan', en: 'Room opens & tour briefing' } },
+      { agendaStartTime: '09:00', agendaEndTime: '12:00', agendaTitle: { vi: 'Tham quan gian hàng trực tuyến theo nhóm ngành', en: 'Guided online booth visits by sector' } },
+      { agendaStartTime: '14:00', agendaEndTime: '16:00', agendaTitle: { vi: 'Gặp gỡ nhà cung cấp trực tuyến', en: 'Online supplier meetings' } },
+    ],
+  },
+  {
+    id: 'e-abis-ph', eventType: 'TRADE_MISSION', eventStatus: 'UPCOMING', coverImage: IMG.port, format: 'ONLINE',
+    title: { vi: 'Xúc tiến thương mại trực tuyến Philippines kết hợp ABIS 2026', en: 'Online trade promotion to the Philippines with ABIS 2026' },
+    introduction: { vi: 'Doanh nghiệp Việt Nam tìm hiểu thị trường Philippines, dự diễn đàn ABIS và gặp gỡ nhà nhập khẩu, phân phối địa phương qua các phiên B2B trực tuyến.', en: 'Vietnamese companies explore the Philippine market, join the ABIS forum and meet local importers and distributors in online B2B sessions.' },
+    startDate: day(14, 9), endDate: day(18, 17), startTime: '09:00', endTime: '17:00', industry: ['Food', 'Handicraft', 'Multi-industry'],
+    participationFee: 45000000, participationFeeCurrency: 'VND', registeredSlots: 21, maxSlots: 30, registrationDeadline: day(8, 17), targetMarket: { vi: 'Philippines / ASEAN', en: 'Philippines / ASEAN' },
+    organizedBy: { vi: 'Ban Quan hệ Quốc tế (VCCI)', en: 'VCCI International Relations Department' }, location: { vi: 'Trực tuyến — phát trực tiếp trên hệ thống VCCI', en: 'Online — live on the VCCI platform' },
+    contact: { name: 'Ban Quan hệ Quốc tế', phone: '024 3577 0632', email: 'international@vcci.example.vn' },
+    agendaOptions: [
+      { agendaStartTime: 'N1', agendaEndTime: '', agendaTitle: { vi: 'Khai mạc & giới thiệu thị trường Philippines', en: 'Opening & Philippine market overview' } },
+      { agendaStartTime: 'N2', agendaEndTime: '', agendaTitle: { vi: 'Diễn đàn ABIS 2026', en: 'ABIS 2026 forum' } },
+      { agendaStartTime: 'N3–N4', agendaEndTime: '', agendaTitle: { vi: 'Gặp gỡ B2B trực tuyến và giới thiệu kênh bán lẻ', en: 'Online B2B meetings and retail channels' } },
+      { agendaStartTime: 'N5', agendaEndTime: '', agendaTitle: { vi: 'Tổng kết và bước tiếp theo', en: 'Wrap-up and next steps' } },
+    ],
+  },
+  {
+    id: 'e-ceo-k04', eventType: 'TRAINING', eventStatus: 'UPCOMING', coverImage: IMG.workshop, format: 'ONLINE',
+    title: { vi: 'Khai giảng chương trình đào tạo CEO K04 (học trực tuyến)', en: 'CEO Programme K04 — online opening' },
+    introduction: { vi: 'Khóa đào tạo quản trị cấp cao cho chủ doanh nghiệp, học theo chuyên đề, có cố vấn và mạng lưới cựu học viên.', en: 'An executive programme for business owners — thematic modules, mentors and an alumni network.' },
+    startDate: day(25, 13), endDate: day(115, 17), startTime: '13:00', endTime: '17:00', industry: ['Multi-industry'],
+    participationFee: 68000000, participationFeeCurrency: 'VND', registeredSlots: 33, maxSlots: 40, registrationDeadline: day(22, 17),
+    organizedBy: { vi: 'Trung tâm Phát triển Tiềm năng Việt (VCCI)', en: 'VCCI Viet Potential Development Center' }, location: { vi: 'Trực tuyến — phát trực tiếp trên hệ thống VCCI', en: 'Online — live on the VCCI platform' },
+    contact: { name: 'Ban Tuyển sinh', phone: '024 3577 0632', email: 'daotao@vcci.example.vn' },
+    agendaOptions: [{ agendaStartTime: '13:00', agendaEndTime: '17:00', agendaTitle: { vi: 'Lễ khai giảng và chuyên đề 1', en: 'Opening ceremony and module 1' } }],
+  },
+  {
+    id: 'e-digital-safety', eventType: 'SUPPORT_1TO1', eventStatus: 'ONGOING', coverImage: IMG.laptop, format: 'ONLINE',
+    title: { vi: 'An toàn số cùng doanh nghiệp — hỗ trợ 1:1 miễn phí', en: 'Digital safety with businesses — free 1:1 support' },
+    introduction: { vi: 'Chuyên gia rà soát an toàn thông tin cho doanh nghiệp theo lịch hẹn riêng, trực tuyến. Đặt lịch bất kỳ lúc nào trong thời gian chương trình.', en: 'Security experts review your company’s digital safety by private appointment, online. Book any time during the programme.' },
+    startDate: day(-20, 0), endDate: day(40, 0), startTime: '08:30', endTime: '17:00', industry: ['IT', 'Multi-industry'],
+    participationFee: 0, participationFeeCurrency: 'VND', registeredSlots: 87, maxSlots: 150,
+    organizedBy: { vi: 'Hội đồng Doanh nhân nữ Việt Nam', en: 'Vietnam Women Entrepreneurs Council' }, location: { vi: 'Toàn quốc — tư vấn trực tuyến 1:1', en: 'Nationwide — online 1:1 consultations' },
+    contact: { name: 'Ban Điều phối', phone: '024 3577 0632', email: 'antoanso@vcci.example.vn' },
+    agendaOptions: [{ agendaStartTime: '08:30', agendaEndTime: '17:00', agendaTitle: { vi: 'Đặt lịch hẹn tư vấn 1:1 (45 phút)', en: 'Book a 45-minute 1:1 consultation' } }],
+  },
+  {
+    id: 'e-de-biz', eventType: 'WEBINAR', eventStatus: 'ENDED', coverImage: IMG.discussion, format: 'ONLINE',
+    title: { vi: 'Kết nối kinh doanh với thị trường Đức, châu Âu', en: 'Business connections with Germany and the EU' },
+    introduction: { vi: 'Buổi kết nối trực tuyến giới thiệu chương trình chắp mối doanh nghiệp Việt – Đức. Đã kết thúc; có bản ghi và tài liệu để xem lại.', en: 'An online session introducing the Vietnam–Germany matchmaking programme. Ended — recording and materials available.' },
+    startDate: day(-9, 8), endDate: day(-9, 11), startTime: '08:30', endTime: '11:00', industry: ['Multi-industry'],
+    participationFee: 0, participationFeeCurrency: 'VND', registeredSlots: 312, maxSlots: 400,
+    organizedBy: { vi: 'Trung tâm Hỗ trợ DNNVV (VCCI)', en: 'VCCI SME Support Center' }, location: { vi: 'Trực tuyến — phát trực tiếp trên hệ thống VCCI', en: 'Online — live on the VCCI platform' },
+    agendaOptions: [{ agendaStartTime: '08:30', agendaEndTime: '11:00', agendaTitle: { vi: 'Toàn bộ phiên', en: 'Full session' } }],
+  },
 ]
+
+/** Every VCCI event is online, so covers are online-themed (video call, laptop, remote work). */
+const onlineCover: Record<string, string> = {
+  'e-giz-eu': IMG.dealLaptop, 'e-eu-talk18': IMG.videoCall, 'e-krfood': IMG.remoteCall, 'e-evfta': IMG.onlineLaptop, 'e-furniture': IMG.laptopDesk,
+  'e-cbam': IMG.workLaptop, 'e-japan': IMG.cheerLaptop, 'e-asean': IMG.videoCall, 'e-forum-fx': IMG.onlineLaptop, 'e-ieae-tour': IMG.laptopDesk,
+  'e-abis-ph': IMG.dealLaptop, 'e-ceo-k04': IMG.webcamChat, 'e-digital-safety': IMG.workLaptop, 'e-de-biz': IMG.videoCall,
+}
+export const events: EventItem[] = rawEvents.map((e) => withComputedStatus({ ...e, coverImage: onlineCover[e.id] ?? e.coverImage }))
 
 /* ------------------------------------------------------------ sponsors & misc */
 export type SponsorTier = 'MAIN' | 'GOLD' | 'PARTNER'

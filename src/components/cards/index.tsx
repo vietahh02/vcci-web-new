@@ -2,11 +2,12 @@
  * Cards show only fields that exist in the VCCI portal DTOs
  * (ProductResult, Business, EventItem, PortalImportRequestListItem) — nothing invented.
  */
-import { ArrowRight, CalendarDays, MapPin, Radio, Users, Video } from 'lucide-react'
+import { ArrowRight, CalendarDays, MapPin, Radio, Store, Users, Video } from 'lucide-react'
 import { Link } from 'react-router-dom'
-import { getCategory, productsOf } from '@/api'
+import { getCategory, liveApi, USE_MOCK, useOrgProducts } from '@/api'
 import type { Business, EventItem, ImportRequest, Product } from '@/data/mock'
-import { CompanyMark, CountryChip, Stars, VerifiedBadge } from '@/components/brand'
+import { CompanyMark, CountryChip, VerifiedBadge } from '@/components/brand'
+import { ReputationStars } from '@/components/reputation/Reputation'
 import { LiveDot, SmartImage, Tilt } from '@/components/effects'
 import { Badge } from '@/components/ui/primitives'
 import { useI18n } from '@/lib/i18n'
@@ -37,7 +38,7 @@ export function ProductCard({ product, className }: { product: Product; classNam
 /* ---------------------------------------------------------------- Supplier (Business) — interactive card */
 export function SupplierCard({ business }: { business: Business }) {
   const { t, L } = useI18n()
-  const items = productsOf(business.id).slice(0, 3)
+  const items = (useOrgProducts(business.id, USE_MOCK || liveApi.hasEmbeddedProducts(business.id)).data ?? []).slice(0, 3)
   return (
     <Tilt className="h-full rounded-2xl" max={6}>
       <Link
@@ -66,7 +67,7 @@ export function SupplierCard({ business }: { business: Business }) {
           <CompanyMark name={business.nameEn} accent={business.accent} className="-mt-8 size-16 rounded-2xl border-4 border-card text-lg shadow-md" />
           <p className="mt-3 line-clamp-2 text-[16px] font-bold leading-snug transition-colors group-hover:text-primary">{business.name}</p>
           <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] text-muted-foreground">
-            <Stars score={business.reputationScore} className="text-foreground" />
+            <ReputationStars orgId={business.id} legacyScore={business.reputationScore} className="text-foreground" />
             <span className="inline-flex items-center gap-1"><MapPin className="size-3.5" />{business.province}</span>
           </div>
           <p className="mt-3 line-clamp-2 text-[13px] leading-relaxed text-muted-foreground">{L(business.description)}</p>
@@ -86,7 +87,7 @@ export function SupplierCard({ business }: { business: Business }) {
 /* ---------------------------------------------------------------- Supplier (Business) — horizontal row */
 export function SupplierRow({ business }: { business: Business }) {
   const { t, L } = useI18n()
-  const items = productsOf(business.id).slice(0, 3)
+  const items = (useOrgProducts(business.id, USE_MOCK || liveApi.hasEmbeddedProducts(business.id)).data ?? []).slice(0, 3)
   return (
     <article className="group grid gap-5 border-b py-6 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
       <div className="flex gap-4">
@@ -95,7 +96,7 @@ export function SupplierRow({ business }: { business: Business }) {
           <Link to={`/suppliers/${business.id}`} className="text-[17px] font-bold leading-snug hover:text-primary">{business.name}</Link>
           <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] text-muted-foreground">
             {business.verified && <VerifiedBadge />}
-            <Stars score={business.reputationScore} className="text-foreground" />
+            <ReputationStars orgId={business.id} legacyScore={business.reputationScore} className="text-foreground" />
             <span className="inline-flex items-center gap-1"><MapPin className="size-3.5" />{business.province}</span>
             <span>{t.supplier.types[business.businessType]}</span>
           </div>
@@ -136,7 +137,7 @@ export function EventCard({ event }: { event: EventItem }) {
         )}
       </div>
       <p className="mt-3 flex items-center gap-2 text-xs font-medium text-muted-foreground">
-        {event.eventType === 'LIVESTREAM' ? <Radio className="size-3.5" /> : <Video className="size-3.5" />}
+        {event.eventType === 'LIVESTREAM' ? <Radio className="size-3.5" /> : event.eventType === 'SHOW' ? <Store className="size-3.5" /> : <Video className="size-3.5" />}
         {t.events.type[event.eventType]}
         <span>·</span>
         <CalendarDays className="size-3.5" /> {formatDate(event.startDate, locale)} · {event.startTime}

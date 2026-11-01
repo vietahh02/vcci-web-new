@@ -3,15 +3,17 @@ import { AnimatePresence, motion } from 'motion/react'
 import { SearchX, SlidersHorizontal, X } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { searchProducts, type ProductQuery } from '@/api'
+import { catalogApi, searchProductsPage, USE_MOCK, type ProductQuery } from '@/api'
 import { categories, products, type Product } from '@/data/mock'
 import { categoryIcons } from '@/components/brand'
 import { ProductCard } from '@/components/cards'
-import { Badge, Button, Select, Skeleton } from '@/components/ui/primitives'
+import { Badge, Button, Skeleton } from '@/components/ui/primitives'
+import { Select } from '@/components/ui/select'
 import { useI18n } from '@/lib/i18n'
+import { tx } from '@/lib/tx'
 import { cn, formatNumber } from '@/lib/utils'
 
-const ALL_CERTS = Array.from(new Set(products.flatMap((p) => p.certificates))).slice(0, 12)
+const MOCK_CERTS = Array.from(new Set(products.flatMap((p) => p.certificates))).slice(0, 12)
 const MOQ_STEPS = [0, 50, 500, 2000, 5000]
 
 export default function SearchPage() {
@@ -23,18 +25,40 @@ export default function SearchPage() {
   const [certs, setCerts] = useState<string[]>([])
   const [sort, setSort] = useState<NonNullable<ProductQuery['sort']>>('popular')
   const [results, setResults] = useState<Product[] | null>(null)
+  const [total, setTotal] = useState(0)
+  const [page, setPage] = useState(0)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [facetCerts, setFacetCerts] = useState<string[]>([])
   const [filtersOpen, setFiltersOpen] = useState(false)
+  const query = (pg: number): ProductQuery => ({ keyword, categoryId: categoryId || undefined, maxMoq: maxMoq || undefined, certificates: certs, sort, page: pg, size: 24 })
 
+  // filters, sorting and paging are all applied by the BE; a new filter restarts from page 0
   useEffect(() => {
     let alive = true
     setResults(null)
-    searchProducts({ keyword, categoryId: categoryId || undefined, maxMoq: maxMoq || undefined, certificates: certs, sort }).then((r) => alive && setResults(r))
+    setPage(0)
+    searchProductsPage(query(0)).then((r) => { if (alive) { setResults(r.items); setTotal(r.total) } }, () => alive && setResults([]))
     return () => {
       alive = false
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [keyword, categoryId, maxMoq, certs, sort, lang])
 
+  useEffect(() => {
+    if (!USE_MOCK) catalogApi.popularCertificates(12).then(setFacetCerts, () => undefined)
+  }, [lang])
+
+  const loadMore = () => {
+    setLoadingMore(true)
+    searchProductsPage(query(page + 1)).then(
+      (r) => { setResults((prev) => [...(prev ?? []), ...r.items]); setPage(page + 1); setTotal(r.total) },
+      () => undefined,
+    ).finally(() => setLoadingMore(false))
+  }
+
   const cat = categories.find((c) => c.id === categoryId)
+  // live mode: certificate facets are the most used labels in the public catalogue (GET /api/products/certificates)
+  const ALL_CERTS = USE_MOCK ? MOCK_CERTS : facetCerts
   const activeFilters = useMemo(() => [maxMoq ? `MOQ ≤ ${formatNumber(maxMoq, locale)}` : null, ...certs].filter(Boolean) as string[], [maxMoq, certs, locale])
 
   const setCategory = (id: string) => {
@@ -122,9 +146,7 @@ export default function SearchPage() {
               {activeFilters.map((f) => <Badge key={f} variant="secondary" className="py-1">{f}</Badge>)}
               {activeFilters.length > 0 && <button onClick={clearAll} className="text-xs font-semibold text-muted-foreground hover:text-foreground">{t.searchPage.clear}</button>}
             </div>
-            <Select value={sort} onChange={(e) => setSort(e.target.value as typeof sort)} className="h-9 w-auto min-w-44 text-[13px]" aria-label={t.searchPage.sort}>
-              {(Object.keys(t.searchPage.sorts) as (keyof typeof t.searchPage.sorts)[]).map((k) => <option key={k} value={k}>{t.searchPage.sorts[k]}</option>)}
-            </Select>
+            <Select value={sort} onValueChange={setSort} className="h-9 w-auto min-w-44 text-[13px]" aria-label={t.searchPage.sort} options={(Object.keys(t.searchPage.sorts) as (keyof typeof t.searchPage.sorts)[]).map((k) => ({ value: k, label: t.searchPage.sorts[k] }))} />
           </div>
 
           {!results ? (
@@ -144,6 +166,11 @@ export default function SearchPage() {
                   <ProductCard product={p} />
                 </motion.div>
               ))}
+            </div>
+          )}
+          {results && results.length > 0 && results.length < total && (
+            <div className="mt-10 flex justify-center">
+              <Button variant="outline" disabled={loadingMore} onClick={loadMore}>{tx('Xem thêm', 'Load more', '더 보기')} ({results.length}/{total})</Button>
             </div>
           )}
         </div>

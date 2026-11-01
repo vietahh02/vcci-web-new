@@ -3,7 +3,11 @@
  * Prototype: persisted in localStorage. Real backend: extend Organization + new tables
  * (org_capability, org_export, org_revenue_evidence, org_needs, org_attendee).
  */
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { fetchSession, logout as apiLogout } from '@/api/auth'
+import { USE_MOCK } from '@/api/config'
+import { onAuthExpired, tokens } from '@/api/http'
+import { fetchMyProfile } from '@/api/realApi'
 import type { Bilingual } from '@/lib/i18n'
 import { KO } from '@/lib/ko-profile'
 import { withKo } from '@/lib/tx'
@@ -87,10 +91,15 @@ export const OPTIONS = {
 
 /* ---------------------------------------------------------------- data shape */
 export type VerifyStatus = 'SELF' | 'SUBMITTED' | 'VERIFIED'
-export interface RevenueRow { year: number; band: string; amount: string; proofType: string; proofFile: string; status: VerifyStatus }
-export interface Certificate { name: string; issuer: string; expiry: string; file: string; preview?: string }
-export interface DocFile { id: string; name: string; kind: string; size: number; preview?: string }
-export interface MediaItem { id: string; url: string; caption: string; kind: string }
+export interface RevenueRow {
+  year: number; band: string; amount: string; proofType: string; proofFile: string; proofFileId?: string; status: VerifyStatus
+  /** Lý do VCCI từ chối chứng từ (dòng quay về SELF); chỉ chủ DN thấy. Tải chứng từ mới để gửi xác minh lại. */
+  reviewReason?: string | null
+}
+export interface Certificate { name: string; issuer: string; expiry: string; file: string; fileId?: string; preview?: string }
+/** `fileId`/`url` are set once the file is stored by the backend (live mode); `preview` stays a local thumbnail */
+export interface DocFile { id: string; name: string; kind: string; size: number; preview?: string; fileId?: string; url?: string }
+export interface MediaItem { id: string; url: string; caption: string; kind: string; fileId?: string }
 export interface Registration {
   businessForm: string; businessType: string; industries: string[]; charterCapital: string; charterCurrency: string
   totalRevenue: string; reportYear: string; employees: string; fax: string; website: string
@@ -199,6 +208,10 @@ type Ctx = {
   profile: CompanyProfile
   signIn: (s?: Partial<Session>, fresh?: boolean, reg?: Partial<Registration>, extra?: { nameEn?: string; logo?: string }) => void
   signOut: () => void
+  /** live mode: (re)load session + profile from GET /api/auth/me and GET /api/me/profile */
+  loadRemote: () => Promise<void>
+  /** live mode: organization approval status from GET /api/me/profile */
+  remoteStatus: { orgStatus: string; statusReason: string } | null
   update: <K extends keyof CompanyProfile>(key: K, value: CompanyProfile[K]) => void
   registrations: EventRegistration[]
   register: (r: Omit<EventRegistration, 'at' | 'snapshot'>) => void
@@ -208,6 +221,7 @@ const ProfileContext = createContext<Ctx | null>(null)
 const KEY = 'vcci.profile.v1'
 
 function load(): { session: Session | null; profile: CompanyProfile; registrations: EventRegistration[] } {
+  if (!USE_MOCK) return { session: null, profile: emptyProfile(), registrations: [] }
   try {
     const raw = localStorage.getItem(KEY)
     if (raw) {
@@ -229,8 +243,26 @@ function load(): { session: Session | null; profile: CompanyProfile; registratio
 
 export function ProfileProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState(load)
+  const [remoteStatus, setRemoteStatus] = useState<{ orgStatus: string; statusReason: string } | null>(null)
+
+  const loadRemote = useCallback(async () => {
+    const me = await fetchSession().catch(() => null)
+    const r = await fetchMyProfile().catch(() => null)
+    if (!me && !r) throw new Error('session')
+    const profile = r?.profile ?? emptyProfile(me?.companyName ?? '', me?.taxCode ?? '')
+    setRemoteStatus(r ? { orgStatus: r.orgStatus, statusReason: r.statusReason } : null)
+    setState((prev) => ({ ...prev, session: { companyName: me?.companyName || profile.general.nameVi, taxCode: me?.taxCode || profile.general.taxCode }, profile }))
+  }, [])
+
+  // live mode: keep the session in sync with the stored token; drop it when the refresh token is rejected
+  useEffect(() => {
+    if (USE_MOCK) return
+    if (tokens.access()) loadRemote().catch(() => setState((p) => ({ ...p, session: null })))
+    return onAuthExpired(() => setState((p) => ({ ...p, session: null })))
+  }, [loadRemote])
 
   useEffect(() => {
+    if (!USE_MOCK) return // live data is never persisted client-side (it is re-read from the backend)
     try {
       localStorage.setItem(KEY, JSON.stringify(state))
     } catch {
@@ -257,7 +289,12 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
           const p = prev.profile.general.nameVi ? prev.profile : demoProfile()
           return { ...prev, session: { companyName: p.general.nameVi, taxCode: p.general.taxCode }, profile: p }
         }),
-      signOut: () => setState((prev) => ({ ...prev, session: null })),
+      signOut: () => {
+        if (!USE_MOCK) void apiLogout()
+        setState((prev) => ({ ...prev, session: null, ...(USE_MOCK ? {} : { profile: emptyProfile() }) }))
+      },
+      loadRemote,
+      remoteStatus,
       update: (key, v) => setState((prev) => ({ ...prev, profile: { ...prev.profile, [key]: v } })),
       register: (r) =>
         setState((prev) => ({
@@ -265,7 +302,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
           registrations: [...prev.registrations.filter((x) => x.eventId !== r.eventId), { ...r, at: new Date().toISOString(), snapshot: prev.profile }],
         })),
     }),
-    [state],
+    [state, loadRemote, remoteStatus],
   )
 
   return <ProfileContext.Provider value={value}>{children}</ProfileContext.Provider>

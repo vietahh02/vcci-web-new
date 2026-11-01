@@ -2,9 +2,11 @@ import { AnimatePresence, motion } from 'motion/react'
 import { ArrowUpRight, Flame, Search, TrendingUp } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { categories, products, trendingKeywords } from '@/data/mock'
+import { liveApi, USE_MOCK, useHomeTrending } from '@/api'
+import { categories, products, type Product } from '@/data/mock'
 import { categoryIcons } from '@/components/brand'
 import { Kbd } from '@/components/ui/primitives'
+import { Select } from '@/components/ui/select'
 import { useI18n } from '@/lib/i18n'
 import { cn, img } from '@/lib/utils'
 
@@ -49,11 +51,21 @@ export function SearchBar({ size = 'md', className, autoFocusKey }: { size?: 'md
     return () => document.removeEventListener('mousedown', onDown)
   }, [])
 
+  const trendingKeywords = useHomeTrending().data ?? []
+  // live: GET /api/products/search?keyword=&size=4 (debounced); mock: filter the in-memory catalogue
+  const [liveMatches, setLiveMatches] = useState<{ q: string; list: Product[] }>({ q: '', list: [] })
+  useEffect(() => {
+    if (USE_MOCK || !q.trim()) return
+    let alive = true
+    const id = setTimeout(() => liveApi.suggestProducts(q.trim()).then((list) => alive && setLiveMatches({ q, list }), () => {}), 250)
+    return () => { alive = false; clearTimeout(id) }
+  }, [q])
   const matches = useMemo(() => {
     if (!q.trim()) return []
+    if (!USE_MOCK) return liveMatches.list
     const n = q.toLowerCase()
     return products.filter((p) => L(p.productName).toLowerCase().includes(n) || p.industry.toLowerCase().includes(n)).slice(0, 4)
-  }, [q, L])
+  }, [q, L, liveMatches])
 
   function submit(term = q) {
     setOpen(false)
@@ -79,16 +91,14 @@ export function SearchBar({ size = 'md', className, autoFocusKey }: { size?: 'md
         role="search"
       >
         {!lg && (
-          <select
+          <Select
             value={scope}
-            onChange={(e) => setScope(e.target.value as Scope)}
+            onValueChange={setScope}
             aria-label={t.ui.scope}
-            className="mr-1 hidden h-full shrink-0 cursor-pointer rounded-xl bg-muted pl-3 pr-2 text-xs font-semibold text-foreground outline-none md:block"
-          >
-            {scopes.map((s) => (
-              <option key={s} value={s}>{t.search.scopes[s]}</option>
-            ))}
-          </select>
+            options={scopes.map((s) => ({ value: s, label: t.search.scopes[s] }))}
+            className="mr-1 hidden h-full w-auto shrink-0 gap-1.5 rounded-xl border-0 bg-muted pl-3 pr-2 text-xs font-semibold shadow-none hover:bg-muted/70 focus:ring-0 focus-visible:ring-2 focus-visible:ring-primary/30 data-[state=open]:ring-0 xl:flex"
+            contentClassName="min-w-36"
+          />
         )}
         <div className={cn('hidden shrink-0 items-center rounded-xl bg-muted p-0.5', lg && 'mr-2 md:flex')}>
           {scopes.map((s) => (
@@ -140,7 +150,7 @@ export function SearchBar({ size = 'md', className, autoFocusKey }: { size?: 'md
           )}
         >
           <Search className={lg ? 'size-5' : 'size-4'} />
-          <span className="hidden sm:inline">{t.search.submit}</span>
+          <span className={lg ? 'hidden sm:inline' : 'hidden sm:inline md:hidden xl:inline'}>{t.search.submit}</span>
         </button>
       </form>
 

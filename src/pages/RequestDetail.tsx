@@ -3,8 +3,9 @@ import { AnimatePresence, motion } from 'motion/react'
 import { CalendarClock, FileUp, MapPin, Package, Paperclip, Send, Tag, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { getCategory, getImportRequest, searchProducts } from '@/api'
-import { importRequests, type Product } from '@/data/mock'
+import { browseImportRequests, getCategory, liveApi, searchProducts, USE_MOCK, useImportRequest } from '@/api'
+import { type ImportRequest, type Product } from '@/data/mock'
+import { ErrorBlock, LoadingBlock } from '@/components/ui/StateViews'
 import { CountryChip, SectionHeader } from '@/components/brand'
 import { ProductCard, RequestCard } from '@/components/cards'
 import { Countdown, Reveal } from '@/components/effects'
@@ -18,17 +19,22 @@ import { formatDate, formatMoney, formatNumber } from '@/lib/utils'
 export default function RequestDetail() {
   const { id = '' } = useParams()
   const { t, L, lang, locale } = useI18n()
-  const r = getImportRequest(id)
+  const { data: r, loading, error, reload } = useImportRequest(id)
   const [quoteOpen, setQuoteOpen] = useState(false)
   const [matches, setMatches] = useState<Product[]>([])
+  const [others, setOthers] = useState<ImportRequest[]>([])
+  const catId = r?.categoryId
 
   useEffect(() => {
-    if (r) searchProducts({ categoryId: r.categoryId }).then((p) => setMatches(p.slice(0, 4)))
-  }, [r, lang])
+    if (!r) return
+    searchProducts({ categoryId: catId }).then((p) => setMatches(p.slice(0, 4)), () => setMatches([]))
+    browseImportRequests().then((l) => setOthers(l.filter((x) => x.id !== r.id).slice(0, 4)), () => setOthers([]))
+  }, [r, catId, lang])
 
+  if (loading) return <LoadingBlock />
+  if (error) return <ErrorBlock error={error} onRetry={reload} />
   if (!r) return <NotFound />
   const cat = getCategory(r.categoryId)
-  const others = importRequests.filter((x) => x.id !== r.id).slice(0, 4)
 
   return (
     <div className="container-page pt-6">
@@ -96,16 +102,16 @@ export default function RequestDetail() {
         <div className="grid gap-4 md:grid-cols-2">{others.map((o) => <RequestCard key={o.id} request={o} />)}</div>
       </section>
 
-      <QuoteSheet open={quoteOpen} onOpenChange={setQuoteOpen} to={r.organizationEmail} subject={`Quotation – ${r.requestCode} – ${L(r.requestName)}`} />
+      <QuoteSheet open={quoteOpen} onOpenChange={setQuoteOpen} requestId={r.id} to={r.organizationEmail} subject={`Quotation – ${r.requestCode} – ${L(r.requestName)}`} />
     </div>
   )
 }
 
 /** POST /api/portal/import-requests/{id}/quotes/email (multipart) */
-function QuoteSheet({ open, onOpenChange, to, subject }: { open: boolean; onOpenChange: (v: boolean) => void; to: string; subject: string }) {
+function QuoteSheet({ open, onOpenChange, requestId, to, subject }: { open: boolean; onOpenChange: (v: boolean) => void; requestId: string; to: string; subject: string }) {
   const { t } = useI18n()
   const toast = useToast()
-  const [files, setFiles] = useState<string[]>([])
+  const [files, setFiles] = useState<File[]>([])
   const [drag, setDrag] = useState(false)
   const [sent, setSent] = useState(false)
 
@@ -115,33 +121,41 @@ function QuoteSheet({ open, onOpenChange, to, subject }: { open: boolean; onOpen
         {sent ? (
           <SuccessState title={t.requests.quoteSent} desc={t.requests.quoteSentDesc} onClose={() => onOpenChange(false)} />
         ) : (
-          <form className="space-y-4 p-6" onSubmit={(e) => { e.preventDefault(); setSent(true); toast({ kind: 'success', title: t.requests.quoteSent }) }}>
+          <form className="space-y-4 p-6" onSubmit={(e) => {
+            e.preventDefault()
+            if (USE_MOCK) { setSent(true); toast({ kind: 'success', title: t.requests.quoteSent }); return }
+            const g = (k: string) => String(new FormData(e.currentTarget).get(k) ?? '')
+            liveApi.sendQuote(requestId, { cc: g('cc'), bcc: g('bcc'), subject: g('subject'), content: g('content'), files }).then(
+              () => { setSent(true); toast({ kind: 'success', title: t.requests.quoteSent }) },
+              (err: Error) => toast({ kind: 'info', title: err.message }),
+            )
+          }}>
             <Field label={t.requests.to} htmlFor="q-to"><Input id="q-to" value={to} readOnly className="bg-muted" /></Field>
             <div className="grid grid-cols-2 gap-3">
-              <Field label="CC" htmlFor="q-cc"><Input id="q-cc" type="email" placeholder="sales@company.vn" /></Field>
-              <Field label="BCC" htmlFor="q-bcc"><Input id="q-bcc" type="email" /></Field>
+              <Field label="CC" htmlFor="q-cc"><Input id="q-cc" name="cc" type="email" placeholder="sales@company.vn" /></Field>
+              <Field label="BCC" htmlFor="q-bcc"><Input id="q-bcc" name="bcc" type="email" /></Field>
             </div>
-            <Field label={t.requests.subject} htmlFor="q-sub"><Input id="q-sub" defaultValue={subject} required /></Field>
-            <Field label={t.requests.content} htmlFor="q-body"><Textarea id="q-body" className="min-h-36" required placeholder={t.ui.quotePh} /></Field>
+            <Field label={t.requests.subject} htmlFor="q-sub"><Input id="q-sub" name="subject" defaultValue={subject} required /></Field>
+            <Field label={t.requests.content} htmlFor="q-body"><Textarea id="q-body" name="content" className="min-h-36" required placeholder={t.ui.quotePh} /></Field>
             <div>
               <p className="mb-1.5 text-[13px] font-semibold">{t.requests.attachments}</p>
               <label
                 onDragOver={(e) => { e.preventDefault(); setDrag(true) }}
                 onDragLeave={() => setDrag(false)}
-                onDrop={(e) => { e.preventDefault(); setDrag(false); setFiles((f) => [...f, ...Array.from(e.dataTransfer.files).map((x) => x.name)]) }}
+                onDrop={(e) => { e.preventDefault(); setDrag(false); setFiles((f) => [...f, ...Array.from(e.dataTransfer.files)]) }}
                 className={`flex cursor-pointer flex-col items-center gap-2 rounded-xl border-2 border-dashed p-6 text-center transition ${drag ? 'scale-[1.02] border-primary bg-primary-soft' : 'hover:border-primary/50 hover:bg-muted/50'}`}
               >
                 <motion.div animate={drag ? { y: [0, -6, 0] } : { y: 0 }} transition={{ repeat: drag ? Infinity : 0, duration: 0.8 }}>
                   <FileUp className="size-7 text-primary" />
                 </motion.div>
                 <span className="text-xs text-muted-foreground">{t.requests.attachHint}</span>
-                <input type="file" multiple className="sr-only" onChange={(e) => setFiles((f) => [...f, ...Array.from(e.target.files ?? []).map((x) => x.name)])} />
+                <input type="file" multiple className="sr-only" onChange={(e) => setFiles((f) => [...f, ...Array.from(e.target.files ?? [])])} />
               </label>
               <ul className="mt-2 space-y-1.5">
                 <AnimatePresence>
                   {files.map((f, i) => (
-                    <motion.li key={f + i} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }} className="flex items-center gap-2 rounded-lg bg-muted px-3 py-2 text-xs">
-                      <Paperclip className="size-3.5" /> <span className="flex-1 truncate">{f}</span>
+                    <motion.li key={f.name + i} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }} className="flex items-center gap-2 rounded-lg bg-muted px-3 py-2 text-xs">
+                      <Paperclip className="size-3.5" /> <span className="flex-1 truncate">{f.name}</span>
                       <button type="button" onClick={() => setFiles((x) => x.filter((_, k) => k !== i))} aria-label={t.ui.remove}><X className="size-3.5" /></button>
                     </motion.li>
                   ))}

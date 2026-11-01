@@ -1,8 +1,9 @@
 /**
  * shadcn-style primitives (see ui-references/flutter-shadcn-ui/skills/shadcn-ui-flutter/components):
- * Button, Badge, Card, Input, Textarea, Label, Select, Separator, Skeleton, Progress.
+ * Button, Badge, Card, Input, Textarea, Label, Field, Separator, Skeleton, Progress. Select lives in ./select (Radix).
  */
-import { forwardRef, type ReactNode, type ButtonHTMLAttributes, type HTMLAttributes, type InputHTMLAttributes, type LabelHTMLAttributes, type SelectHTMLAttributes, type TextareaHTMLAttributes } from 'react'
+import { forwardRef, type ReactNode, type ButtonHTMLAttributes, type HTMLAttributes, type InputHTMLAttributes, type LabelHTMLAttributes, type TextareaHTMLAttributes } from 'react'
+import { fieldBase } from '@/components/ui/styles'
 import { cn } from '@/lib/utils'
 
 /* ---------------------------------------------------------------- Button */
@@ -104,9 +105,6 @@ export function CardFooter({ className, ...props }: HTMLAttributes<HTMLDivElemen
 }
 
 /* ---------------------------------------------------------------- Form fields */
-const fieldBase =
-  'w-full rounded-lg border border-input bg-background px-3 text-sm text-foreground shadow-[0_1px_1px_rgb(15_23_42/0.03)] transition-[border,box-shadow] placeholder:text-muted-foreground/80 focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/12 disabled:opacity-60'
-
 export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement>>(function Input({ className, ...props }, ref) {
   return <input ref={ref} className={cn(fieldBase, 'h-10', className)} {...props} />
 })
@@ -114,21 +112,6 @@ export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputE
 export const Textarea = forwardRef<HTMLTextAreaElement, TextareaHTMLAttributes<HTMLTextAreaElement>>(function Textarea({ className, ...props }, ref) {
   return <textarea ref={ref} className={cn(fieldBase, 'min-h-24 py-2.5 leading-relaxed', className)} {...props} />
 })
-
-export function Select({ className, children, ...props }: SelectHTMLAttributes<HTMLSelectElement>) {
-  return (
-    <select
-      className={cn(
-        fieldBase,
-        "h-10 appearance-none bg-[url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%2371717a' stroke-width='2' viewBox='0 0 24 24'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E\")] bg-[length:16px] bg-[right_10px_center] bg-no-repeat pr-9",
-        className,
-      )}
-      {...props}
-    >
-      {children}
-    </select>
-  )
-}
 
 export function Label({ className, ...props }: LabelHTMLAttributes<HTMLLabelElement>) {
   return <label className={cn('mb-1.5 block text-[13px] font-semibold text-foreground', className)} {...props} />

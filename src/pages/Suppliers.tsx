@@ -26,7 +26,7 @@ export default function Suppliers() {
   useEffect(() => {
     let alive = true
     setList(null)
-    const id = setTimeout(() => searchBusinesses(q, cat || undefined).then((r) => alive && setList(r.filter((b) => type === 'ALL' || b.businessType === type))), 200)
+    const id = setTimeout(() => searchBusinesses(q, cat || undefined, type).then((r) => alive && setList(r.filter((b) => type === 'ALL' || b.businessType === type)), () => alive && setList([])), 200)
     return () => {
       alive = false
       clearTimeout(id)

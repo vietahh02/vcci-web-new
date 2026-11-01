@@ -7,10 +7,12 @@ import { AnimatePresence, motion, useScroll, useTransform } from 'motion/react'
 import { Award, BadgeCheck, Building2, ChevronLeft, ChevronRight, Download, Eye, FileText, Globe, Mail, MapPin, MessageSquare, Phone, Plus, Send, ShieldCheck, Users, X } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { getBusiness, productsOf } from '@/api'
+import { liveApi, USE_MOCK, useBusiness, useOrgProducts } from '@/api'
+import { ErrorBlock, LoadingBlock } from '@/components/ui/StateViews'
 import { buildPublicProfile, type PublicProfile } from '@/data/capability'
 import { categories, type Business } from '@/data/mock'
-import { CompanyMark, Stars, VerifiedBadge } from '@/components/brand'
+import { CompanyMark, VerifiedBadge } from '@/components/brand'
+import { ReputationPanel, ReputationStars } from '@/components/reputation/Reputation'
 import { ProductCard } from '@/components/cards'
 import { GALLERY_KINDS } from '@/components/upload/Upload'
 import { Dialog, DialogContent, DialogTrigger, useToast } from '@/components/ui/overlay'
@@ -42,24 +44,34 @@ const STATUS: Record<VerifyStatus, { cls: string; label: Bilingual }> = {
 
 export default function SupplierProfile() {
   const { id = '' } = useParams()
-  const b = getBusiness(id)
-  if (!b) return <NotFound />
-  return <Storefront b={b} />
+  const { data, loading, error, reload } = useBusiness(id)
+  if (loading) return <LoadingBlock />
+  if (error) return <ErrorBlock error={error} onRetry={reload} />
+  if (!data?.business) return <NotFound />
+  return <Storefront b={data.business} remote={data.profile} />
 }
 
-function Storefront({ b }: { b: Business }) {
+function Storefront({ b, remote }: { b: Business; remote: PublicProfile | null }) {
   const { t, L } = useI18n()
   const toast = useToast()
   const { session, profile } = useProfile()
   const isOwn = !!session && profile.general.taxCode.replace(/\s/g, '') === b.taxCode.replace(/\s/g, '')
-  const pp = useMemo(() => buildPublicProfile(b, isOwn ? profile : null), [b, isOwn, profile])
+  // live: the BE returns the (already privacy-filtered) public profile; mock: built locally
+  const pp = useMemo(() => remote ?? buildPublicProfile(b, isOwn ? profile : null), [b, isOwn, profile, remote])
   const [tab, setTab] = useState<Tab>('overview')
   const [following, setFollowing] = useState(false)
+  // live: the follow flag is per user, so it is read from the authenticated endpoint (and only when signed in)
+  useEffect(() => {
+    if (USE_MOCK || !session) return
+    let alive = true
+    liveApi.isFollowingBusiness(b.id).then((v) => { if (alive) setFollowing(v) }, () => undefined)
+    return () => { alive = false }
+  }, [b.id, session])
   const [lightbox, setLightbox] = useState<{ slides: Slide[]; index: number } | null>(null)
   const coverRef = useRef<HTMLDivElement>(null)
   const { scrollYProgress } = useScroll({ target: coverRef, offset: ['start start', 'end start'] })
   const coverY = useTransform(scrollYProgress, [0, 1], ['0%', '25%'])
-  const items = productsOf(b.id)
+  const items = useOrgProducts(b.id).data ?? []
   const gallerySlides: Slide[] = pp.gallery.map((m) => ({ url: m.url, caption: caption(m, L) }))
 
   return (
@@ -82,7 +94,7 @@ function Storefront({ b }: { b: Business }) {
               <h1 className="mt-2 text-2xl font-extrabold tracking-tight md:text-4xl">{b.name}</h1>
               <p className="text-sm text-white/65">{pp.nameEn}</p>
               <p className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-white/75">
-                <Stars score={b.reputationScore} className="text-white" />
+                <ReputationStars orgId={b.id} legacyScore={b.reputationScore} className="text-white" dark />
                 <span className="inline-flex items-center gap-1.5"><MapPin className="size-4" /> {b.province}</span>
                 <span className="inline-flex items-center gap-1.5"><Users className="size-4" /> {pp.facts.employees}</span>
               </p>
@@ -90,10 +102,15 @@ function Storefront({ b }: { b: Business }) {
           </motion.div>
           <div className="flex flex-wrap gap-2">
             {pp.own && <Link to="/account/profile" className="inline-flex h-10 items-center gap-2 rounded-lg bg-white/15 px-4 text-sm font-semibold hover:bg-white/25">{tx('Sửa hồ sơ', 'Edit profile', '프로필 수정')}</Link>}
-            <Button variant="ghost" className="border border-white/25 text-white hover:bg-white/10" onClick={() => { setFollowing((v) => !v); if (!following) toast({ kind: 'success', title: t.supplier.follow, description: b.name }) }}>
+            <Button variant="ghost" className="border border-white/25 text-white hover:bg-white/10" onClick={() => {
+              const next = !following
+              const done = () => { setFollowing(next); if (next) toast({ kind: 'success', title: t.supplier.follow, description: b.name }) }
+              if (USE_MOCK) return done()
+              liveApi.followBusiness(b.id, next).then(done, (err: Error) => toast({ kind: 'info', title: err.message }))
+            }}>
               {following ? <BadgeCheck /> : <Plus />} {t.supplier.follow}
             </Button>
-            <ContactDialog name={b.name} email={pp.facts.contact.email} />
+            <ContactDialog id={b.id} name={b.name} email={pp.facts.contact.email} />
           </div>
         </div>
       </div>
@@ -119,7 +136,7 @@ function Storefront({ b }: { b: Business }) {
         <AnimatePresence mode="wait">
           <motion.div key={tab} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.25 }} className="py-10">
             {tab === 'overview' && (
-              <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_340px]">
+              <div className="grid grid-cols-[minmax(0,1fr)] gap-10 lg:grid-cols-[minmax(0,1fr)_340px]">
                 <div className="min-w-0">
                   <h2 className="text-xl font-bold">{t.supplier.about}</h2>
                   <p className="mt-3 max-w-3xl text-[15px] leading-relaxed text-foreground/85">{L(b.description)}</p>
@@ -147,7 +164,10 @@ function Storefront({ b }: { b: Business }) {
                     {items.slice(0, 3).map((p) => <ProductCard key={p.id} product={p} />)}
                   </div>
                 </div>
-                <InfoCard b={b} pp={pp} />
+                <div className="space-y-5">
+                  <ReputationPanel orgId={b.id} />
+                  <InfoCard b={b} pp={pp} />
+                </div>
               </div>
             )}
             {tab === 'capability' && <Capability pp={pp} open={(slides, index) => setLightbox({ slides, index })} />}
@@ -208,7 +228,7 @@ function Facts({ b, pp }: { b: Business; pp: PublicProfile }) {
       <dl className="mt-4 grid gap-x-8 sm:grid-cols-2">
         {rows.map((r) => (
           <div key={r.k} className="flex justify-between gap-4 border-b py-3 text-sm">
-            <dt className="shrink-0 text-muted-foreground">{r.k}</dt>
+            <dt className="text-muted-foreground">{r.k}</dt>
             <dd className="text-right font-medium">{r.v}</dd>
           </div>
         ))}
@@ -264,7 +284,7 @@ function Capability({ pp, open }: { pp: PublicProfile; open: (slides: Slide[], i
   ].filter(([, v]) => v) as [string, string][]
 
   return (
-    <div className="grid gap-10 lg:grid-cols-[200px_minmax(0,1fr)]">
+    <div className="grid grid-cols-[minmax(0,1fr)] gap-10 lg:grid-cols-[200px_minmax(0,1fr)]">
       <nav className="hidden lg:block">
         <ul className="sticky top-48 space-y-1 border-l text-sm">
           {toc.map(([id, t]) => (
@@ -501,8 +521,9 @@ function InfoCard({ b, pp }: { b: Business; pp: PublicProfile }) {
 }
 
 /** POST /api/business/{businessId}/rfq/email */
-function ContactDialog({ name, email }: { name: string; email: string }) {
+function ContactDialog({ id, name, email }: { id: string; name: string; email: string }) {
   const { t } = useI18n()
+  const toast = useToast()
   const [open, setOpen] = useState(false)
   const [sent, setSent] = useState(false)
   return (
@@ -514,10 +535,15 @@ function ContactDialog({ name, email }: { name: string; email: string }) {
         {sent ? (
           <SuccessState title={t.product.sent} desc={t.product.sentDesc} onClose={() => setOpen(false)} />
         ) : (
-          <form className="space-y-4 p-6" onSubmit={(e) => { e.preventDefault(); setSent(true) }}>
+          <form className="space-y-4 p-6" onSubmit={(e) => {
+            e.preventDefault()
+            if (USE_MOCK) return setSent(true)
+            const fd = new FormData(e.currentTarget)
+            liveApi.sendBusinessRfq(id, { subject: String(fd.get('subject') ?? ''), content: String(fd.get('content') ?? '') }).then(() => setSent(true), (err: Error) => toast({ kind: 'info', title: err.message }))
+          }}>
             <Field label={t.requests.to} htmlFor="c-to"><Input id="c-to" value={email} readOnly className="bg-muted" /></Field>
-            <Field label={t.requests.subject} htmlFor="c-sub"><Input id="c-sub" required placeholder="RFQ – …" /></Field>
-            <Field label={t.product.message} htmlFor="c-msg"><Textarea id="c-msg" required placeholder={t.product.messagePh} /></Field>
+            <Field label={t.requests.subject} htmlFor="c-sub"><Input id="c-sub" name="subject" required placeholder="RFQ – …" /></Field>
+            <Field label={t.product.message} htmlFor="c-msg"><Textarea id="c-msg" name="content" required placeholder={t.product.messagePh} /></Field>
             <div className="flex justify-end gap-2">
               <Button variant="ghost" onClick={() => setOpen(false)}>{t.common.cancel}</Button>
               <Button type="submit"><Send /> {t.common.submit}</Button>

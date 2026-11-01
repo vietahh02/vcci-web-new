@@ -7,6 +7,9 @@ import type { DocFile, MediaItem } from '@/lib/profile'
 import { tx } from '@/lib/tx'
 import { checkFile, formatSize, isImage, RULES, ruleSummary, toPreview, type RuleKey } from '@/lib/upload'
 import { cn } from '@/lib/utils'
+import { USE_MOCK } from '@/api/config'
+import { Select } from '@/components/ui/select'
+import { fileSrc, uploadFile, type UploadedFile } from '@/api/uploads'
 
 /* ---------------------------------------------------------------- hint line + expandable tips */
 export function UploadHint({ rule }: { rule: RuleKey }) {
@@ -57,13 +60,28 @@ export function UploadGuide({ keys }: { keys: RuleKey[] }) {
 function useValidated(rule: RuleKey) {
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
-  const accept = async (file: File, maxSide?: number) => {
+  /** Local checks, then (live mode) the real upload; the backend re-validates and its message is shown on rejection. */
+  const accept = async (file: File, maxSide?: number): Promise<{ preview: string; remote: UploadedFile | null } | null> => {
     setBusy(true)
     const err = await checkFile(file, RULES[rule])
     setError(err)
-    const preview = err ? '' : await toPreview(file, maxSide)
+    if (err) {
+      setBusy(false)
+      return null
+    }
+    const preview = await toPreview(file, maxSide)
+    let remote: UploadedFile | null = null
+    if (!USE_MOCK) {
+      try {
+        remote = await uploadFile(rule, file)
+      } catch (e) {
+        setError((e as Error).message)
+        setBusy(false)
+        return null
+      }
+    }
     setBusy(false)
-    return err ? null : { preview }
+    return { preview, remote }
   }
   return { error, busy, accept, setError }
 }
@@ -77,7 +95,7 @@ export function FileUpload({ rule, value, onChange, compact }: { rule: RuleKey; 
   const pick = async (file?: File) => {
     if (!file) return
     const ok = await accept(file, 800)
-    if (ok) onChange({ id: `f${Date.now()}`, name: file.name, kind: rule, size: file.size, preview: ok.preview || undefined })
+    if (ok) onChange({ id: ok.remote?.fileId ?? `f${Date.now()}`, name: file.name, kind: rule, size: file.size, preview: ok.preview || undefined, fileId: ok.remote?.fileId, url: ok.remote?.url })
   }
 
   return (
@@ -85,7 +103,7 @@ export function FileUpload({ rule, value, onChange, compact }: { rule: RuleKey; 
       {value ? (
         <div className="flex items-center gap-3 rounded-xl border bg-success-soft/40 p-2.5">
           {value.preview ? (
-            <img src={value.preview} alt="" className="size-12 shrink-0 rounded-lg border object-cover" />
+            <img src={fileSrc(value.preview)} alt="" className="size-12 shrink-0 rounded-lg border object-cover" />
           ) : (
             <span className="grid size-12 shrink-0 place-items-center rounded-lg bg-red-50 text-red-600 dark:bg-red-500/10"><FileText className="size-5" /></span>
           )}
@@ -126,15 +144,15 @@ export function ImageUpload({ rule, value, onChange }: { rule: 'logo' | 'cover';
   const pick = async (file?: File) => {
     if (!file) return
     const ok = await accept(file, logo ? 400 : 1600)
-    if (ok) onChange(ok.preview)
+    if (ok) onChange(ok.remote?.url ?? ok.preview)
   }
   return (
     <div>
       <div className={cn('group relative overflow-hidden rounded-2xl border-2 border-dashed bg-muted/40', logo ? 'size-32' : 'aspect-[16/5] w-full')}>
         {value ? (
           <>
-            <img src={value} alt="" className={cn('size-full', logo ? 'object-contain p-2' : 'object-cover')} />
-            <div className="absolute inset-0 flex items-center justify-center gap-2 bg-black/50 opacity-0 transition group-hover:opacity-100">
+            <img src={fileSrc(value)} alt="" className={cn('size-full', logo ? 'object-contain p-2' : 'object-cover')} />
+            <div className="absolute inset-0 flex items-center justify-center gap-2 bg-black/50 opacity-0 transition focus-within:opacity-100 group-hover:opacity-100 pointer-coarse:items-end pointer-coarse:bg-transparent pointer-coarse:bg-gradient-to-t pointer-coarse:from-black/60 pointer-coarse:to-transparent pointer-coarse:to-60% pointer-coarse:pb-2 pointer-coarse:opacity-100">
               <button type="button" onClick={() => input.current?.click()} className="rounded-lg bg-white px-3 py-1.5 text-xs font-semibold text-navy">{tx('Đổi ảnh', 'Replace', '변경')}</button>
               <button type="button" onClick={() => onChange('')} className="rounded-lg bg-white/90 p-1.5 text-destructive" aria-label={tx('Xoá', 'Remove', '삭제')}><X className="size-4" /></button>
             </div>
@@ -175,7 +193,11 @@ export function GalleryUpload({ value, onChange, max = 12 }: { value: MediaItem[
     for (const file of Array.from(files).slice(0, max - value.length)) {
       const err = await checkFile(file, RULES.gallery)
       if (err) { errs.push(`${file.name}: ${err}`); continue }
-      next.push({ id: `g${Date.now()}${Math.random().toString(36).slice(2, 6)}`, url: await toPreview(file, 1200), caption: '', kind: 'FACTORY' })
+      let remote: UploadedFile | null = null
+      if (!USE_MOCK) {
+        try { remote = await uploadFile('gallery', file) } catch (e) { errs.push(`${file.name}: ${(e as Error).message}`); continue }
+      }
+      next.push({ id: `g${Date.now()}${Math.random().toString(36).slice(2, 6)}`, url: remote?.url ?? await toPreview(file, 1200), fileId: remote?.fileId, caption: '', kind: 'FACTORY' })
     }
     setErrors(errs)
     onChange(next)
@@ -188,14 +210,12 @@ export function GalleryUpload({ value, onChange, max = 12 }: { value: MediaItem[
           {value.map((m, i) => (
             <motion.div key={m.id} layout initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} className="overflow-hidden rounded-xl border bg-card">
               <div className="group relative aspect-[4/3]">
-                <img src={m.url} alt={m.caption} className="size-full object-cover" />
-                <button type="button" onClick={() => onChange(value.filter((x) => x.id !== m.id))} className="absolute right-2 top-2 rounded-md bg-black/55 p-1.5 text-white opacity-0 transition group-hover:opacity-100" aria-label={tx('Xoá', 'Remove', '삭제')}><Trash2 className="size-3.5" /></button>
+                <img src={fileSrc(m.url)} alt={m.caption} className="size-full object-cover" />
+                <button type="button" onClick={() => onChange(value.filter((x) => x.id !== m.id))} className="absolute right-2 top-2 rounded-md bg-black/55 p-1.5 text-white opacity-0 transition focus-visible:opacity-100 group-hover:opacity-100 pointer-coarse:p-2 pointer-coarse:opacity-100" aria-label={tx('Xoá', 'Remove', '삭제')}><Trash2 className="size-3.5" /></button>
                 {i === 0 && <span className="absolute left-2 top-2 rounded bg-gold-bright px-1.5 py-0.5 text-[10px] font-bold text-navy">{tx('Ảnh chính', 'Main', '대표')}</span>}
               </div>
               <div className="space-y-1.5 p-2">
-                <select value={m.kind} onChange={(e) => onChange(value.map((x) => (x.id === m.id ? { ...x, kind: e.target.value } : x)))} className="w-full rounded-md border bg-background px-2 py-1 text-xs" aria-label={tx('Loại ảnh', 'Photo type', '사진 유형')}>
-                  {GALLERY_KINDS.map((k) => <option key={k.value} value={k.value}>{L(k)}</option>)}
-                </select>
+                <Select value={m.kind} onValueChange={(kind) => onChange(value.map((x) => (x.id === m.id ? { ...x, kind } : x)))} className="h-7 rounded-md px-2 text-xs shadow-none" aria-label={tx('Loại ảnh', 'Photo type', '사진 유형')} options={GALLERY_KINDS.map((k) => ({ value: k.value, label: L(k) }))} />
                 <input value={m.caption} onChange={(e) => onChange(value.map((x) => (x.id === m.id ? { ...x, caption: e.target.value } : x)))} placeholder={tx('Chú thích ảnh…', 'Caption…', '사진 설명…')} className="w-full rounded-md border bg-background px-2 py-1 text-xs outline-none focus:border-primary" />
               </div>
             </motion.div>

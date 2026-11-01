@@ -7,6 +7,15 @@ export const mainSponsor = sponsors.find((s) => s.tier === 'MAIN')!
 export const goldSponsors = sponsors.filter((s) => s.tier === 'GOLD')
 export const partnerSponsors = sponsors.filter((s) => s.tier === 'PARTNER')
 
+/** Live mode: swap the backend sponsor list into the shared arrays/object in place (called once from api/bootstrap before first render). */
+export function applySponsors(list: typeof sponsors) {
+  if (!list.length) return
+  sponsors.splice(0, sponsors.length, ...list)
+  Object.assign(mainSponsor, list.find((s) => s.tier === 'MAIN') ?? list[0]!)
+  goldSponsors.splice(0, goldSponsors.length, ...list.filter((s) => s.tier === 'GOLD'))
+  partnerSponsors.splice(0, partnerSponsors.length, ...list.filter((s) => s.tier === 'PARTNER'))
+}
+
 export function SponsorMark({ mark, color, className }: { mark: string; color: string; className?: string }) {
   return (
     <span

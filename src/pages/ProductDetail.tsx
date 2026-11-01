@@ -2,9 +2,13 @@ import { AnimatePresence, motion } from 'motion/react'
 import { Award, CheckCircle2, CreditCard, Heart, MapPin, MessageSquare, Package, Send, Share2, ShieldCheck } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { getBusiness, getCategory, getProduct } from '@/api'
-import { products, type Product } from '@/data/mock'
-import { CompanyMark, SectionHeader, Stars, VerifiedBadge } from '@/components/brand'
+import { catalogApi, getCategory, getProduct, liveApi, tokens, USE_MOCK, useBusiness, useRelatedProducts } from '@/api'
+import { tx } from '@/lib/tx'
+import { businessStub } from '@/api/adapters/business'
+import { type Product } from '@/data/mock'
+import { ErrorBlock } from '@/components/ui/StateViews'
+import { CompanyMark, SectionHeader, VerifiedBadge } from '@/components/brand'
+import { ReputationStars } from '@/components/reputation/Reputation'
 import { ProductCard } from '@/components/cards'
 import { Reveal, Stagger, StaggerItem } from '@/components/effects'
 import { Dialog, DialogContent, DialogTrigger, UnderlineTabs, useToast } from '@/components/ui/overlay'
@@ -17,17 +21,20 @@ export default function ProductDetail() {
   const { id = '' } = useParams()
   const { lang } = useI18n()
   const [product, setProduct] = useState<Product | null | undefined>(undefined)
+  const [error, setError] = useState<Error | null>(null)
 
   useEffect(() => {
     setProduct(undefined)
-    getProduct(id).then(setProduct)
+    setError(null)
+    getProduct(id).then(setProduct, setError)
   }, [id])
 
   // refetch BE-localized content on language switch, without the skeleton flash
   useEffect(() => {
-    getProduct(id).then(setProduct)
+    getProduct(id).then(setProduct, () => {})
   }, [lang]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  if (error) return <ErrorBlock error={error} onRetry={() => { setError(null); getProduct(id).then(setProduct, setError) }} />
   if (product === undefined) return <DetailSkeleton />
   if (product === null) return <NotFound />
   return <ProductView product={product} />
@@ -36,13 +43,12 @@ export default function ProductDetail() {
 function ProductView({ product }: { product: Product }) {
   const { t, L, locale } = useI18n()
   const toast = useToast()
-  const supplier = getBusiness(product.organizationId)!
+  const supplier = useBusiness(product.organizationId).data?.business ?? businessStub(product.organizationId, product.organizationName)
   const category = getCategory(product.categoryId)
   const [active, setActive] = useState(0)
   const [tab, setTab] = useState('overview')
   const [zoom, setZoom] = useState({ on: false, x: 50, y: 50 })
-  const related = products.filter((p) => p.categoryId === product.categoryId && p.id !== product.id).slice(0, 5)
-  const more = related.length < 4 ? products.filter((p) => p.id !== product.id && !related.includes(p)).slice(0, 5 - related.length) : []
+  const related = useRelatedProducts(product.id, product.categoryId).data ?? []
 
   return (
     <div className="container-page pt-6">
@@ -53,7 +59,7 @@ function ProductView({ product }: { product: Product }) {
         <span className="line-clamp-1 text-foreground">{L(product.productName)}</span>
       </nav>
 
-      <div className="grid gap-8 lg:grid-cols-[1.05fr_1fr] xl:grid-cols-[560px_1fr_300px]">
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-8 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)] xl:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)_280px]">
         {/* gallery */}
         <Reveal className="lg:sticky lg:top-32 lg:self-start">
           <div
@@ -145,7 +151,7 @@ function ProductView({ product }: { product: Product }) {
             <Button variant="outline" size="lg" onClick={() => toast({ kind: 'info', title: t.product.chatNow, description: supplier.name })}>
               <MessageSquare /> {t.product.chatNow}
             </Button>
-            <Button variant="ghost" size="icon" className="size-12 rounded-xl" aria-label={t.product.addFav} onClick={() => toast({ kind: 'success', title: t.product.addFav })}><Heart /></Button>
+            <FavoriteButton product={product} />
             <Button variant="ghost" size="icon" className="size-12 rounded-xl" aria-label={t.product.share} onClick={() => toast({ kind: 'info', title: t.product.share })}><Share2 /></Button>
           </div>
 
@@ -199,14 +205,14 @@ function ProductView({ product }: { product: Product }) {
         </div>
 
         {/* supplier sticky */}
-        <aside className="lg:col-span-2 xl:col-span-1">
+        <aside className="lg:col-start-2 xl:col-start-auto">
           <Reveal className="rounded-2xl border bg-card p-5 xl:sticky xl:top-32">
             <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{t.product.supplierCard}</p>
             <div className="mt-4 flex items-start gap-3">
               <CompanyMark name={supplier.nameEn} accent={supplier.accent} className="size-12" />
               <div className="min-w-0">
                 <Link to={`/suppliers/${supplier.id}`} className="line-clamp-2 font-bold leading-snug hover:text-primary">{supplier.name}</Link>
-                <div className="mt-1.5 flex items-center gap-2"><VerifiedBadge /><Stars score={supplier.reputationScore} /></div>
+                <div className="mt-1.5 flex items-center gap-2">{supplier.verified && <VerifiedBadge />}<ReputationStars orgId={supplier.id} legacyScore={supplier.reputationScore} /></div>
               </div>
             </div>
             <dl className="mt-5 space-y-2.5 text-sm">
@@ -229,10 +235,36 @@ function ProductView({ product }: { product: Product }) {
       <section className="mt-20">
         <SectionHeader title={t.product.related} />
         <Stagger className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-5">
-          {[...related, ...more].map((p) => <StaggerItem key={p.id}><ProductCard product={p} className="h-full" /></StaggerItem>)}
+          {related.map((p) => <StaggerItem key={p.id}><ProductCard product={p} className="h-full" /></StaggerItem>)}
         </Stagger>
       </section>
     </div>
+  )
+}
+
+/** Favourite toggle: stored per account on the BE in live mode (needs sign-in), toast-only in mock mode. */
+function FavoriteButton({ product }: { product: Product }) {
+  const { t } = useI18n()
+  const toast = useToast()
+  const [on, setOn] = useState(false)
+  useEffect(() => {
+    if (USE_MOCK || !tokens.access()) return
+    catalogApi.favoriteIds([product.id]).then((s) => setOn(s.has(product.id)), () => undefined)
+  }, [product.id])
+  const toggle = () => {
+    if (USE_MOCK) { toast({ kind: 'success', title: t.product.addFav }); return }
+    if (!tokens.access()) { toast({ kind: 'info', title: tx('Vui lòng đăng nhập để lưu sản phẩm yêu thích', 'Please sign in to save favourites', '즐겨찾기를 저장하려면 로그인하세요') }); return }
+    const next = !on
+    setOn(next)
+    ;(next ? catalogApi.addFavorite(product.id) : catalogApi.removeFavorite(product.id)).then(
+      () => toast({ kind: 'success', title: next ? t.product.addFav : tx('Đã bỏ khỏi yêu thích', 'Removed from favourites', '즐겨찾기에서 제거됨') }),
+      (e: Error) => { setOn(!next); toast({ kind: 'info', title: e.message }) },
+    )
+  }
+  return (
+    <Button variant="ghost" size="icon" className="size-12 rounded-xl" aria-label={t.product.addFav} aria-pressed={on} onClick={toggle}>
+      <Heart className={on ? 'fill-red-500 text-red-500' : ''} />
+    </Button>
   )
 }
 
@@ -258,8 +290,17 @@ function RfqDialog({ product }: { product: Product }) {
               className="space-y-4 p-6"
               onSubmit={(e) => {
                 e.preventDefault()
-                setSent(true)
-                toast({ kind: 'success', title: t.product.sent, description: L(product.productName) })
+                const fd = new FormData(e.currentTarget)
+                const body = { quantity: Number(fd.get('quantity')), destination: String(fd.get('destination') ?? ''), message: String(fd.get('message') ?? '') }
+                if (USE_MOCK) {
+                  setSent(true)
+                  toast({ kind: 'success', title: t.product.sent, description: L(product.productName) })
+                  return
+                }
+                liveApi.sendProductRfq(product.id, body).then(
+                  () => { setSent(true); toast({ kind: 'success', title: t.product.sent, description: L(product.productName) }) },
+                  (err: Error) => toast({ kind: 'info', title: err.message }),
+                )
               }}
             >
               <div className="flex items-center gap-3 rounded-xl bg-muted p-3">
@@ -270,10 +311,10 @@ function RfqDialog({ product }: { product: Product }) {
                 </div>
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
-                <Field label={t.product.quantity} htmlFor="rfq-q"><Input id="rfq-q" type="number" min={product.moq} defaultValue={product.moq} required /></Field>
-                <Field label={t.product.destination} htmlFor="rfq-d"><Input id="rfq-d" placeholder="Busan, KR" required /></Field>
+                <Field label={t.product.quantity} htmlFor="rfq-q"><Input id="rfq-q" name="quantity" type="number" min={product.moq} defaultValue={product.moq} required /></Field>
+                <Field label={t.product.destination} htmlFor="rfq-d"><Input id="rfq-d" name="destination" placeholder="Busan, KR" required /></Field>
               </div>
-              <Field label={t.product.message} htmlFor="rfq-m"><Textarea id="rfq-m" placeholder={t.product.messagePh} required /></Field>
+              <Field label={t.product.message} htmlFor="rfq-m"><Textarea id="rfq-m" name="message" placeholder={t.product.messagePh} required /></Field>
               <div className="flex justify-end gap-2 pt-2">
                 <Button variant="ghost" onClick={() => setOpen(false)}>{t.common.cancel}</Button>
                 <Button type="submit"><Send /> {t.common.submit}</Button>

@@ -19,32 +19,32 @@ export function Footer() {
   return (
     <footer className="relative mt-24 overflow-hidden border-t bg-muted/40">
       <div className="pointer-events-none absolute -left-40 top-0 size-96 rounded-full bg-primary/10 blur-3xl" />
-      <div className="container-page relative grid gap-10 py-14 md:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_1fr_1.4fr]">
-        <div>
+      <div className="container-page relative grid grid-cols-2 gap-x-6 gap-y-10 py-14 sm:grid-cols-3 lg:grid-cols-[1.4fr_1fr_1fr_1fr_1.4fr]">
+        <div className="col-span-2 sm:col-span-3 lg:col-span-1">
           <Logo />
           <p className="mt-4 max-w-sm text-sm leading-relaxed text-muted-foreground">{t.footer.about}</p>
           <ul className="mt-5 space-y-2 text-sm text-muted-foreground">
-            <li className="flex items-center gap-2"><MapPin className="size-4 text-primary" /> {t.footer.address}</li>
-            <li className="flex items-center gap-2"><Phone className="size-4 text-primary" /> 1900 6 1111</li>
-            <li className="flex items-center gap-2"><Mail className="size-4 text-primary" /> tradehub@vcci.example.vn</li>
+            <li className="flex items-center gap-2"><MapPin className="size-4 shrink-0 text-primary" /> {t.footer.address}</li>
+            <li className="flex items-center gap-2"><Phone className="size-4 shrink-0 text-primary" /> 1900 6 1111</li>
+            <li className="flex items-center gap-2"><Mail className="size-4 shrink-0 text-primary" /> tradehub@vcci.example.vn</li>
           </ul>
         </div>
         {(Object.keys(t.footer.cols) as (keyof typeof t.footer.cols)[]).map((k) => (
           <div key={k}>
             <h4 className="text-sm font-bold">{t.footer.cols[k]}</h4>
-            <ul className="mt-4 space-y-2.5">
+            <ul className="mt-3 space-y-1">
               {t.footer.links[k].map((label, i) => (
                 <li key={label}>
-                  <Link to={footerRoutes[k][i]!} className="text-sm text-muted-foreground transition hover:text-primary">{label}</Link>
+                  <Link to={footerRoutes[k][i]!} className="inline-block py-1 text-sm text-muted-foreground transition hover:text-primary">{label}</Link>
                 </li>
               ))}
             </ul>
           </div>
         ))}
-        <div>
+        <div className="col-span-2 sm:col-span-3 lg:col-span-1">
           <h4 className="text-sm font-bold">{t.footer.newsletter}</h4>
           <form
-            className="mt-4 flex gap-2"
+            className="mt-4 flex max-w-md gap-2"
             onSubmit={(e) => {
               e.preventDefault()
               if (!email.includes('@')) return

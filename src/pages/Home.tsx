@@ -2,15 +2,17 @@ import { AnimatePresence, motion, useScroll, useTransform } from 'motion/react'
 import {
   ArrowRight, ChevronRight, FilePlus2, Pause, Play, Send, UserRound,
 } from 'lucide-react'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { categories, events, importRequests, products, trendingKeywords } from '@/data/mock'
+import { useEvents, useHomeProducts, useHomeRequests, useHomeStats, useHomeTrending } from '@/api'
+import { categories } from '@/data/mock'
 import { categoryIcons, CountryChip, SectionHeader } from '@/components/brand'
 import { ProductCard, RequestCard } from '@/components/cards'
 import { CountUp, LiveDot, Reveal, Stagger, StaggerItem, WordsReveal } from '@/components/effects'
 import { SearchBar } from '@/components/layout/SearchBar'
 import { Tabs, useToast } from '@/components/ui/overlay'
-import { Badge, Button, buttonClass, Input, Select } from '@/components/ui/primitives'
+import { Badge, Button, buttonClass, Input } from '@/components/ui/primitives'
+import { Select } from '@/components/ui/select'
 import { useI18n } from '@/lib/i18n'
 import { CategoryTiles, EventsAgenda, FeaturedBusiness, SponsorTiers, Testimonials, TrustBand, WhyList } from '@/pages/home/sections'
 import { formatNumber, img } from '@/lib/utils'
@@ -59,11 +61,13 @@ function Hero() {
     if (v.paused) { void v.play(); setPlaying(true) } else { v.pause(); setPlaying(false) }
   }
 
+  const st = useHomeStats().data
+  const trendingKeywords = useHomeTrending().data ?? []
   const stats = [
-    { to: 12400, suffix: '+', label: t.home.stats.businesses },
-    { to: 58000, suffix: '+', label: t.home.stats.products },
-    { to: 1200, suffix: '+', label: t.home.stats.requests },
-    { to: 40, suffix: '+', label: t.home.stats.countries },
+    { to: st?.businesses ?? 12400, suffix: '+', label: t.home.stats.businesses },
+    { to: st?.products ?? 58000, suffix: '+', label: t.home.stats.products },
+    { to: st?.requests ?? 1200, suffix: '+', label: t.home.stats.requests },
+    { to: st?.countries ?? 40, suffix: '+', label: t.home.stats.countries },
   ]
 
   return (
@@ -135,16 +139,16 @@ function SourcingDock() {
   const { t, L } = useI18n()
   const navigate = useNavigate()
   const toast = useToast()
-  const slides = events.filter((e) => e.eventStatus !== 'ENDED').slice(0, 3)
+  const slides = (useEvents().data ?? []).filter((e) => e.eventStatus !== 'ENDED').slice(0, 3)
   const [slide, setSlide] = useState(0)
   const [need, setNeed] = useState('')
   const [qty, setQty] = useState('')
 
   useEffect(() => {
-    const id = setInterval(() => setSlide((s) => (s + 1) % slides.length), 5200)
+    const id = setInterval(() => setSlide((s) => (s + 1) % Math.max(slides.length, 1)), 5200)
     return () => clearInterval(id)
   }, [slides.length])
-  const ev = slides[slide]!
+  const ev = slides[slide]
 
   return (
     <section className="container-page relative z-10 -mt-20 md:-mt-24">
@@ -170,7 +174,7 @@ function SourcingDock() {
 
         {/* promo carousel */}
         <div className="relative min-h-[300px] overflow-hidden rounded-2xl bg-navy text-white">
-          <AnimatePresence mode="popLayout" initial={false}>
+          {ev && <AnimatePresence mode="popLayout" initial={false}>
             <motion.img
               key={ev.id}
               src={img(ev.coverImage, 1100, 640)}
@@ -181,10 +185,10 @@ function SourcingDock() {
               transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
               className="absolute inset-0 size-full object-cover"
             />
-          </AnimatePresence>
+          </AnimatePresence>}
           <div className="absolute inset-0 bg-gradient-to-r from-navy via-navy/75 to-transparent" />
           <div className="relative flex h-full flex-col justify-end p-6 md:p-8">
-            <AnimatePresence mode="wait">
+            {ev && <AnimatePresence mode="wait">
               <motion.div key={ev.id} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.45 }}>
                 <div className="flex gap-2">
                   {ev.eventStatus === 'ONGOING' ? (
@@ -200,7 +204,7 @@ function SourcingDock() {
                   {ev.eventStatus === 'ONGOING' ? t.events.watchNow : t.events.register} <ArrowRight />
                 </Link>
               </motion.div>
-            </AnimatePresence>
+            </AnimatePresence>}
             <div className="mt-6 flex gap-1.5">
               {slides.map((s, k) => (
                 <button key={s.id} onClick={() => setSlide(k)} className="relative h-1 w-10 overflow-hidden rounded-full bg-white/25" aria-label={`Slide ${k + 1}`}>
@@ -240,9 +244,7 @@ function SourcingDock() {
             <Input className="mt-3 h-9" placeholder={t.home.dock.whatNeed} value={need} onChange={(e) => setNeed(e.target.value)} aria-label={t.home.dock.whatNeed} />
             <div className="mt-2 grid grid-cols-[1fr_90px] gap-2">
               <Input className="h-9" type="number" min={1} placeholder={t.home.dock.qty} value={qty} onChange={(e) => setQty(e.target.value)} aria-label={t.home.dock.qty} />
-              <Select className="h-9" aria-label={t.common.unit} defaultValue="MT">
-                <option>MT</option><option>kg</option><option>pcs</option><option>set</option>
-              </Select>
+              <Select className="h-9" aria-label={t.common.unit} defaultValue="MT" options={['MT', 'kg', 'pcs', 'set'].map((u) => ({ value: u, label: u }))} />
             </div>
             <Button type="submit" variant="gold" size="sm" className="mt-3 h-9 w-full">
               <Send /> {t.home.dock.sendRfq}
@@ -258,11 +260,7 @@ function SourcingDock() {
 function ProductsSection() {
   const { t } = useI18n()
   const [tab, setTab] = useState<'popular' | 'newest' | 'certified'>('popular')
-  const list = useMemo(() => {
-    if (tab === 'newest') return [...products].sort((a, b) => b.createdDate.localeCompare(a.createdDate)).slice(0, 10)
-    if (tab === 'certified') return products.filter((p) => p.certificates.length >= 3).slice(0, 10)
-    return [...products].sort((a, b) => b.viewCount - a.viewCount).slice(0, 10)
-  }, [tab])
+  const list = useHomeProducts(tab).data ?? []
 
   return (
     <section className="container-page mt-24">
@@ -301,11 +299,12 @@ function ProductsSection() {
 function RequestsSection() {
   const { t, L } = useI18n()
   const [offset, setOffset] = useState(0)
+  const importRequests = useHomeRequests().data ?? []
   useEffect(() => {
-    const id = setInterval(() => setOffset((o) => (o + 1) % importRequests.length), 6000)
+    const id = setInterval(() => setOffset((o) => (o + 1) % Math.max(importRequests.length, 1)), 6000)
     return () => clearInterval(id)
-  }, [])
-  const list = [0, 1, 2, 3].map((k) => importRequests[(offset + k) % importRequests.length]!)
+  }, [importRequests.length])
+  const list = importRequests.length ? [0, 1, 2, 3].map((k) => importRequests[(offset + k) % importRequests.length]!) : []
 
   return (
     <section className="container-page mt-24">

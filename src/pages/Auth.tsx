@@ -1,16 +1,20 @@
 import { AnimatePresence, motion } from 'motion/react'
 import { ArrowLeft, ArrowRight, Check, Eye, EyeOff, Quote, RefreshCw } from 'lucide-react'
-import { useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { authApi, liveApi, USE_MOCK } from '@/api'
+import type { Captcha as CaptchaChallenge } from '@/api/auth'
 import { emptyProfile, useProfile, type Registration } from '@/lib/profile'
 import { FileUpload, ImageUpload, UploadGuide } from '@/components/upload/Upload'
+import { clearRegisterUploadToken } from '@/api/uploads'
 import { tx } from '@/lib/tx'
 import { categories } from '@/data/mock'
 import { Logo } from '@/components/brand'
 import { CountUp } from '@/components/effects'
 import { LangSwitcher } from '@/components/layout/LangSwitcher'
 import { useToast } from '@/components/ui/overlay'
-import { Button, Field, Input, Select } from '@/components/ui/primitives'
+import { Button, Field, Input } from '@/components/ui/primitives'
+import { Select } from '@/components/ui/select'
 import { useI18n } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
 
@@ -47,12 +51,12 @@ function AuthShell({ children, wide }: { children: ReactNode; wide?: boolean }) 
   )
 }
 
-function PasswordInput({ id, placeholder }: { id: string; placeholder?: string }) {
+function PasswordInput({ id, placeholder, name }: { id: string; placeholder?: string; name?: string }) {
   const { t } = useI18n()
   const [show, setShow] = useState(false)
   return (
     <div className="relative">
-      <Input id={id} type={show ? 'text' : 'password'} required minLength={8} placeholder={placeholder} className="pr-10" />
+      <Input id={id} name={name} type={show ? 'text' : 'password'} required minLength={8} placeholder={placeholder} className="pr-10" />
       <button type="button" onClick={() => setShow((v) => !v)} className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1.5 text-muted-foreground hover:text-foreground" aria-label={t.ui.togglePassword}>
         {show ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
       </button>
@@ -60,16 +64,28 @@ function PasswordInput({ id, placeholder }: { id: string; placeholder?: string }
   )
 }
 
-function Captcha() {
+/** Live: GET /api/auth/captcha (image data-URI + captchaId). `enabled=false` means login needs no captcha. */
+function useLiveCaptcha() {
+  const [cap, setCap] = useState<CaptchaChallenge | null>(null)
+  const refresh = useCallback(() => {
+    if (USE_MOCK) return
+    authApi.getCaptcha().then(setCap, () => setCap({ enabled: false }))
+  }, [])
+  useEffect(() => { refresh() }, [refresh])
+  return { cap, refresh }
+}
+
+function Captcha({ live }: { live?: ReturnType<typeof useLiveCaptcha> }) {
   const { t } = useI18n()
   const [code, setCode] = useState(() => Math.random().toString(36).slice(2, 7).toUpperCase())
+  const remote = !USE_MOCK && live
   return (
     <div className="flex gap-2">
-      <Input id="captcha" required placeholder="•••••" className="flex-1 uppercase tracking-[0.3em]" />
+      <Input id="captcha" name="captcha" required placeholder="•••••" className="flex-1 uppercase tracking-[0.3em]" />
       <div className="relative grid h-10 w-28 select-none place-items-center overflow-hidden rounded-lg bg-[repeating-linear-gradient(45deg,var(--muted),var(--muted)_6px,var(--background)_6px,var(--background)_12px)] font-mono text-lg font-bold italic tracking-[0.25em] text-primary">
-        {code}
+        {remote ? (live.cap?.image ? <img src={live.cap.image} alt="" className="size-full object-contain" /> : '…') : code}
       </div>
-      <button type="button" onClick={() => setCode(Math.random().toString(36).slice(2, 7).toUpperCase())} className="grid size-10 place-items-center rounded-lg border hover:bg-muted" aria-label={t.ui.refreshCaptcha}>
+      <button type="button" onClick={() => (remote ? live.refresh() : setCode(Math.random().toString(36).slice(2, 7).toUpperCase()))} className="grid size-10 place-items-center rounded-lg border hover:bg-muted" aria-label={t.ui.refreshCaptcha}>
         <RefreshCw className="size-4" />
       </button>
     </div>
@@ -81,8 +97,11 @@ export function Login() {
   const { t } = useI18n()
   const toast = useToast()
   const navigate = useNavigate()
-  const { signIn } = useProfile()
+  const { signIn, loadRemote } = useProfile()
   const [params] = useSearchParams()
+  const captcha = useLiveCaptcha()
+  const [busy, setBusy] = useState(false)
+  const showCaptcha = USE_MOCK || captcha.cap?.enabled !== false
   return (
     <AuthShell>
       <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
@@ -92,21 +111,31 @@ export function Login() {
           className="mt-8 space-y-4"
           onSubmit={(e) => {
             e.preventDefault()
-            toast({ kind: 'success', title: t.auth.loginTitle, description: t.common.demoNote })
-            signIn()
-            navigate(params.get('return') ?? '/account/profile')
+            if (USE_MOCK) {
+              toast({ kind: 'success', title: t.auth.loginTitle, description: t.common.demoNote })
+              signIn()
+              navigate(params.get('return') ?? '/account/profile')
+              return
+            }
+            const fd = new FormData(e.currentTarget)
+            setBusy(true)
+            authApi.login(String(fd.get('email') ?? ''), String(fd.get('pw') ?? ''), { captchaId: captcha.cap?.captchaId, answer: String(fd.get('captcha') ?? '') })
+              .then(() => loadRemote())
+              .then(() => navigate(params.get('return') ?? '/account/profile'))
+              .catch((err: Error) => { toast({ kind: 'info', title: err.message }); captcha.refresh() })
+              .finally(() => setBusy(false))
           }}
         >
-          <Field label={t.auth.email} htmlFor="email"><Input id="email" type="email" required autoComplete="email" placeholder="export@company.vn" /></Field>
+          <Field label={t.auth.email} htmlFor="email"><Input id="email" name="email" type="email" required autoComplete="email" placeholder="export@company.vn" /></Field>
           <div>
             <div className="flex items-center justify-between">
               <label htmlFor="pw" className="mb-1.5 block text-[13px] font-semibold">{t.auth.password}</label>
               <a href="#" className="mb-1.5 text-xs font-semibold text-primary hover:underline">{t.auth.forgot}</a>
             </div>
-            <PasswordInput id="pw" />
+            <PasswordInput id="pw" name="pw" />
           </div>
-          <Field label={t.auth.captcha} htmlFor="captcha"><Captcha /></Field>
-          <Button type="submit" size="lg" className="w-full">{t.auth.loginTitle} <ArrowRight /></Button>
+          {showCaptcha && <Field label={t.auth.captcha} htmlFor="captcha"><Captcha live={captcha} /></Field>}
+          <Button type="submit" size="lg" className="w-full" disabled={busy}>{t.auth.loginTitle} <ArrowRight /></Button>
         </form>
         <p className="mt-6 text-center text-sm text-muted-foreground">
           {t.auth.noAccount} <Link to="/register" className="font-semibold text-primary hover:underline">{t.nav.register}</Link>
@@ -143,6 +172,7 @@ export function Register() {
   const [step, setStep] = useState(0)
   const [dir, setDir] = useState(1)
   const [done, setDone] = useState(false)
+  const [busy, setBusy] = useState(false)
   const [r, setR] = useState<Reg>(() => ({ ...emptyProfile().registration, nameVi: '', nameEn: '', taxCode: '', logo: '', loginEmail: '' }))
   const set = <K extends keyof Reg>(k: K, v: Reg[K]) => setR((x) => ({ ...x, [k]: v }))
   const region = new Intl.DisplayNames([locale], { type: 'region' })
@@ -153,6 +183,8 @@ export function Register() {
   }
 
   const submit = () => {
+    // live: the account is created by VCCI after approval (no password is accepted at registration), so go to login
+    if (!USE_MOCK) return navigate('/login')
     signIn(
       { companyName: r.nameVi, taxCode: r.taxCode },
       true,
@@ -202,10 +234,11 @@ export function Register() {
             <div className="h-1 overflow-hidden rounded-full bg-muted">
               <motion.div className="h-full bg-primary" initial={false} animate={{ width: i <= step ? '100%' : '0%' }} transition={{ duration: 0.45 }} />
             </div>
-            <p className={cn('mt-2 truncate text-xs font-semibold', i <= step ? 'text-foreground' : 'text-muted-foreground')}>{i + 1}. {s}</p>
+            <p className={cn('mt-2 truncate text-xs font-semibold', i <= step ? 'text-foreground' : 'text-muted-foreground')}>{i + 1}<span className="max-sm:hidden">. {s}</span></p>
           </button>
         ))}
       </div>
+      <p className="mt-1.5 text-sm font-semibold sm:hidden">{step + 1}/{steps.length} · {steps[step]}</p>
 
       <form
         className="mt-6"
@@ -216,7 +249,18 @@ export function Register() {
           if (step < 3) {
             if (step === 2 && !r.loginEmail) set('loginEmail', r.repEmail || r.email)
             go(step + 1)
-          } else setDone(true)
+          } else if (USE_MOCK) setDone(true)
+          else {
+            const fd = new FormData(e.currentTarget)
+            const password = String(fd.get('password') ?? '')
+            if (password !== String(fd.get('confirmPassword') ?? '')) return toast({ kind: 'info', title: tx('Mật khẩu nhập lại không khớp', 'Passwords do not match', '비밀번호가 일치하지 않습니다') })
+            setBusy(true)
+            // files were already uploaded (token + fileIds); the BE links them to the new organization
+            liveApi.registerBusiness({ ...r, businessForm: r.businessForm, repName: r.repName, password }).then(
+              () => { clearRegisterUploadToken(); setDone(true) },
+              (err: Error) => toast({ kind: 'info', title: err.message }),
+            ).finally(() => setBusy(false))
+          }
         }}
       >
         <AnimatePresence mode="wait" custom={dir}>
@@ -229,15 +273,10 @@ export function Register() {
                   <Input id="tax" required inputMode="numeric" pattern="\d{10}(\d{3})?" title={tx('10 hoặc 13 chữ số', '10 or 13 digits', '10자리 또는 13자리')} value={r.taxCode} onChange={(e) => set('taxCode', e.target.value.replace(/\D/g, ''))} />
                 </Field>
                 <Field label={tx('Loại hình doanh nghiệp', 'Legal form', '기업 형태') + ' *'} htmlFor="bf">
-                  <Select id="bf" required value={r.businessForm} onChange={(e) => set('businessForm', e.target.value)}>
-                    <option value="" disabled>—</option>
-                    {BUSINESS_FORMS.map((o) => <option key={o.value} value={o.value}>{L(o)}</option>)}
-                  </Select>
+                  <Select id="bf" required value={r.businessForm} onValueChange={(v) => set('businessForm', v)} placeholder="—" options={BUSINESS_FORMS.map((o) => ({ value: o.value, label: L(o) }))} />
                 </Field>
                 <Field label={tx('Loại hình hoạt động', 'Business type', '사업 유형') + ' *'} htmlFor="bt">
-                  <Select id="bt" value={r.businessType} onChange={(e) => set('businessType', e.target.value)}>
-                    {(Object.keys(t.supplier.types) as (keyof typeof t.supplier.types)[]).map((k) => <option key={k} value={k}>{t.supplier.types[k]}</option>)}
-                  </Select>
+                  <Select id="bt" value={r.businessType} onValueChange={(v) => set('businessType', v)} options={(Object.keys(t.supplier.types) as (keyof typeof t.supplier.types)[]).map((k) => ({ value: k, label: t.supplier.types[k] }))} />
                 </Field>
                 <div className="sm:col-span-2">
                   <p className="mb-2 text-[13px] font-semibold">{t.auth.industry} *</p>
@@ -255,11 +294,11 @@ export function Register() {
                 <Field label={tx('Vốn điều lệ', 'Charter capital', '자본금') + ' *'} htmlFor="cap">
                   <div className="flex gap-2">
                     <Input id="cap" required inputMode="numeric" value={r.charterCapital} onChange={(e) => set('charterCapital', e.target.value)} />
-                    <Select aria-label={tx('Đơn vị tiền tệ', 'Currency', '통화')} className="w-24 shrink-0" value={r.charterCurrency} onChange={(e) => set('charterCurrency', e.target.value)}><option>VND</option><option>USD</option></Select>
+                    <Select aria-label={tx('Đơn vị tiền tệ', 'Currency', '통화')} className="w-24 shrink-0" value={r.charterCurrency} onValueChange={(v) => set('charterCurrency', v)} options={[{ value: 'VND', label: 'VND' }, { value: 'USD', label: 'USD' }]} />
                   </div>
                 </Field>
                 <Field label={tx('Số lao động', 'Employees', '직원 수')} htmlFor="emp">
-                  <Select id="emp" value={r.employees} onChange={(e) => set('employees', e.target.value)}><option value="">—</option>{EMPLOYEE_RANGES.map((x) => <option key={x}>{x}</option>)}</Select>
+                  <Select id="emp" value={r.employees} onValueChange={(v) => set('employees', v)} options={[{ value: '', label: '—' }, ...EMPLOYEE_RANGES.map((x) => ({ value: x, label: x }))]} />
                 </Field>
                 <Field label={tx('Tổng doanh thu năm gần nhất', 'Latest annual revenue', '최근 연매출')} htmlFor="rev" hint={tx('Tự khai; xác minh bằng chứng từ ở bước hoàn thiện hồ sơ', 'Self-declared; verified with evidence in your profile', '자체 신고; 프로필에서 증빙으로 검증')}>
                   <Input id="rev" inputMode="numeric" value={r.totalRevenue} onChange={(e) => set('totalRevenue', e.target.value)} />
@@ -272,7 +311,7 @@ export function Register() {
             {step === 1 && (
               <>
                 <Field label={t.auth.country + ' *'} htmlFor="ct">
-                  <Select id="ct" value={r.country} onChange={(e) => set('country', e.target.value)}>{REG_COUNTRIES.map((c) => <option key={c} value={c}>{region.of(c)}</option>)}</Select>
+                  <Select id="ct" value={r.country} onValueChange={(v) => set('country', v)} options={REG_COUNTRIES.map((c) => ({ value: c, label: region.of(c) }))} />
                 </Field>
                 <Field label={t.auth.province + ' *'} htmlFor="prov"><Input id="prov" required value={r.province} onChange={(e) => set('province', e.target.value)} /></Field>
                 <Field label={tx('Địa chỉ trụ sở chính', 'Registered address', '본사 주소') + ' *'} htmlFor="addr" className="sm:col-span-2" hint={tx('Ghi đúng như trên Giấy chứng nhận đăng ký doanh nghiệp', 'As shown on the business registration certificate', '사업자등록증 기재 주소')}>
@@ -307,8 +346,8 @@ export function Register() {
                   <ImageUpload rule="logo" value={r.logo} onChange={(v) => set('logo', v)} />
                 </div>
                 <Field label={t.auth.email + ' *'} htmlFor="ae" className="sm:col-span-2"><Input id="ae" type="email" required value={r.loginEmail} onChange={(e) => set('loginEmail', e.target.value)} /></Field>
-                <Field label={t.auth.password} htmlFor="ap"><PasswordInput id="ap" /></Field>
-                <Field label={t.auth.confirmPassword} htmlFor="ap2"><PasswordInput id="ap2" /></Field>
+                <Field label={t.auth.password} htmlFor="ap"><PasswordInput id="ap" name="password" /></Field>
+                <Field label={t.auth.confirmPassword} htmlFor="ap2"><PasswordInput id="ap2" name="confirmPassword" /></Field>
                 <label className="flex items-start gap-2.5 text-sm text-muted-foreground sm:col-span-2">
                   <input type="checkbox" required className="mt-0.5 size-4 accent-[var(--primary)]" /> {t.auth.agree}
                 </label>
@@ -319,7 +358,7 @@ export function Register() {
         </AnimatePresence>
         <div className="mt-6 flex justify-between gap-3">
           {step > 0 ? <Button variant="ghost" onClick={() => go(step - 1)}><ArrowLeft /> {t.common.back}</Button> : <span />}
-          <Button type="submit" size="lg">{step < 3 ? t.common.next : t.common.submit} <ArrowRight /></Button>
+          <Button type="submit" size="lg" disabled={busy}>{step < 3 ? t.common.next : t.common.submit} <ArrowRight /></Button>
         </div>
       </form>
       <p className="mt-6 text-center text-sm text-muted-foreground">

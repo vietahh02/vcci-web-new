@@ -6,9 +6,10 @@ import {
 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { featuredBusinesses, productsOf } from '@/api'
-import { categories, countryName, events, testimonials } from '@/data/mock'
-import { categoryIcons, CompanyMark, SectionHeader, Stars, VerifiedBadge } from '@/components/brand'
+import { useEvents, useFeaturedBusinesses, useHomeStats, useHomeTestimonials, useOrgProducts } from '@/api'
+import { categories, countryName } from '@/data/mock'
+import { categoryIcons, CompanyMark, SectionHeader, VerifiedBadge } from '@/components/brand'
+import { ReputationStars } from '@/components/reputation/Reputation'
 import { EventCard } from '@/components/cards'
 import { CountUp, Marquee, Reveal, Stagger, StaggerItem } from '@/components/effects'
 import { goldSponsors, mainSponsor, partnerSponsors, SponsorMark } from '@/components/sponsor'
@@ -55,6 +56,7 @@ export function TrustBand() {
 /* ================================================================ CATEGORIES — icon tiles, split layout */
 export function CategoryTiles() {
   const { t, L, locale } = useI18n()
+  const productTotal = useHomeStats().data?.products ?? 58000
   return (
     <section className="container-page mt-20 grid grid-cols-1 gap-10 lg:grid-cols-[320px_minmax(0,1fr)] lg:items-center">
       <Reveal>
@@ -62,7 +64,7 @@ export function CategoryTiles() {
         <h2 className="mt-2 text-3xl font-extrabold tracking-tight text-balance md:text-[38px] md:leading-[1.1]">{t.home.categoriesTitle}</h2>
         <p className="mt-3 text-muted-foreground">{t.home.categoriesSub}</p>
         <p className="mt-6 text-5xl font-extrabold tracking-tight text-primary">
-          <CountUp to={58000} format={(n) => formatNumber(Math.round(n), locale) + '+'} />
+          <CountUp to={productTotal} format={(n) => formatNumber(Math.round(n), locale) + '+'} />
         </p>
         <p className="text-sm text-muted-foreground">{t.home.stats.products}</p>
         <Link to="/search" className={buttonClass('outline', 'md', 'mt-6 rounded-full')}>{t.common.viewAll} <ArrowRight /></Link>
@@ -97,16 +99,17 @@ export function CategoryTiles() {
 /* ================================================================ FEATURED BUSINESS SPOTLIGHT */
 export function FeaturedBusiness() {
   const { t, L } = useI18n()
-  const list = featuredBusinesses().slice(0, 5)
+  const list = (useFeaturedBusinesses().data ?? []).slice(0, 5)
   const [i, setI] = useState(0)
   const [paused, setPaused] = useState(false)
   useEffect(() => {
-    if (paused) return
+    if (paused || list.length < 2) return
     const id = setInterval(() => setI((v) => (v + 1) % list.length), 7000)
     return () => clearInterval(id)
   }, [paused, list.length, i])
-  const b = list[i]!
-  const items = productsOf(b.id)
+  const b = list[i % Math.max(list.length, 1)]
+  const items = useOrgProducts(b?.id ?? '').data ?? []
+  if (!b) return null
 
   return (
     <section className="relative mt-24 overflow-hidden py-20" onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)}>
@@ -124,13 +127,13 @@ export function FeaturedBusiness() {
                 <div className="min-w-0">
                   <h3 className="text-2xl font-extrabold leading-tight tracking-tight md:text-[30px]">{b.name}</h3>
                   <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
-                    <VerifiedBadge /> <span className="inline-flex items-center gap-1"><MapPin className="size-3.5" />{b.province}</span>
+                    {b.verified && <VerifiedBadge />} <span className="inline-flex items-center gap-1"><MapPin className="size-3.5" />{b.province}</span>
                   </p>
                 </div>
               </div>
               <p className="mt-5 max-w-xl text-[15px] leading-relaxed text-foreground/80">{L(b.description)}</p>
               <div className="mt-5 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
-                <Stars score={b.reputationScore} className="text-base" />
+                <ReputationStars orgId={b.id} legacyScore={b.reputationScore} className="text-base" />
                 <span className="text-muted-foreground">{t.supplier.types[b.businessType]}</span>
                 <span className="text-muted-foreground">{b.employees} {t.common.employees.toLowerCase()}</span>
               </div>
@@ -202,8 +205,10 @@ export function FeaturedBusiness() {
 /* ================================================================ EVENTS — featured + calendar list */
 export function EventsAgenda() {
   const { t, L, locale } = useI18n()
-  const live = events.find((e) => e.eventStatus === 'ONGOING')!
+  const events = useEvents().data ?? []
   const upcoming = events.filter((e) => e.eventStatus === 'UPCOMING')
+  const live = events.find((e) => e.eventStatus === 'ONGOING') ?? upcoming[0]
+  if (!live) return null
 
   return (
     <section className="container-page mt-24">
@@ -250,6 +255,7 @@ export function EventsAgenda() {
 /* ================================================================ TESTIMONIALS */
 export function Testimonials() {
   const { t, L } = useI18n()
+  const testimonials = useHomeTestimonials().data ?? []
   const scroller = useRef<HTMLDivElement>(null)
   const [paused, setPaused] = useState(false)
 
@@ -266,6 +272,9 @@ export function Testimonials() {
     const id = setInterval(() => scroll(1), 5000)
     return () => clearInterval(id)
   }, [paused])
+
+  // Live mode with no testimonials authored in the CMS yet: hide the block instead of rendering an empty carousel.
+  if (!testimonials.length) return null
 
   return (
     <section className="relative isolate mt-24 overflow-hidden bg-navy py-20 text-white">

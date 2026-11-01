@@ -2,7 +2,8 @@ import { AnimatePresence, motion } from 'motion/react'
 import { ArrowLeft, CalendarPlus, Heart, Maximize2, Send, ThumbsUp, Users, Volume2 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { getEvent } from '@/api'
+import { useEvent } from '@/api'
+import { LoadingBlock } from '@/components/ui/StateViews'
 import { businesses } from '@/data/mock'
 import { mainSponsor, SponsorMark, SponsorVerticalBanner } from '@/components/sponsor'
 import { CompanyMark, VerifiedBadge } from '@/components/brand'
@@ -29,7 +30,8 @@ export default function LiveRoom() {
   const { id = '' } = useParams()
   const { t, L, locale } = useI18n()
   const toast = useToast()
-  const ev = getEvent(id)
+  const evr = useEvent(id)
+  const ev = evr.data
   const exhibitors = businesses.filter((b) => ['c-agri', 'c-sea'].includes(b.categoryId))
   const [viewers, setViewers] = useState(ev?.viewers ?? 1200)
   const [showing, setShowing] = useState(0)
@@ -54,6 +56,7 @@ export default function LiveRoom() {
     listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: 'smooth' })
   }, [msgs])
 
+  if (evr.loading) return <LoadingBlock />
   if (!ev) return <NotFound />
   const ex = exhibitors[showing]!
 

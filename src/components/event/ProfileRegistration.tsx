@@ -17,7 +17,7 @@ import { tx } from '@/lib/tx'
 
 const DEFAULT_REQUIRED: SectionKey[] = ['general', 'attendees', 'consent']
 
-export function ProfileRegistration({ ev, onDone }: { ev: EventItem; onDone: () => void }) {
+export function ProfileRegistration({ ev, onDone }: { ev: EventItem; onDone: (info: { answers: Record<string, string>; attendeeIds: string[] }) => void }) {
   const { L, locale } = useI18n()
   const { session, profile, registrations, register } = useProfile()
   const required = ev.requiredSections ?? DEFAULT_REQUIRED
@@ -52,7 +52,7 @@ export function ProfileRegistration({ ev, onDone }: { ev: EventItem; onDone: () 
         e.preventDefault()
         if (!canSubmit) return
         register({ eventId: ev.id, attendees: profile.attendees.filter((a) => picked.includes(a.id)), answers })
-        onDone()
+        onDone({ answers, attendeeIds: picked })
       }}
     >
       {/* company */}

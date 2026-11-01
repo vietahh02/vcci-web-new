@@ -1,76 +1,38 @@
 /** Trade-show layout: immersive countdown hero + live strip + month-grouped schedule + past recordings. */
 import { motion } from 'motion/react'
-import { ArrowRight, ArrowUpRight, MapPin, Radio, Ticket, Video } from 'lucide-react'
+import { ArrowRight, MapPin, Ticket, Video } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { searchEvents } from '@/api'
-import type { EventItem, EventType } from '@/data/mock'
-import { EventCard } from '@/components/cards'
+import type { EventItem } from '@/data/mock'
+import { EventExplorer, formatLabel } from '@/components/event/EventExplorer'
 import { LiveDot, useCountdown } from '@/components/effects'
-import { Tabs } from '@/components/ui/overlay'
 import { buttonClass, Skeleton } from '@/components/ui/primitives'
 import { useI18n } from '@/lib/i18n'
-import { formatDate, formatMoney, img } from '@/lib/utils'
+import { formatDate, img } from '@/lib/utils'
 
 export default function Events() {
-  const { t, lang } = useI18n()
+  const { lang } = useI18n()
   const [list, setList] = useState<EventItem[] | null>(null)
-  const [type, setType] = useState<'ALL' | EventType>('ALL')
 
   useEffect(() => {
-    searchEvents().then(setList)
+    searchEvents().then(setList, () => setList([]))
   }, [lang])
 
   if (!list) return <div className="container-page py-10"><Skeleton className="h-[480px] rounded-3xl" /></div>
 
-  const live = list.find((e) => e.eventStatus === 'ONGOING')
+  const live = list.find((e) => e.eventStatus === 'ONGOING' && e.eventType === 'LIVESTREAM')
   const upcoming = list.filter((e) => e.eventStatus === 'UPCOMING').sort((a, b) => a.startDate.localeCompare(b.startDate))
   const next = upcoming[0]
-  const schedule = upcoming.filter((e) => type === 'ALL' || e.eventType === type)
-  const past = list.filter((e) => e.eventStatus === 'ENDED')
-  const byMonth = schedule.reduce<Record<string, EventItem[]>>((acc, e) => {
-    const k = e.startDate.slice(0, 7)
-    ;(acc[k] ??= []).push(e)
-    return acc
-  }, {})
 
   return (
     <>
       {live && <LiveStrip ev={live} />}
       {next && <CountdownHero ev={next} />}
 
-      <section className="container-page mt-16">
-        <div className="flex flex-wrap items-end justify-between gap-4">
-          <h2 className="text-3xl font-extrabold tracking-tight">{t.events.viewCalendar}</h2>
-          <Tabs
-            layoutId="ev-type"
-            size="sm"
-            value={type}
-            onValueChange={(v) => setType(v as typeof type)}
-            items={[
-              { value: 'ALL', label: t.searchPage.all },
-              { value: 'WEBINAR', label: t.events.type.WEBINAR },
-              { value: 'LIVESTREAM', label: t.events.type.LIVESTREAM },
-              { value: 'MATCHMAKING', label: t.events.type.MATCHMAKING },
-            ]}
-          />
-        </div>
-        <div className="mt-8 space-y-10">
-          {Object.entries(byMonth).map(([month, items]) => (
-            <MonthGroup key={month} month={month} items={items} />
-          ))}
-          {schedule.length === 0 && <p className="text-muted-foreground">{t.common.noResults}</p>}
-        </div>
-      </section>
+      <EventExplorer list={list} />
 
-      {past.length > 0 && (
-        <section className="container-page mt-20">
-          <h2 className="text-2xl font-extrabold tracking-tight">{t.events.status.ENDED}</h2>
-          <div className="mt-6 grid gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
-            {past.map((e) => <EventCard key={e.id} event={e} />)}
-          </div>
-        </section>
-      )}
+      <div className="h-16" />
     </>
   )
 }
@@ -106,7 +68,9 @@ function CountdownHero({ ev }: { ev: EventItem }) {
         </motion.h1>
         <p className="mt-4 flex flex-wrap gap-x-5 gap-y-1 text-white/75">
           <span>{formatDate(ev.startDate, locale, { day: '2-digit', month: 'long', year: 'numeric' })} · {ev.startTime}–{ev.endTime}</span>
-          <span className="inline-flex items-center gap-1.5"><MapPin className="size-4" /> {L(ev.location)}</span>
+          {/* online-first: format/platform first, venue secondary and only when set */}
+          {ev.format !== 'OFFLINE' && <span className="inline-flex items-center gap-1.5"><Video className="size-4" /> {formatLabel(ev.format)}{ev.platform ? ` · ${ev.platform}` : ''}</span>}
+          {L(ev.location) && <span className="inline-flex items-center gap-1.5 text-white/60"><MapPin className="size-4" /> {L(ev.location)}</span>}
         </p>
         <div className="mt-10 flex flex-wrap items-end justify-between gap-8">
           <div className="flex gap-3 md:gap-6">
@@ -128,43 +92,5 @@ function CountdownHero({ ev }: { ev: EventItem }) {
         </div>
       </div>
     </section>
-  )
-}
-
-function MonthGroup({ month, items }: { month: string; items: EventItem[] }) {
-  const { t, L, locale } = useI18n()
-  const label = formatDate(`${month}-01T00:00:00`, locale, { month: 'long', year: 'numeric' })
-  return (
-    <div className="grid gap-4 md:grid-cols-[200px_minmax(0,1fr)]">
-      <p className="text-lg font-extrabold capitalize text-primary md:sticky md:top-36 md:self-start">{label}</p>
-      <ol className="divide-y border-y">
-        {items.map((e, i) => {
-          const d = new Date(e.startDate)
-          return (
-            <motion.li key={e.id} initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.06 }}>
-              <Link to={`/events/${e.id}`} className="group grid grid-cols-[56px_minmax(0,1fr)_auto] items-center gap-5 py-5">
-                <div className="text-center">
-                  <p className="text-3xl font-extrabold leading-none">{String(d.getDate()).padStart(2, '0')}</p>
-                  <p className="mt-1 text-[11px] font-semibold uppercase text-muted-foreground">{formatDate(e.startDate, locale, { weekday: 'short' })}</p>
-                </div>
-                <div className="min-w-0">
-                  <p className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
-                    {e.eventType === 'LIVESTREAM' ? <Radio className="size-3.5" /> : <Video className="size-3.5" />}
-                    {t.events.type[e.eventType]} · {e.startTime}–{e.endTime} · {L(e.location)}
-                  </p>
-                  <p className="mt-1 text-lg font-bold leading-snug transition-colors group-hover:text-primary">{L(e.title)}</p>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    {L(e.organizedBy)} · {e.participationFee ? formatMoney(e.participationFee, e.participationFeeCurrency, locale) : t.common.free}
-                  </p>
-                </div>
-                <span className="grid size-11 place-items-center rounded-full border transition-all group-hover:border-primary group-hover:bg-primary group-hover:text-primary-foreground">
-                  <ArrowUpRight className="size-4" />
-                </span>
-              </Link>
-            </motion.li>
-          )
-        })}
-      </ol>
-    </div>
   )
 }

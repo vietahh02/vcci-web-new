@@ -3,14 +3,17 @@ import { motion } from 'motion/react'
 import { ArrowUpRight, FilePlus2 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { browseImportRequests, getCategory } from '@/api'
+import { browseImportRequests, getCategory, liveApi, USE_MOCK } from '@/api'
 import { categories, type ImportRequest } from '@/data/mock'
 import { CountryChip } from '@/components/brand'
 import { useToast } from '@/components/ui/overlay'
-import { Button, Field, Input, Select, Skeleton, Textarea } from '@/components/ui/primitives'
+import { Button, Field, Input, Skeleton, Textarea } from '@/components/ui/primitives'
+import { Select } from '@/components/ui/select'
 import { SuccessState } from '@/pages/ProductDetail'
 import { useI18n } from '@/lib/i18n'
 import { cn, daysLeft, formatDate, formatMoney, formatNumber } from '@/lib/utils'
+
+const UNITS = ['MT', 'kg', 'pcs', 'set']
 
 export default function Requests() {
   const { t, L, lang, locale } = useI18n()
@@ -23,11 +26,11 @@ export default function Requests() {
   useEffect(() => {
     let alive = true
     setList(null)
-    browseImportRequests(cat || undefined).then((r) => alive && setList(r))
+    browseImportRequests(cat || undefined, q || undefined).then((r) => alive && setList(r), () => alive && setList([]))
     return () => {
       alive = false
     }
-  }, [cat, lang])
+  }, [cat, lang, q])
 
   useEffect(() => {
     if (params.get('post') === '1') setTimeout(() => formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 400)
@@ -66,14 +69,11 @@ export default function Requests() {
       <section className="container-page mt-12">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <h2 className="text-2xl font-extrabold tracking-tight">{t.home.requestsTitle}</h2>
-          <Select value={cat} onChange={(e) => setCat(e.target.value)} className="h-9 w-auto min-w-52 text-[13px]" aria-label={t.requests.category}>
-            <option value="">{t.requests.allCats}</option>
-            {categories.map((c) => <option key={c.id} value={c.id}>{L(c.categoryName)}</option>)}
-          </Select>
+          <Select value={cat} onValueChange={setCat} className="h-9 w-full text-[13px] sm:w-auto sm:min-w-52" aria-label={t.requests.category} options={[{ value: '', label: t.requests.allCats }, ...categories.map((c) => ({ value: c.id, label: L(c.categoryName) }))]} />
         </div>
 
         <div className="mt-5 overflow-hidden rounded-xl border">
-          <div className="hidden grid-cols-[minmax(0,2.4fr)_1fr_1fr_1.1fr_0.9fr_40px] gap-4 bg-muted/60 px-5 py-3 text-xs font-bold uppercase tracking-wider text-muted-foreground md:grid">
+          <div className="hidden grid-cols-[minmax(0,2.4fr)_1fr_1fr_1.1fr_0.9fr_40px] gap-4 bg-muted/60 px-5 py-3 text-xs font-bold uppercase tracking-wider text-muted-foreground lg:grid">
             <span>{t.requests.name}</span>
             <span>{t.requests.quantity}</span>
             <span>{t.requests.targetPrice}</span>
@@ -93,17 +93,17 @@ export default function Requests() {
                 <motion.div key={r.id} initial={{ opacity: 0 }} animate={{ opacity: 1, transition: { delay: i * 0.04 } }}>
                   <Link
                     to={`/requests/${r.id}`}
-                    className="group grid gap-2 border-t px-5 py-4 transition-colors hover:bg-primary-soft/50 md:grid-cols-[minmax(0,2.4fr)_1fr_1fr_1.1fr_0.9fr_40px] md:items-center md:gap-4"
+                    className="group grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1.5 border-t px-4 py-4 transition-colors hover:bg-primary-soft/50 sm:px-5 lg:grid-cols-[minmax(0,2.4fr)_1fr_1fr_1.1fr_0.9fr_40px] lg:gap-4"
                   >
-                    <div className="min-w-0">
+                    <div className="col-span-2 min-w-0 lg:col-span-1">
                       <p className="truncate font-semibold group-hover:text-primary">{L(r.requestName)}</p>
                       <p className="text-xs text-muted-foreground">{c ? L(c.categoryName) : r.productType}</p>
                     </div>
                     <span className="text-sm">{formatNumber(r.quantity, locale)} {r.unit}</span>
-                    <span className="text-sm font-semibold">{formatMoney(r.price)}/{r.unit}</span>
+                    <span className="text-sm font-semibold max-lg:text-right">{formatMoney(r.price)}/{r.unit}</span>
                     <CountryChip code={r.country} label={r.organizationName} className="min-w-0 truncate" />
-                    <span className={cn('text-sm', left <= 7 && 'font-semibold text-amber-600 dark:text-amber-400')}>{formatDate(r.endTime, locale)}</span>
-                    <ArrowUpRight className="hidden size-4 text-muted-foreground transition group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-primary md:block" />
+                    <span className={cn('whitespace-nowrap text-sm max-lg:text-right', left <= 7 && 'font-semibold text-amber-600 dark:text-amber-400')}><span className="font-normal text-muted-foreground lg:hidden">{t.requests.deadline}: </span>{formatDate(r.endTime, locale)}</span>
+                    <ArrowUpRight className="hidden size-4 text-muted-foreground transition group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-primary lg:block" />
                   </Link>
                 </motion.div>
               )
@@ -137,26 +137,34 @@ function PostForm() {
           className="grid gap-4 p-6 sm:grid-cols-2"
           onSubmit={(e) => {
             e.preventDefault()
-            setSent(true)
-            toast({ kind: 'success', title: t.requests.posted })
+            if (USE_MOCK) {
+              setSent(true)
+              toast({ kind: 'success', title: t.requests.posted })
+              return
+            }
+            const g = (k: string) => String(new FormData(e.currentTarget).get(k) ?? '')
+            liveApi.postImportRequest({
+              requestName: g('requestName'), categoryId: g('categoryId'), address: g('address'), quantity: Number(g('quantity')), unit: g('unit'),
+              price: Number(g('price')), startTime: g('startTime'), endTime: g('endTime'), description: g('description'),
+            }).then(
+              () => { setSent(true); toast({ kind: 'success', title: t.requests.posted }) },
+              (err: Error) => toast({ kind: 'info', title: err.message }),
+            )
           }}
         >
-          <Field label={t.requests.name} htmlFor="pr-name" className="sm:col-span-2"><Input id="pr-name" required placeholder={t.ui.requestNamePh} /></Field>
+          <Field label={t.requests.name} htmlFor="pr-name" className="sm:col-span-2"><Input id="pr-name" name="requestName" required placeholder={t.ui.requestNamePh} /></Field>
           <Field label={t.requests.category} htmlFor="pr-cat">
-            <Select id="pr-cat" required defaultValue="">
-              <option value="" disabled>—</option>
-              {categories.map((c) => <option key={c.id} value={c.id}>{L(c.categoryName)}</option>)}
-            </Select>
+            <Select id="pr-cat" name="categoryId" required defaultValue="" placeholder="—" options={categories.map((c) => ({ value: c.id, label: L(c.categoryName) }))} />
           </Field>
-          <Field label={t.requests.address} htmlFor="pr-addr"><Input id="pr-addr" required placeholder={t.ui.addressPh} /></Field>
+          <Field label={t.requests.address} htmlFor="pr-addr"><Input id="pr-addr" name="address" required placeholder={t.ui.addressPh} /></Field>
           <div className="grid grid-cols-[minmax(0,1fr)_88px] gap-2">
-            <Field label={t.requests.quantity} htmlFor="pr-qty"><Input id="pr-qty" type="number" min={1} required /></Field>
-            <Field label={t.requests.unit} htmlFor="pr-unit"><Select id="pr-unit" defaultValue="MT"><option>MT</option><option>kg</option><option>pcs</option><option>set</option></Select></Field>
+            <Field label={t.requests.quantity} htmlFor="pr-qty"><Input id="pr-qty" name="quantity" type="number" min={1} required /></Field>
+            <Field label={t.requests.unit} htmlFor="pr-unit"><Select id="pr-unit" name="unit" defaultValue="MT" options={UNITS.map((u) => ({ value: u, label: u }))} /></Field>
           </div>
-          <Field label={t.requests.price} htmlFor="pr-price"><Input id="pr-price" type="number" min={0} step="0.01" required /></Field>
-          <Field label={t.requests.start} htmlFor="pr-start"><Input id="pr-start" type="date" required /></Field>
-          <Field label={t.requests.end} htmlFor="pr-end"><Input id="pr-end" type="date" required /></Field>
-          <Field label={t.requests.description} htmlFor="pr-desc" className="sm:col-span-2"><Textarea id="pr-desc" className="min-h-20" placeholder={t.product.messagePh} /></Field>
+          <Field label={t.requests.price} htmlFor="pr-price"><Input id="pr-price" name="price" type="number" min={0} step="0.01" required /></Field>
+          <Field label={t.requests.start} htmlFor="pr-start"><Input id="pr-start" name="startTime" type="date" required /></Field>
+          <Field label={t.requests.end} htmlFor="pr-end"><Input id="pr-end" name="endTime" type="date" required /></Field>
+          <Field label={t.requests.description} htmlFor="pr-desc" className="sm:col-span-2"><Textarea id="pr-desc" name="description" className="min-h-20" placeholder={t.product.messagePh} /></Field>
           <Button type="submit" variant="gold" size="lg" className="sm:col-span-2"><FilePlus2 /> {t.requests.post}</Button>
         </form>
       )}

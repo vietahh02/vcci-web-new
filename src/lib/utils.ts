@@ -7,6 +7,7 @@ export function cn(...inputs: ClassValue[]) {
 
 /** Unsplash image helper — all ids verified to resolve. */
 export function img(id: string, w = 640, h?: number) {
+  if (/^(https?:|data:|blob:|\/)/.test(id)) return id // real backend returns absolute URLs
   const size = h ? `&h=${h}&fit=crop` : ''
   return `https://images.unsplash.com/photo-${id}?w=${w}${size}&q=70&auto=format`
 }

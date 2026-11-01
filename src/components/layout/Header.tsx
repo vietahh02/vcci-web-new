@@ -1,12 +1,13 @@
 import * as DialogPrimitive from '@radix-ui/react-dialog'
 import { AnimatePresence, motion, useMotionValueEvent, useScroll } from 'motion/react'
-import { Bell, ChevronDown, ChevronRight, FilePlus2, LayoutGrid, Menu, MessageSquare, Moon, Phone, Sun } from 'lucide-react'
+import { ChevronDown, ChevronRight, FilePlus2, LayoutGrid, Menu, MessageSquare, Moon, Phone, Sun } from 'lucide-react'
 import { useState } from 'react'
 import { Link, NavLink, useLocation } from 'react-router-dom'
 import { categories } from '@/data/mock'
 import { categoryIcons, Logo } from '@/components/brand'
 import { LiveDot } from '@/components/effects'
 import { LangSwitcher } from '@/components/layout/LangSwitcher'
+import { NotificationBell } from '@/components/layout/NotificationBell'
 import { SearchBar } from '@/components/layout/SearchBar'
 import { SheetContent, Tooltip } from '@/components/ui/overlay'
 import { buttonClass } from '@/components/ui/primitives'
@@ -48,12 +49,12 @@ export function Header() {
         transition={{ duration: 0.25 }}
         className="overflow-hidden bg-navy text-white/75"
       >
-        <div className="container-page flex h-[34px] items-center justify-between text-[12px]">
-          <p className="truncate">
+        <div className="container-page flex h-[34px] items-center justify-between gap-6 text-[12px]">
+          <p className="min-w-0 truncate">
             <span className="mr-2 inline-block size-1.5 rounded-full bg-gold-bright align-middle" />
             {t.top.official}
           </p>
-          <div className="hidden items-center gap-5 md:flex">
+          <div className="hidden shrink-0 items-center gap-5 whitespace-nowrap lg:flex">
             <Link to="/search" className="hover:text-white">{t.top.buyers}</Link>
             <Link to="/register" className="hover:text-white">{t.top.suppliers}</Link>
             <Link to="/about" className="hover:text-white">{t.top.help}</Link>
@@ -64,11 +65,11 @@ export function Header() {
 
       {/* main bar */}
       <div className={cn('border-b transition-[background,box-shadow] duration-300', scrolled ? 'glass shadow-[0_8px_30px_-12px_rgb(8_8_46/0.18)]' : 'bg-background')}>
-        <div className="container-page flex h-[68px] items-center gap-4 lg:gap-8">
+        <div className="container-page flex h-[68px] items-center gap-3 sm:gap-4 lg:gap-6 xl:gap-8">
           <button className="-ml-2 rounded-lg p-2 hover:bg-muted lg:hidden" onClick={() => setMobileOpen(true)} aria-label={t.ui.menu}>
             <Menu className="size-5" />
           </button>
-          <Logo />
+          <Logo className="shrink-0" />
           <div className={cn('hidden flex-1 transition-all duration-500 md:block', isHome && !scrolled && 'pointer-events-none opacity-0 md:-translate-y-1')}>
             <SearchBar autoFocusKey={!isHome || scrolled} />
           </div>
@@ -82,12 +83,7 @@ export function Header() {
                 <span className="absolute right-1.5 top-1.5 grid size-4 place-items-center rounded-full bg-live text-[9px] font-bold text-white">3</span>
               </button>
             </Tooltip>
-            <Tooltip content={t.nav.notifications}>
-              <button className="relative hidden rounded-lg p-2.5 text-muted-foreground transition hover:bg-muted hover:text-foreground sm:block" aria-label={t.nav.notifications}>
-                <Bell className="size-[18px]" />
-                <span className="absolute right-2 top-2 size-2 rounded-full bg-primary ring-2 ring-background" />
-              </button>
-            </Tooltip>
+            <NotificationBell />
             <LangSwitcher />
             <button onClick={toggle} className="rounded-lg p-2.5 text-muted-foreground transition hover:bg-muted hover:text-foreground" aria-label={t.ui.theme}>
               <AnimatePresence mode="wait" initial={false}>
@@ -97,6 +93,8 @@ export function Header() {
               </AnimatePresence>
             </button>
             {session ? (
+              <>
+              <Link to="/account/catalog" className={buttonClass('ghost', 'sm', 'ml-2 hidden h-9 xl:inline-flex')}>{tx('Sản phẩm & gian hàng', 'Products & booths', '제품 및 부스')}</Link>
               <Link to="/account/profile" className="ml-2 flex items-center gap-2.5 rounded-xl py-1 pl-1 pr-3 transition hover:bg-muted" title={tx('Hồ sơ doanh nghiệp của tôi', 'My company profile')}>
                 <span className="relative grid size-9 place-items-center">
                   <svg viewBox="0 0 36 36" className="absolute inset-0 -rotate-90">
@@ -105,8 +103,9 @@ export function Header() {
                   </svg>
                   <span className="text-[10px] font-bold">{completion(profile)}%</span>
                 </span>
-                <span className="hidden max-w-40 truncate text-[13px] font-semibold xl:block">{profile.general.nameEn || session.companyName}</span>
+                <span className="hidden max-w-40 truncate text-[13px] font-semibold 2xl:block">{profile.general.nameEn || session.companyName}</span>
               </Link>
+              </>
             ) : (
               <div className="ml-2 hidden items-center gap-2 lg:flex">
                 <Link to="/login" className={buttonClass('ghost', 'sm', 'h-9')}>{t.nav.login}</Link>
@@ -121,7 +120,7 @@ export function Header() {
           <button
             onMouseEnter={() => setMegaOpen(true)}
             onClick={() => setMegaOpen((v) => !v)}
-            className={cn('mr-3 inline-flex h-9 items-center gap-2 rounded-lg px-3 text-[13px] font-bold transition', megaOpen ? 'bg-primary text-primary-foreground' : 'bg-primary-soft text-primary hover:bg-primary hover:text-primary-foreground')}
+            className={cn('mr-1 inline-flex h-9 shrink-0 items-center gap-2 whitespace-nowrap rounded-lg px-3 text-[13px] font-bold transition xl:mr-3', megaOpen ? 'bg-primary text-primary-foreground' : 'bg-primary-soft text-primary hover:bg-primary hover:text-primary-foreground')}
             aria-expanded={megaOpen}
           >
             <LayoutGrid className="size-4" />
@@ -134,7 +133,7 @@ export function Header() {
               to={n.to}
               onMouseEnter={() => setMegaOpen(false)}
               className={({ isActive }) =>
-                cn('relative inline-flex h-9 items-center gap-1.5 rounded-lg px-3 text-[13.5px] font-semibold transition-colors hover:bg-muted', isActive ? 'text-primary' : 'text-foreground/80 hover:text-foreground')
+                cn('relative inline-flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg px-2.5 text-[13px] font-semibold transition-colors hover:bg-muted xl:px-3 xl:text-[13.5px]', isActive ? 'text-primary' : 'text-foreground/80 hover:text-foreground')
               }
             >
               {({ isActive }) => (
@@ -245,6 +244,7 @@ function MegaMenu({ open, onClose }: { open: boolean; onClose: () => void }) {
 
 function MobileNav({ open, onOpenChange, items }: { open: boolean; onOpenChange: (v: boolean) => void; items: { to: string; label: string; live?: boolean }[] }) {
   const { t, L } = useI18n()
+  const { session } = useProfile()
   return (
     <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
       <SheetContent side="left" title={t.brand.name} description={t.brand.tagline}>
@@ -275,8 +275,17 @@ function MobileNav({ open, onOpenChange, items }: { open: boolean; onOpenChange:
             })}
           </div>
           <div className="mt-6 grid grid-cols-2 gap-2">
-            <Link to="/login" onClick={() => onOpenChange(false)} className={buttonClass('outline')}>{t.nav.login}</Link>
-            <Link to="/register" onClick={() => onOpenChange(false)} className={buttonClass('default')}>{t.nav.register}</Link>
+            {session ? (
+              <>
+                <Link to="/account/catalog" onClick={() => onOpenChange(false)} className={buttonClass('outline', 'md', 'h-auto min-h-10 whitespace-normal py-2 text-center leading-tight')}>{tx('Sản phẩm & gian hàng', 'Products & booths', '제품 및 부스')}</Link>
+                <Link to="/account/profile" onClick={() => onOpenChange(false)} className={buttonClass('default', 'md', 'h-auto min-h-10 whitespace-normal py-2 text-center leading-tight')}>{tx('Hồ sơ doanh nghiệp', 'Company profile', '기업 프로필')}</Link>
+              </>
+            ) : (
+              <>
+                <Link to="/login" onClick={() => onOpenChange(false)} className={buttonClass('outline')}>{t.nav.login}</Link>
+                <Link to="/register" onClick={() => onOpenChange(false)} className={buttonClass('default')}>{t.nav.register}</Link>
+              </>
+            )}
           </div>
         </div>
       </SheetContent>

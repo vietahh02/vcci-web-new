@@ -18,6 +18,7 @@ import Events from '@/pages/Events'
 import Home from '@/pages/Home'
 import LegalAI from '@/pages/LegalAI'
 import LiveRoom from '@/pages/LiveRoom'
+import MyCatalog from '@/pages/MyCatalog'
 import NotFound from '@/pages/NotFound'
 import ProductDetail from '@/pages/ProductDetail'
 import RequestDetail from '@/pages/RequestDetail'
@@ -74,6 +75,7 @@ export default function App() {
                     <Route path="/login" element={<Login />} />
                     <Route path="/register" element={<Register />} />
                     <Route path="/account/profile" element={<MyProfile />} />
+                    <Route path="/account/catalog" element={<MyCatalog />} />
                     <Route path="*" element={<NotFound />} />
                   </Routes>
                 </motion.main>

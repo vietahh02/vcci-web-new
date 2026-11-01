@@ -165,6 +165,13 @@
 @keyframes border-spin {
   to { --angle: 360deg; }
 }
+/* Select / DropdownMenu (transform-origin comes from Radix, so the list grows out of its trigger) */
+@keyframes popover-in {
+  from { opacity: 0; transform: scale(0.96); }
+}
+@keyframes popover-out {
+  to { opacity: 0; transform: scale(0.96); }
+}
 
 @layer base {
   * { border-color: var(--border); }
