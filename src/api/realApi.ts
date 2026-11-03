@@ -247,7 +247,15 @@ export interface RegisterInput {
   country: string; province: string; address: string; email: string; phone: string; repName: string; repTitle: string; repEmail: string; repPhone: string
   /** Phase 2: login email, logo path (`/api/files/{id}/content`), legal files (uploaded through `uploadFile`), password (BE ignores it unless Q4b picks self-set) */
   loginEmail?: string; logo?: string; legalDocs?: { license?: { fileId?: string } | null; tax?: { fileId?: string } | null }; password?: string
+  /** V70: tên viết tắt, đăng ký kinh doanh, tổng tài sản, "Lãnh đạo chủ chốt", chi nhánh, hồ sơ yêu cầu (≤ 5 file/nhóm) */
+  shortName?: string; otherBusinessForm?: string; businessRegNo?: string; businessRegDate?: string; businessRegPlace?: string; totalAssets?: string
+  leaders?: KeyLeaders; branches?: Branch[]; docs?: Partial<Record<RegDocGroup, { fileId?: string }[]>>
 }
+export interface LeaderPerson { fullName: string; gender: string; landline: string; mobile: string; email: string }
+export type KeyLeaders = Record<'chairman' | 'ceo' | 'chiefOfOffice' | 'contact1' | 'contact2', LeaderPerson>
+export interface Branch { name: string; address: string }
+export type RegDocGroup = 'application' | 'license' | 'finance' | 'payment' | 'other'
+const fileIds = (xs?: { fileId?: string }[]) => (xs ?? []).map((x) => x.fileId).filter((x): x is string => !!x)
 /** POST /api/business/register. Files must be uploaded first (`uploadFile`, anonymous token is sent back as `uploadToken`). `password` is sent for Q4b but the BE ignores it by default (account created after approval + activation link). */
 export const registerBusiness = (r: RegisterInput) => apiFetch('/api/business/register', {
   method: 'POST', anon: true,
@@ -258,10 +266,18 @@ export const registerBusiness = (r: RegisterInput) => apiFetch('/api/business/re
     loginEmail: r.loginEmail || undefined,
     ...(r.password ? { password: r.password, confirmPassword: r.password } : {}),
     uploadToken: registerUploadToken() ?? undefined,
-    logoFileId: fileIdOf(r.logo), licenseFileId: r.legalDocs?.license?.fileId, taxFileId: r.legalDocs?.tax?.fileId,
+    logoFileId: fileIdOf(r.logo),
+    ...(r.docs
+      ? { applicationFileIds: fileIds(r.docs.application), licenseFileIds: fileIds(r.docs.license), financeFileIds: fileIds(r.docs.finance), paymentFileIds: fileIds(r.docs.payment), otherFileIds: fileIds(r.docs.other) }
+      : { licenseFileId: r.legalDocs?.license?.fileId, taxFileId: r.legalDocs?.tax?.fileId }),
+    shortName: r.shortName || undefined, otherBusinessForm: r.businessForm === 'OTHER' ? r.otherBusinessForm : undefined,
+    businessRegNo: r.businessRegNo, businessRegDate: r.businessRegDate || undefined, businessRegPlace: r.businessRegPlace,
+    totalAssets: r.totalAssets || undefined, totalAssetsCurrency: r.totalAssets ? r.charterCurrency : undefined,
+    keyLeaders: r.leaders, branches: r.branches?.filter((b) => b.name || b.address),
     charterCapital: r.charterCapital, charterCapitalCurrency: r.charterCurrency, totalRevenue: r.totalRevenue, reportYear: r.reportYear, employees: r.employees,
     website: r.website, fax: r.fax, country: r.country, province: r.province, address: r.address, email: r.email, phone: r.phone,
-    representativeName: r.repName, representativeTitle: r.repTitle, representativeEmail: r.repEmail, representativePhone: r.repPhone,
+    // khi có keyLeaders, BE tự lấy người đại diện từ TGĐ/Giám đốc rồi người liên hệ #1
+    ...(r.leaders ? {} : { representativeName: r.repName, representativeTitle: r.repTitle, representativeEmail: r.repEmail, representativePhone: r.repPhone }),
   },
 })
 

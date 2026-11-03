@@ -23,8 +23,9 @@ const b = (vi: string, en: string, ko: string): Bilingual => ({ vi, en, ko })
 export const RULES: Record<RuleKey, UploadRule> = {
   legal: {
     key: 'legal', label: b('Giấy tờ pháp lý', 'Legal documents', '법인 서류'),
-    accept: '.pdf,.jpg,.jpeg,.png', exts: ['pdf', 'jpg', 'jpeg', 'png'], maxMB: 10,
+    accept: '.pdf,.jpg,.jpeg,.png,.doc,.docx', exts: ['pdf', 'jpg', 'jpeg', 'png', 'doc', 'docx'], maxMB: 10,
     tips: [
+      b('Đơn, tờ khai có thể nộp file Word (.doc, .docx); giấy tờ có dấu nên nộp bản scan PDF/ảnh', 'Forms may be Word files (.doc, .docx); sealed papers should be scanned PDF/images', '신청서는 Word(.doc, .docx) 가능, 직인 서류는 PDF/이미지 스캔본 권장'),
       b('Bản scan màu hoặc ảnh chụp rõ nét, đủ 4 góc, đủ tất cả các trang', 'Clear colour scan or photo, all four corners and every page', '모든 페이지가 포함된 선명한 컬러 스캔 또는 사진'),
       b('Còn hiệu lực, có dấu đỏ; không chỉnh sửa, không che thông tin', 'Valid, with red seal; not edited or redacted', '유효하며 직인이 있고 수정·가림 없음'),
       b('Nhiều trang thì gộp thành 1 file PDF', 'Merge multi-page documents into one PDF', '여러 페이지는 PDF 한 파일로 병합'),

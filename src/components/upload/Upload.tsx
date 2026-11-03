@@ -87,7 +87,7 @@ function useValidated(rule: RuleKey) {
 }
 
 /* ---------------------------------------------------------------- document / single file */
-export function FileUpload({ rule, value, onChange, compact }: { rule: RuleKey; value: DocFile | null; onChange: (v: DocFile | null) => void; compact?: boolean }) {
+export function FileUpload({ rule, value, onChange, compact, noHint }: { rule: RuleKey; value: DocFile | null; onChange: (v: DocFile | null) => void; compact?: boolean; noHint?: boolean }) {
   const { error, busy, accept } = useValidated(rule)
   const [drag, setDrag] = useState(false)
   const input = useRef<HTMLInputElement>(null)
@@ -131,7 +131,24 @@ export function FileUpload({ rule, value, onChange, compact }: { rule: RuleKey; 
       )}
       <input ref={input} type="file" accept={RULES[rule].accept} className="sr-only" onChange={(e) => { void pick(e.target.files?.[0]); e.target.value = '' }} />
       {error && <p className="mt-1.5 flex items-start gap-1.5 text-xs text-destructive"><AlertCircle className="mt-px size-3.5 shrink-0" /> {error}</p>}
-      <UploadHint rule={rule} />
+      {!noHint && <UploadHint rule={rule} />}
+    </div>
+  )
+}
+
+/** Several documents in one group (max `max`), each checked and uploaded like FileUpload. */
+export function MultiFileUpload({ rule, value, onChange, max = 5 }: { rule: RuleKey; value: DocFile[]; onChange: (v: DocFile[]) => void; max?: number }) {
+  return (
+    <div className="space-y-2">
+      {value.map((f) => (
+        <FileUpload key={f.id} rule={rule} compact noHint value={f} onChange={(v) => onChange(v ? value.map((x) => (x.id === f.id ? v : x)) : value.filter((x) => x.id !== f.id))} />
+      ))}
+      {value.length < max ? (
+        <FileUpload key={value.length} rule={rule} compact value={null} onChange={(v) => v && onChange([...value, v])} />
+      ) : (
+        <UploadHint rule={rule} />
+      )}
+      <p className="text-xs text-muted-foreground">{value.length}/{max} {tx('file', 'files', '파일')}</p>
     </div>
   )
 }
