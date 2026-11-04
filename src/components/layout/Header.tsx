@@ -35,7 +35,7 @@ export function Header() {
     { to: '/suppliers', label: t.nav.suppliers },
     { to: '/requests', label: t.nav.requests },
     { to: '/events', label: t.nav.events },
-    { to: '/live/e-krfood', label: t.nav.live, live: true },
+    { to: '/events', label: t.nav.live, live: true },
     { to: '/legal-ai', label: t.nav.legal },
     { to: '/about', label: t.nav.about },
   ]
@@ -129,7 +129,7 @@ export function Header() {
           </button>
           {navItems.map((n) => (
             <NavLink
-              key={n.to}
+              key={n.label}
               to={n.to}
               onMouseEnter={() => setMegaOpen(false)}
               className={({ isActive }) =>
@@ -156,12 +156,12 @@ export function Header() {
 
 function MegaMenu({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { t, L, locale } = useI18n()
-  const [active, setActive] = useState(categories[0]!.id)
-  const cat = categories.find((c) => c.id === active)!
+  const [active, setActive] = useState(categories[0]?.id)
+  const cat = categories.find((c) => c.id === active)
 
   return (
     <AnimatePresence>
-      {open && (
+      {open && cat && (
         <motion.div
           initial={{ opacity: 0, y: -8, clipPath: 'inset(0 0 100% 0 round 16px)' }}
           animate={{ opacity: 1, y: 0, clipPath: 'inset(0 0 0% 0 round 16px)' }}
@@ -253,7 +253,7 @@ function MobileNav({ open, onOpenChange, items }: { open: boolean; onOpenChange:
           <nav className="mt-4 flex flex-col">
             {items.map((n) => (
               <NavLink
-                key={n.to}
+                key={n.label}
                 to={n.to}
                 onClick={() => onOpenChange(false)}
                 className={({ isActive }) => cn('flex items-center gap-2 rounded-lg px-3 py-3 text-[15px] font-semibold', isActive ? 'bg-primary-soft text-primary' : 'hover:bg-muted')}

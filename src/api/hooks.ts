@@ -69,4 +69,4 @@ export const useRelatedProducts = (pid: string, categoryId: string) =>
 
 /** Home product tabs (GET /api/public/home/products?tab=) and request ticker (browse?sort=newest&size=8). */
 export const useHomeProducts = (tab: 'popular' | 'newest' | 'certified') => useRemote('home:products:' + tab, useCallback(() => (USE_MOCK ? mockApi.homeProducts : liveApi.homeProducts)(tab), [tab]))
-export const useHomeRequests = () => useRemote('home:requests', useCallback(() => (USE_MOCK ? mockApi.browseImportRequests : liveApi.browseImportRequests)(undefined, undefined, 8), []))
+export const useHomeRequests = () => useRemote('home:requests', useCallback(() => (USE_MOCK ? mockApi.browseImportRequests : liveApi.browseImportRequests)(), []))

@@ -99,7 +99,7 @@ export const vi = {
       { title: 'Đa ngôn ngữ', desc: 'Tiếng Việt, English, 한국어' },
     ],
     categoriesTitle: 'Khám phá theo ngành hàng',
-    categoriesSub: 'Hơn 50.000 sản phẩm từ các ngành xuất khẩu chủ lực của Việt Nam',
+    categoriesSub: 'Sản phẩm từ các ngành xuất khẩu chủ lực của Việt Nam',
     productsTitle: 'Sản phẩm nổi bật',
     productsSub: 'Được người mua quốc tế quan tâm nhiều nhất tuần này',
     productTabs: { popular: 'Xem nhiều nhất', newest: 'Mới đăng', certified: 'Có chứng nhận quốc tế' },
@@ -384,7 +384,7 @@ export const vi = {
     },
     newsletter: 'Nhận bản tin cơ hội giao thương',
     subscribe: 'Đăng ký',
-    rights: '© 2026 VCCI. Bản thiết kế thử nghiệm — dữ liệu minh hoạ.',
+    rights: '© 2026 VCCI.',
   },
 }
 
@@ -491,7 +491,7 @@ export const en: Dict = {
       { title: 'Multilingual', desc: 'Tiếng Việt, English, 한국어' },
     ],
     categoriesTitle: 'Explore by industry',
-    categoriesSub: "50,000+ products from Vietnam's leading export sectors",
+    categoriesSub: "Products from Vietnam's leading export sectors",
     productsTitle: 'Featured products',
     productsSub: 'What international buyers are looking at this week',
     productTabs: { popular: 'Most viewed', newest: 'Newly listed', certified: 'Internationally certified' },
@@ -772,7 +772,7 @@ export const en: Dict = {
     },
     newsletter: 'Get trade opportunity alerts',
     subscribe: 'Subscribe',
-    rights: '© 2026 VCCI. Design prototype — sample data.',
+    rights: '© 2026 VCCI.',
   },
 }
 
@@ -877,7 +877,7 @@ export const ko: Dict = {
       { title: '다국어 지원', desc: 'Tiếng Việt, English, 한국어' },
     ],
     categoriesTitle: '산업별 둘러보기',
-    categoriesSub: '베트남 주력 수출 산업의 50,000개 이상 제품',
+    categoriesSub: '베트남 주력 수출 산업의 제품',
     productsTitle: '추천 제품',
     productsSub: '이번 주 해외 바이어가 가장 많이 찾은 제품',
     productTabs: { popular: '최다 조회', newest: '신규 등록', certified: '국제 인증 보유' },
@@ -1158,6 +1158,6 @@ export const ko: Dict = {
     },
     newsletter: '무역 기회 소식 받기',
     subscribe: '구독',
-    rights: '© 2026 VCCI. 디자인 프로토타입 — 샘플 데이터.',
+    rights: '© 2026 VCCI.',
   },
 }

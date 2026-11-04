@@ -1,13 +1,14 @@
 import { ArrowRight, Mail, MapPin, Phone } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
+import { USE_MOCK } from '@/api'
 import { Logo } from '@/components/brand'
 import { useToast } from '@/components/ui/overlay'
 import { useI18n } from '@/lib/i18n'
 
 const footerRoutes = {
   buyers: ['/search', '/suppliers', '/requests?post=1', '/events'],
-  suppliers: ['/register', '/requests', '/register', '/live/e-krfood'],
+  suppliers: ['/register', '/requests', '/register', '/events'],
   vcci: ['/about', '/legal-ai', '/about', '/about'],
 } as const
 
@@ -42,8 +43,9 @@ export function Footer() {
           </div>
         ))}
         <div className="col-span-2 sm:col-span-3 lg:col-span-1">
-          <h4 className="text-sm font-bold">{t.footer.newsletter}</h4>
-          <form
+          {/* no newsletter endpoint on the BE yet */}
+          {USE_MOCK && <h4 className="text-sm font-bold">{t.footer.newsletter}</h4>}
+          {USE_MOCK && <form
             className="mt-4 flex max-w-md gap-2"
             onSubmit={(e) => {
               e.preventDefault()
@@ -64,7 +66,7 @@ export function Footer() {
             <button type="submit" className="inline-flex h-10 items-center gap-1 rounded-lg bg-primary px-3 text-sm font-semibold text-primary-foreground hover:bg-primary-hover" aria-label={t.footer.subscribe}>
               <ArrowRight className="size-4" />
             </button>
-          </form>
+          </form>}
           <div className="mt-6 flex items-center gap-3">
             <img src="/imgs/Logo_vcci.png" alt="VCCI" className="h-10 w-auto rounded bg-white p-1" />
             <p className="text-xs leading-relaxed text-muted-foreground">{t.top.official}</p>

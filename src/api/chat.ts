@@ -13,6 +13,10 @@ export const CHAT_URL = clean(env.VITE_CHAT_URL)
 export const CHAT_SOCKET_URL = clean(env.VITE_CHAT_SOCKET_URL)
 export const chatConfigured = () => CHAT_URL !== '' && CHAT_SOCKET_URL !== ''
 
+export const OPEN_B2B = 'vcci:chat-b2b'
+/** Mở ChatWidget ở hội thoại B2B với doanh nghiệp này (khách: widget yêu cầu đăng nhập). */
+export const openBusinessChat = (businessId: string) => window.dispatchEvent(new CustomEvent(OPEN_B2B, { detail: businessId }))
+
 export const SUPPORT = 'PORTAL_BUSINESS_SUPPORT'
 export const B2B = 'PORTAL_BUSINESS_B2B'
 
@@ -110,6 +114,8 @@ export const chatApi = {
   conversations: (channel?: string) => call<ChatConversation[]>('/api/business-chat/conversations', { query: { channel, limit: 50 } }),
   /** Mở (hoặc lấy lại) hội thoại hỗ trợ của DN đang đăng nhập (DN + kênh theo token). */
   ensureSupport: () => call<{ conversationId: string }>('/api/business-chat/conversations/ensure', { method: 'POST', body: {} }),
+  /** Mở (hoặc lấy lại) hội thoại B2B giữa DN của mình và DN đối tác. */
+  ensureB2b: (businessId: string, otherBusinessId: string, principalId: string) => call<{ conversationId: string }>('/api/business-chat/conversations/b2b', { method: 'POST', body: { businessId, otherBusinessId, channel: B2B, principalId } }),
   join: (id: string) => call<{ participantId: string }>(`${conv(id)}/participants/portal`, { method: 'POST', body: {} }),
   messages: (id: string, limit = 50, beforeSeq?: number) => call<ChatMessageDto[]>(`${conv(id)}/messages`, { query: { limit, beforeSeq } }),
   send: (id: string, body: string, clientMessageId: string) => call<BizEnvelope>(`${conv(id)}/messages`, { method: 'POST', body: { body, clientMessageId } }),

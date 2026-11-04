@@ -10,7 +10,8 @@ import { categoryIcons, CountryChip, SectionHeader } from '@/components/brand'
 import { ProductCard, RequestCard } from '@/components/cards'
 import { CountUp, LiveDot, Reveal, Stagger, StaggerItem, WordsReveal } from '@/components/effects'
 import { SearchBar } from '@/components/layout/SearchBar'
-import { Tabs, useToast } from '@/components/ui/overlay'
+import { Tabs } from '@/components/ui/overlay'
+import { Pager, usePaged } from '@/components/ui/pager'
 import { Badge, Button, buttonClass, Input } from '@/components/ui/primitives'
 import { Select } from '@/components/ui/select'
 import { useI18n } from '@/lib/i18n'
@@ -64,11 +65,11 @@ function Hero() {
   const st = useHomeStats().data
   const trendingKeywords = useHomeTrending().data ?? []
   const stats = [
-    { to: st?.businesses ?? 12400, suffix: '+', label: t.home.stats.businesses },
-    { to: st?.products ?? 58000, suffix: '+', label: t.home.stats.products },
-    { to: st?.requests ?? 1200, suffix: '+', label: t.home.stats.requests },
-    { to: st?.countries ?? 40, suffix: '+', label: t.home.stats.countries },
-  ]
+    { to: st?.businesses ?? 0, suffix: '+', label: t.home.stats.businesses },
+    { to: st?.products ?? 0, suffix: '+', label: t.home.stats.products },
+    { to: st?.requests ?? 0, suffix: '+', label: t.home.stats.requests },
+    { to: st?.countries ?? 0, suffix: '+', label: t.home.stats.countries },
+  ].filter((s) => s.to > 0)
 
   return (
     <section ref={ref} className="relative isolate overflow-hidden bg-navy pb-28 text-white md:pb-36">
@@ -138,7 +139,6 @@ function Hero() {
 function SourcingDock() {
   const { t, L } = useI18n()
   const navigate = useNavigate()
-  const toast = useToast()
   const slides = (useEvents().data ?? []).filter((e) => e.eventStatus !== 'ENDED').slice(0, 3)
   const [slide, setSlide] = useState(0)
   const [need, setNeed] = useState('')
@@ -152,9 +152,9 @@ function SourcingDock() {
 
   return (
     <section className="container-page relative z-10 -mt-20 md:-mt-24">
-      <Reveal className="grid gap-4 rounded-3xl border bg-card p-3 shadow-2xl shadow-navy/12 lg:grid-cols-[250px_1fr_310px]">
+      <Reveal className={`grid gap-4 rounded-3xl border bg-card p-3 shadow-2xl shadow-navy/12 ${categories.length ? 'lg:grid-cols-[250px_1fr_310px]' : 'lg:grid-cols-[1fr_310px]'}`}>
         {/* categories rail */}
-        <div className="hidden rounded-2xl bg-muted/50 p-2 lg:block">
+        {categories.length > 0 && <div className="hidden rounded-2xl bg-muted/50 p-2 lg:block">
           <p className="px-3 pb-1.5 pt-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">{t.home.dock.categories}</p>
           <ul>
             {categories.map((c) => {
@@ -170,7 +170,7 @@ function SourcingDock() {
               )
             })}
           </ul>
-        </div>
+        </div>}
 
         {/* promo carousel */}
         <div className="relative min-h-[300px] overflow-hidden rounded-2xl bg-navy text-white">
@@ -235,8 +235,9 @@ function SourcingDock() {
             className="flex-1 rounded-2xl border p-4"
             onSubmit={(e) => {
               e.preventDefault()
-              toast({ kind: 'success', title: t.requests.posted, description: need || undefined })
-              navigate('/requests?post=1')
+              // the real post (and its required fields) happens on the RFQ form: this block only pre-fills it
+              const unit = String(new FormData(e.currentTarget).get('unit') ?? '')
+              navigate(`/requests?${new URLSearchParams({ post: '1', need, qty, unit })}`)
             }}
           >
             <p className="flex items-center gap-2 text-sm font-bold"><FilePlus2 className="size-4 text-gold" /> {t.home.dock.quickRfq}</p>
@@ -244,7 +245,7 @@ function SourcingDock() {
             <Input className="mt-3 h-9" placeholder={t.home.dock.whatNeed} value={need} onChange={(e) => setNeed(e.target.value)} aria-label={t.home.dock.whatNeed} />
             <div className="mt-2 grid grid-cols-[1fr_90px] gap-2">
               <Input className="h-9" type="number" min={1} placeholder={t.home.dock.qty} value={qty} onChange={(e) => setQty(e.target.value)} aria-label={t.home.dock.qty} />
-              <Select className="h-9" aria-label={t.common.unit} defaultValue="MT" options={['MT', 'kg', 'pcs', 'set'].map((u) => ({ value: u, label: u }))} />
+              <Select className="h-9" name="unit" aria-label={t.common.unit} defaultValue="MT" options={['MT', 'kg', 'pcs', 'set'].map((u) => ({ value: u, label: u }))} />
             </div>
             <Button type="submit" variant="gold" size="sm" className="mt-3 h-9 w-full">
               <Send /> {t.home.dock.sendRfq}
@@ -298,13 +299,8 @@ function ProductsSection() {
 /* ================================================================ IMPORT REQUESTS */
 function RequestsSection() {
   const { t, L } = useI18n()
-  const [offset, setOffset] = useState(0)
   const importRequests = useHomeRequests().data ?? []
-  useEffect(() => {
-    const id = setInterval(() => setOffset((o) => (o + 1) % Math.max(importRequests.length, 1)), 6000)
-    return () => clearInterval(id)
-  }, [importRequests.length])
-  const list = importRequests.length ? [0, 1, 2, 3].map((k) => importRequests[(offset + k) % importRequests.length]!) : []
+  const { items: list, ...pager } = usePaged(importRequests)
 
   return (
     <section className="container-page mt-24">
@@ -322,7 +318,7 @@ function RequestsSection() {
                 transition={{ type: 'spring', bounce: 0.18, duration: 0.7 }}
                 className="relative"
               >
-                {k === 0 && (
+                {pager.page === 0 && k === 0 && (
                   <motion.span
                     initial={{ opacity: 0, x: -6 }}
                     animate={{ opacity: 1, x: 0 }}
@@ -335,6 +331,7 @@ function RequestsSection() {
               </motion.div>
             ))}
           </AnimatePresence>
+          <Pager {...pager} className="pt-2" />
         </div>
         <Reveal className="relative overflow-hidden rounded-2xl bg-navy p-6 text-white md:p-7">
           <div className="absolute -right-16 -top-16 size-56 rounded-full bg-primary/40 blur-3xl" />

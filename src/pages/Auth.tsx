@@ -2,7 +2,7 @@ import { AnimatePresence, motion } from 'motion/react'
 import { ArrowLeft, ArrowRight, Check, Eye, EyeOff, Plus, Quote, RefreshCw, Trash2 } from 'lucide-react'
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { authApi, liveApi, USE_MOCK } from '@/api'
+import { authApi, liveApi, USE_MOCK, useHomeStats } from '@/api'
 import type { Captcha as CaptchaChallenge } from '@/api/auth'
 import { emptyProfile, useProfile, type DocFile, type Registration } from '@/lib/profile'
 import { ImageUpload, MultiFileUpload, UploadGuide } from '@/components/upload/Upload'
@@ -21,6 +21,7 @@ import { cn } from '@/lib/utils'
 
 function AuthShell({ children, wide }: { children: ReactNode; wide?: boolean }) {
   const { t } = useI18n()
+  const businesses = useHomeStats().data?.businesses ?? 0
   return (
     <div className={cn('grid min-h-dvh', wide ? 'lg:grid-cols-[1.6fr_1fr]' : 'lg:grid-cols-[1fr_1.05fr]')}>
       <div className="flex flex-col px-5 py-6 sm:px-10">
@@ -38,7 +39,7 @@ function AuthShell({ children, wide }: { children: ReactNode; wide?: boolean }) 
         <div className="absolute -right-20 top-20 size-80 animate-aurora rounded-full bg-primary/40 blur-3xl" />
         <div className="relative flex h-full flex-col justify-end p-12">
           <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.2 }}>
-            <p className="text-5xl font-extrabold tracking-tight"><CountUp to={12400} format={(n) => Math.round(n).toLocaleString('vi-VN') + '+'} /></p>
+            {businesses > 0 && <p className="text-5xl font-extrabold tracking-tight"><CountUp to={businesses} format={(n) => Math.round(n).toLocaleString('vi-VN') + '+'} /></p>}
             <p className="mt-2 text-lg font-semibold text-white/80">{t.auth.sideTitle}</p>
             <div className="glass-dark mt-8 max-w-lg rounded-2xl p-6">
               <Quote className="size-6 text-gold-bright" />

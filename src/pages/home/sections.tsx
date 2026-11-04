@@ -13,6 +13,7 @@ import { ReputationStars } from '@/components/reputation/Reputation'
 import { EventCard } from '@/components/cards'
 import { CountUp, Marquee, Reveal, Stagger, StaggerItem } from '@/components/effects'
 import { goldSponsors, mainSponsor, partnerSponsors, SponsorMark } from '@/components/sponsor'
+import { Pager, usePaged } from '@/components/ui/pager'
 import { Badge, buttonClass } from '@/components/ui/primitives'
 import { useI18n } from '@/lib/i18n'
 import { cn, formatDate, formatMoney, formatNumber, img } from '@/lib/utils'
@@ -56,7 +57,8 @@ export function TrustBand() {
 /* ================================================================ CATEGORIES — icon tiles, split layout */
 export function CategoryTiles() {
   const { t, L, locale } = useI18n()
-  const productTotal = useHomeStats().data?.products ?? 58000
+  const productTotal = useHomeStats().data?.products ?? 0
+  if (!categories.length) return null
   return (
     <section className="container-page mt-20 grid grid-cols-1 gap-10 lg:grid-cols-[320px_minmax(0,1fr)] lg:items-center">
       <Reveal>
@@ -208,6 +210,7 @@ export function EventsAgenda() {
   const events = useEvents().data ?? []
   const upcoming = events.filter((e) => e.eventStatus === 'UPCOMING')
   const live = events.find((e) => e.eventStatus === 'ONGOING') ?? upcoming[0]
+  const { items: pageEvents, ...pager } = usePaged(upcoming)
   if (!live) return null
 
   return (
@@ -218,7 +221,7 @@ export function EventsAgenda() {
         <Reveal delay={0.1}>
           <p className="mb-3 flex items-center gap-2 text-sm font-bold"><CalendarDays className="size-4 text-primary" /> {t.home.upcoming}</p>
           <ol className="divide-y border-y">
-            {upcoming.map((e, i) => {
+            {pageEvents.map((e, i) => {
               const d = new Date(e.startDate)
               return (
                 <motion.li key={e.id} initial={{ opacity: 0, y: 14 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.08 }}>
@@ -245,6 +248,7 @@ export function EventsAgenda() {
               )
             })}
           </ol>
+          <Pager {...pager} className="mt-4" />
           <Link to="/events" className={buttonClass('gold', 'md', 'mt-5')}><Ticket /> {t.events.register}</Link>
         </Reveal>
       </div>
@@ -379,6 +383,8 @@ export function WhyList() {
 export function SponsorTiers() {
   const { t, L } = useI18n()
   const s = mainSponsor
+  // only what the CMS has published: no sponsors, no section
+  if (!s && !goldSponsors.length && !partnerSponsors.length) return null
   return (
     <section className="container-page mt-24">
       <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
@@ -386,14 +392,11 @@ export function SponsorTiers() {
           <p className="text-xs font-bold uppercase tracking-[0.16em] text-primary">{t.live.sponsors}</p>
           <h2 className="mt-2 text-2xl font-extrabold tracking-tight md:text-[32px]">{t.home.sponsorMain} & {t.home.sponsorPartners.toLowerCase()}</h2>
         </Reveal>
-        <a href="#" className="group inline-flex items-center gap-1.5 text-sm font-semibold text-primary">
-          {t.home.sponsorCta} <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" />
-        </a>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[1.4fr_1fr]">
+      <div className={cn('grid gap-4', s && goldSponsors.length > 0 && 'lg:grid-cols-[1.4fr_1fr]')}>
         {/* main sponsor */}
-        <Reveal>
+        {s && <Reveal>
           <a href={s.url} className="border-spin group relative flex h-full min-h-64 flex-col justify-between overflow-hidden rounded-3xl p-7 text-white md:p-9" style={{ background: `linear-gradient(125deg, ${s.color} 0%, #08082e 75%)` }}>
             <div className="absolute -right-16 -top-16 size-72 rounded-full bg-gold-bright/20 blur-3xl transition-transform duration-700 group-hover:scale-125" />
             <div className="bg-grid absolute inset-0 opacity-30" />
@@ -412,14 +415,14 @@ export function SponsorTiers() {
               </span>
             </div>
           </a>
-        </Reveal>
+        </Reveal>}
 
         {/* gold */}
-        <div className="flex flex-col gap-3">
+        {goldSponsors.length > 0 && <div className="flex flex-col gap-3">
           <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-gold"><span className="h-px w-6 bg-gold" /> {t.home.sponsorGold}</p>
           {goldSponsors.map((g, i) => (
             <Reveal key={g.id} delay={i * 0.08}>
-              <a href="#" className="group flex items-center gap-4 rounded-2xl border border-gold/25 bg-gradient-to-r from-gold-soft/70 to-transparent p-4 transition hover:border-gold/60 hover:shadow-lg">
+              <a href={g.url} className="group flex items-center gap-4 rounded-2xl border border-gold/25 bg-gradient-to-r from-gold-soft/70 to-transparent p-4 transition hover:border-gold/60 hover:shadow-lg">
                 <SponsorMark mark={g.mark} color={g.color} className="size-12 transition-transform duration-300 group-hover:scale-110" />
                 <div className="min-w-0 flex-1">
                   <p className="font-bold">{g.name}</p>
@@ -429,11 +432,11 @@ export function SponsorTiers() {
               </a>
             </Reveal>
           ))}
-        </div>
+        </div>}
       </div>
 
       {/* partners — wordmarks, no boxes */}
-      <div className="mt-10">
+      {partnerSponsors.length > 0 && <div className="mt-10">
         <p className="mb-4 text-center text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground">{t.home.sponsorPartners}</p>
         <Marquee duration={34}>
           {partnerSponsors.map((p) => (
@@ -443,7 +446,7 @@ export function SponsorTiers() {
             </span>
           ))}
         </Marquee>
-      </div>
+      </div>}
     </section>
   )
 }

@@ -7,6 +7,9 @@ import { API_BASE } from './config'
 
 const OK_CODE = '00000'
 
+/** The call failed for a technical reason (missing endpoint, 5xx, network), not because the BE refused it: 4xx business errors and 401/403 stay real errors. */
+export const apiUnavailable = (e: unknown) => !(e instanceof ApiError) || e.status === 0 || e.status === 404 || e.status === 405 || e.status >= 500
+
 export class ApiError extends Error {
   code: string
   status: number

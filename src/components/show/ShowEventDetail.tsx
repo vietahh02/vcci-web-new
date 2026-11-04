@@ -136,7 +136,7 @@ export function ShowEventDetail({ show }: { show: Show }) {
           {tab === 'overview' && <div className="-mx-4 sm:mx-0"><EventParticipants ev={showToEvent(show)} /></div>}
           {tab === 'booths' && <Booths show={show} onOpen={setBooth} />}
           {tab === 'products' && <ProductsTab show={show} onAsk={openInquiry} onOpenBooth={setBooth} />}
-          {tab === 'launches' && <Launches show={show} onOpenBooth={setBooth} />}
+          {tab === 'launches' && <Launches show={show} visitor={visitor} onRegister={() => setRegOpen(true)} onOpenBooth={setBooth} />}
           {tab === 'agenda' && <Agenda show={show} visitor={visitor} onRegister={() => setRegOpen(true)} onOpen={setSession} />}
           {tab === 'speakers' && <Speakers show={show} />}
         </div>
@@ -352,11 +352,21 @@ function ProductsTab({ show, onAsk, onOpenBooth }: { show: Show; onAsk: (b: Show
 }
 
 /* ------------------------------------------------------------ launches */
-function Launches({ show, onOpenBooth }: { show: Show; onOpenBooth: (b: ShowBooth) => void }) {
+function Launches({ show, visitor, onRegister, onOpenBooth }: { show: Show; visitor: ReturnType<typeof useShowVisitor>; onRegister: () => void; onOpenBooth: (b: ShowBooth) => void }) {
   const { L, locale } = useI18n()
   const x = useShowT()
   const toast = useToast()
+  // shortcut: followed slots are remembered for this page view only, the BE has no "my follows by badge" read; add one to survive a reload
   const [following, setFollowing] = useState<Set<string>>(new Set())
+  const toggleFollow = (id: string, on: boolean) => {
+    const apply = () => {
+      setFollowing((s) => { const n = new Set(s); if (on) n.delete(id); else n.add(id); return n })
+      if (!on) toast({ title: x.following, description: x.followDesc, kind: 'success' })
+    }
+    if (USE_MOCK) return apply()
+    if (!visitor.badge) return onRegister()
+    liveApi.showLaunchFollow(id, !on, visitor.badge.email, visitor.badge.code).then(apply, (e: Error) => toast({ title: e.message, kind: 'info' }))
+  }
   const sorted = [...show.launches].sort((a, b) => a.start.localeCompare(b.start))
   const stages = [...new Set(sorted.map((l) => L(l.stage)))]
   if (!sorted.length) return <p className="text-muted-foreground">{x.noLaunch}</p>
@@ -383,10 +393,7 @@ function Launches({ show, onOpenBooth }: { show: Show; onOpenBooth: (b: ShowBoot
                       <button type="button" onClick={() => onOpenBooth(b)} className="text-xs text-muted-foreground hover:text-primary">{L(b.org)}</button>
                       <div className="mt-2 flex items-center justify-between gap-2">
                         <span className="text-xs text-muted-foreground">{formatNumber(l.followers + (on ? 1 : 0), locale)} {x.followers}</span>
-                        <Button size="sm" variant={on ? 'secondary' : 'outline'} onClick={() => {
-                          setFollowing((s) => { const n = new Set(s); if (on) n.delete(l.id); else n.add(l.id); return n })
-                          if (!on) toast({ title: x.following, description: x.followDesc, kind: 'success' })
-                        }}>{on ? <BellRing /> : <Bell />} {on ? x.following : x.follow}</Button>
+                        <Button size="sm" variant={on ? 'secondary' : 'outline'} onClick={() => toggleFollow(l.id, on)}>{on ? <BellRing /> : <Bell />} {on ? x.following : x.follow}</Button>
                       </div>
                     </div>
                   </li>

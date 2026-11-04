@@ -393,7 +393,7 @@ function Capability({ pp, open }: { pp: PublicProfile; open: (slides: Slide[], i
 
         <Block id="cap-docs" title={toc[toc.length - 1]![1]} sub={tx('Xem trước trực tiếp hoặc tải về', 'Preview online or download', '온라인 미리보기 또는 다운로드')}>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {pp.documents.map((d) => <DocCard key={d.id} name={d.name} size={d.size} preview={d.preview} onView={() => d.preview && open(docSlides, docSlides.findIndex((s) => s.url === d.preview))} />)}
+            {pp.documents.map((d) => <DocCard key={d.id} name={d.name} size={d.size} preview={d.preview} file={d.url ?? d.preview} onView={() => d.preview && open(docSlides, docSlides.findIndex((s) => s.url === d.preview))} />)}
           </div>
         </Block>
       </div>
@@ -429,8 +429,7 @@ function CertificateArt({ name, issuer }: { name: string; issuer: string }) {
   )
 }
 
-function DocCard({ name, size, preview, onView }: { name: string; size: number; preview?: string; onView: () => void }) {
-  const toast = useToast()
+function DocCard({ name, size, preview, file, onView }: { name: string; size: number; preview?: string; file?: string; onView: () => void }) {
   return (
     <div className="overflow-hidden rounded-2xl border bg-card">
       <button onClick={onView} disabled={!preview} className="group relative block aspect-[4/3] w-full overflow-hidden bg-muted">
@@ -451,7 +450,7 @@ function DocCard({ name, size, preview, onView }: { name: string; size: number; 
           {size > 0 && <p className="text-xs text-muted-foreground">{formatSize(size)}</p>}
         </div>
         {preview && <button onClick={onView} className="rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-foreground" aria-label={tx('Xem', 'View', '보기')}><Eye className="size-4" /></button>}
-        <button onClick={() => toast({ kind: 'info', title: tx('Đang tải về', 'Downloading', '다운로드 중'), description: name })} className="rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-foreground" aria-label={tx('Tải về', 'Download', '다운로드')}><Download className="size-4" /></button>
+        {file && <a href={file} download={name} target="_blank" rel="noopener noreferrer" className="rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-foreground" aria-label={tx('Tải về', 'Download', '다운로드')}><Download className="size-4" /></a>}
       </div>
     </div>
   )

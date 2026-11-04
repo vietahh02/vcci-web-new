@@ -61,7 +61,7 @@ export default function Requests() {
             </ol>
           </motion.div>
           <motion.div ref={formRef} initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
-            <PostForm />
+            <PostForm need={params.get('need') ?? ''} qty={params.get('qty') ?? ''} unit={params.get('unit') ?? ''} />
           </motion.div>
         </div>
       </section>
@@ -116,7 +116,7 @@ export default function Requests() {
 }
 
 /** POST /api/portal/import-requests */
-function PostForm() {
+function PostForm({ need, qty, unit }: { need: string; qty: string; unit: string }) {
   const { t, L } = useI18n()
   const toast = useToast()
   const [sent, setSent] = useState(false)
@@ -152,14 +152,14 @@ function PostForm() {
             )
           }}
         >
-          <Field label={t.requests.name} htmlFor="pr-name" className="sm:col-span-2"><Input id="pr-name" name="requestName" required placeholder={t.ui.requestNamePh} /></Field>
+          <Field label={t.requests.name} htmlFor="pr-name" className="sm:col-span-2"><Input id="pr-name" name="requestName" required defaultValue={need} placeholder={t.ui.requestNamePh} /></Field>
           <Field label={t.requests.category} htmlFor="pr-cat">
             <Select id="pr-cat" name="categoryId" required defaultValue="" placeholder="—" options={categories.map((c) => ({ value: c.id, label: L(c.categoryName) }))} />
           </Field>
           <Field label={t.requests.address} htmlFor="pr-addr"><Input id="pr-addr" name="address" required placeholder={t.ui.addressPh} /></Field>
           <div className="grid grid-cols-[minmax(0,1fr)_88px] gap-2">
-            <Field label={t.requests.quantity} htmlFor="pr-qty"><Input id="pr-qty" name="quantity" type="number" min={1} required /></Field>
-            <Field label={t.requests.unit} htmlFor="pr-unit"><Select id="pr-unit" name="unit" defaultValue="MT" options={UNITS.map((u) => ({ value: u, label: u }))} /></Field>
+            <Field label={t.requests.quantity} htmlFor="pr-qty"><Input id="pr-qty" name="quantity" type="number" min={1} required defaultValue={qty} /></Field>
+            <Field label={t.requests.unit} htmlFor="pr-unit"><Select id="pr-unit" name="unit" defaultValue={UNITS.includes(unit) ? unit : 'MT'} options={UNITS.map((u) => ({ value: u, label: u }))} /></Field>
           </div>
           <Field label={t.requests.price} htmlFor="pr-price"><Input id="pr-price" name="price" type="number" min={0} step="0.01" required /></Field>
           <Field label={t.requests.start} htmlFor="pr-start"><Input id="pr-start" name="startTime" type="date" required /></Field>

@@ -2,7 +2,7 @@ import { AnimatePresence, motion } from 'motion/react'
 import { ArrowUp, Bot, Check, CheckCheck, ChevronLeft, Clock, LogIn, MessageCircle, RotateCw, Send, X } from 'lucide-react'
 import { Fragment, useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { chatConfigured } from '@/api/chat'
+import { chatApi, chatConfigured, OPEN_B2B } from '@/api/chat'
 import { tokens } from '@/api/http'
 import { useI18n } from '@/lib/i18n'
 import { useProfile } from '@/lib/profile'
@@ -24,6 +24,7 @@ export function ChatWidget() {
   const [open, setOpen] = useState(false)
   const [channel, setChannel] = useState<'support' | 'b2b'>('support')
   const [text, setText] = useState('')
+  const [b2bTarget, setB2bTarget] = useState<string | null>(null)
   const [showTop, setShowTop] = useState(false)
   const listRef = useRef<HTMLDivElement>(null)
 
@@ -32,7 +33,23 @@ export function ChatWidget() {
   const chat = useBizChat(configured && loggedIn, open)
   const hasOrg = !!chat.me?.organizationId
   const ready = configured && loggedIn && hasOrg
-  const { activate, support, activeId } = chat
+  const { activate, support, activeId, me, setError } = chat
+
+  useEffect(() => {
+    const onOpen = (e: Event) => {
+      setChannel('b2b')
+      setOpen(true)
+      setB2bTarget((e as CustomEvent<string>).detail)
+    }
+    window.addEventListener(OPEN_B2B, onOpen)
+    return () => window.removeEventListener(OPEN_B2B, onOpen)
+  }, [])
+
+  useEffect(() => {
+    if (!b2bTarget || !ready || !me?.organizationId) return
+    setB2bTarget(null)
+    chatApi.ensureB2b(me.organizationId, b2bTarget, me.principalId).then((r) => activate(r.conversationId), (e: Error) => setError(e.message))
+  }, [b2bTarget, ready, me, activate, setError])
 
   // kênh hỗ trợ: mở widget -> nạp hội thoại hỗ trợ (nếu đã có); kênh B2B: chọn từ danh sách
   useEffect(() => {

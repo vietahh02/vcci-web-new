@@ -1,6 +1,6 @@
 /**
  * LIVE data access layer: portal backend (vcci-portal-apis). Paths/params follow docs/dev/impl-*.md.
- * Endpoints the backend does not provide yet are marked `mockFallback` and keep serving mock data.
+ * Public reads marked `orMock` serve sample data when the call fails, and only then: an empty response stays empty.
  */
 import type { Business, Category, EventItem, ImportRequest, Product, SponsorTier } from '@/data/mock'
 import type { PublicProfile } from '@/data/capability'
@@ -18,7 +18,7 @@ import { fromImportRequestInput, toImportRequest, type ImportRequestInput } from
 import { beShowId, isShowId, toShow } from './adapters/show'
 import { mockFallback } from './config'
 import { registerUploadToken, fileIdOf } from './uploads'
-import { ApiError, apiFetch, toPage, type Page } from './http'
+import { ApiError, apiFetch, apiUnavailable, toPage, type Page } from './http'
 import * as mock from './mockApi'
 
 export type { ImportRequestInput }
@@ -33,12 +33,12 @@ export interface ProductQuery {
   size?: number
 }
 
-/** Run the live call; for endpoints still missing on the BE (404/405/network) use the mock and log it. */
+/** Run the live call; if it fails use the mock and log it. */
 async function orMock<T>(endpoint: string, live: () => Promise<T>, fallback: () => T | Promise<T>): Promise<T> {
   try {
     return await live()
   } catch (e) {
-    if (e instanceof ApiError && e.status !== 404 && e.status !== 405 && e.status !== 0) throw e
+    if (!apiUnavailable(e)) throw e
     mockFallback(endpoint, e instanceof Error ? e.message : 'unavailable')
     return fallback()
   }
@@ -234,9 +234,11 @@ export const showInquiry = (boothId: string, b: { email: string; badgeCode: stri
 /** POST /api/shows/visitors/{visitorId}/payment (multipart, signed-in users only: no anonymous receipt endpoint yet) */
 export function showUploadReceipt(visitorId: string, file: File) {
   const fd = new FormData()
-  fd.set('file', file)
+  fd.set('billImage', file)
   return apiFetch(`/api/shows/visitors/${visitorId}/payment`, { method: 'POST', form: fd })
 }
+/** POST/DELETE /api/public/shows/launch-slots/{id}/follow (badge holder: email + badgeCode) */
+export const showLaunchFollow = (slotId: string, on: boolean, email: string, badgeCode: string) => apiFetch(`/api/public/shows/launch-slots/${slotId}/follow`, on ? { method: 'POST', json: { email, badgeCode } } : { method: 'DELETE', query: { email, badgeCode } })
 export const showBook = (sessionId: string, email: string, badgeCode: string) => apiFetch<Raw>(`/api/public/shows/agenda/${sessionId}/book`, { method: 'POST', json: { email, badgeCode } })
 export const showUnbook = (sessionId: string, email: string, badgeCode: string) => apiFetch(`/api/public/shows/agenda/${sessionId}/book`, { method: 'DELETE', query: { email, badgeCode } })
 
@@ -289,7 +291,7 @@ export const resubmitProfile = () => apiFetch('/api/me/profile/resubmit', { meth
 export const saveProfileSection = (section: SectionKey, data: CompanyProfile[SectionKey]) => apiFetch(`/api/me/profile/${section}`, { method: 'PUT', json: data })
 
 /* ---------------------------------------------------------------------- home */
-/** GET /api/public/stats (proposed; falls back to mock until the BE ships it) */
+/** GET /api/public/stats */
 export const homeStats = () => orMock('GET /api/public/stats', async () => {
   const r = await apiFetch<Raw>('/api/public/stats')
   return { businesses: num(r.businesses), products: num(r.products), requests: num(r.requests), countries: num(r.countries) }
@@ -301,16 +303,15 @@ export const homeTestimonials = () => orMock('GET /api/public/testimonials', asy
 })), mock.homeTestimonials)
 const PALETTE = ['#0b4f8a', '#0f766e', '#be123c', '#6d28d9', '#1d4ed8', '#b45309', '#15803d', '#334155']
 /** GET /api/public/sponsors (tier, mark, color, tagline, url provided by the BE; missing tier falls back to displayOrder). */
-export const homeSponsors = async () => {
+export const homeSponsors = () => orMock('GET /api/public/sponsors', async () => {
   const list = listOf<Raw>(await apiFetch('/api/public/sponsors')).sort((a, b) => num(a.displayOrder) - num(b.displayOrder))
-  if (!list.length) return mock.homeSponsors()
   return list.map((s, i) => ({
     id: id(s.id), name: str(s.name), mark: str(s.mark) || initials(str(s.name)),
     // CMS chỉ cho MAIN/GOLD/PARTNER; hạng lạ (vd. dữ liệu cũ 'SILVER') xếp vào PARTNER thay vì biến mất khỏi trang chủ
     tier: (s.tier ? (['MAIN', 'GOLD', 'PARTNER'].includes(str(s.tier).toUpperCase()) ? str(s.tier).toUpperCase() : 'PARTNER') : i === 0 ? 'MAIN' : i <= 3 ? 'GOLD' : 'PARTNER') as SponsorTier,
     color: str(s.color, PALETTE[i % PALETTE.length]!), tagline: s.tagline ? bi(s.tagline) : undefined, url: str(s.url || s.linkUrl) || undefined,
   }))
-}
+}, mock.homeSponsors)
 
 /** GET /api/public/home/products?tab=popular|newest|certified&limit= */
 export const homeProducts = async (tab: 'popular' | 'newest' | 'certified', limit = 10) => listOf<Raw>(await apiFetch('/api/public/home/products', { query: { tab, limit } })).map(toProduct)

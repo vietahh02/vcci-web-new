@@ -1,16 +1,18 @@
 import { Building2, Globe2, Handshake, Landmark, ShieldCheck, Users } from 'lucide-react'
 import { PageHero } from '@/components/brand'
 import { CountUp, ParallaxImage, Reveal, Spotlight, Stagger, StaggerItem } from '@/components/effects'
+import { useHomeStats } from '@/api'
 import { useI18n } from '@/lib/i18n'
 
 export default function About() {
   const { t, L, locale } = useI18n()
+  const st = useHomeStats().data
   const stats = [
-    { icon: Building2, to: 12400, l: t.home.stats.businesses },
+    { icon: Building2, to: st?.businesses ?? 0, l: t.home.stats.businesses },
     { icon: Landmark, to: 63, l: L({ vi: 'Tỉnh thành có mạng lưới', en: 'Provinces covered', ko: '네트워크를 갖춘 성·시' }) },
-    { icon: Globe2, to: 40, l: t.home.stats.countries },
+    { icon: Globe2, to: st?.countries ?? 0, l: t.home.stats.countries },
     { icon: Users, to: 160, l: L({ vi: 'Sự kiện xúc tiến / năm', en: 'Promotion events / year', ko: '연간 무역 진흥 행사' }) },
-  ]
+  ].filter((s) => s.to > 0)
   const pillars = [
     { icon: ShieldCheck, t: L({ vi: 'Thẩm định & xác thực', en: 'Vetting & verification', ko: '심사 & 인증' }), d: L({ vi: 'Hồ sơ doanh nghiệp, mã số thuế, giấy phép và năng lực được VCCI rà soát trước khi cấp huy hiệu.', en: 'Business records, tax codes, licences and capacity are reviewed before a badge is granted.', ko: '배지 발급 전 기업 정보, 사업자 번호, 인허가 및 역량을 VCCI가 검토합니다.' }) },
     { icon: Handshake, t: L({ vi: 'Xúc tiến thương mại', en: 'Trade promotion', ko: '무역 진흥' }), d: L({ vi: 'Kết nối người mua qua hội chợ, livestream, webinar và mạng lưới thương vụ.', en: 'Buyer matching through fairs, livestreams, webinars and trade offices.', ko: '박람회, 라이브 방송, 웨비나 및 무역관 네트워크를 통해 바이어와 연결합니다.' }) },

@@ -65,7 +65,7 @@ export function toPublicProfile(r: Raw, biz: Business): PublicProfile {
     exports: { ...empty.exports, ...e, markets: arr<string>(e.markets).length ? arr<string>(e.markets) : biz.markets, modes: arr<string>(e.modes) },
     certificates: arr(r.certificates).map((x) => ({ name: str(x.name), issuer: str(x.issuer), expiry: str(x.expiry), preview: x.preview ? url(x.preview) : undefined })),
     gallery: arr(r.gallery).map((g) => ({ id: id(g.id), url: url(g.url), caption: str(g.caption), kind: str(g.kind) })),
-    documents: arr(r.profileDocuments ?? r.documents).filter((d) => 'size' in d || 'kind' in d).map((d) => ({ id: id(d.id), name: str(d.name), kind: str(d.kind), size: num(d.size), preview: d.preview ? url(d.preview) : undefined })),
+    documents: arr(r.profileDocuments ?? r.documents).filter((d) => 'size' in d || 'kind' in d).map((d) => ({ id: id(d.id), name: str(d.name), kind: str(d.kind), size: num(d.size), preview: d.preview ? url(d.preview) : undefined, url: d.url ? url(d.url) : undefined })),
     video: str(r.video),
     needs: { partnerTypes: arr<string>(r.needs?.partnerTypes), opportunities: arr<string>(r.needs?.opportunities) },
   }

@@ -1,7 +1,7 @@
 /**
  * Event detail data access (programme, products, participants, materials, recap, my registrations, prep, messages,
  * speaker questions, feedback, connections). Kept apart from realApi.ts so the business module can edit that file freely.
- * Live mode calls the portal BE; an endpoint that is missing (404/405/network) falls back to the in-repo sample data with a console log.
+ * Live mode calls the portal BE; a read that fails (404/405/5xx/network) falls back to the in-repo sample data with a console log; other 4xx stay real errors.
  * Mock mode (VITE_USE_MOCK=true) never touches the network.
  */
 import { eventParticipants, type Participant } from '@/data/eventParticipants'
@@ -14,7 +14,7 @@ import { arr, type Raw } from './adapters/common'
 import { toMaterial, toParticipant, toPrep, toProgramme, toRecap, toRegistrationFull, toThreadMsg, toTradedProduct, type LivePrep, type LiveThreadMsg, type RegistrationFull } from './adapters/eventExtra'
 import { USE_MOCK, mockFallback } from './config'
 import { useRemote, type Remote } from './hooks'
-import { ApiError, apiFetch, toPage } from './http'
+import { ApiError, apiFetch, apiUnavailable, toPage } from './http'
 
 const enc = encodeURIComponent
 const missing = (e: unknown) => e instanceof ApiError && (e.status === 404 || e.status === 405 || e.status === 0)
@@ -23,7 +23,7 @@ async function orSample<T>(endpoint: string, live: () => Promise<T>, sample: () 
   try {
     return await live()
   } catch (e) {
-    if (!missing(e)) throw e
+    if (!apiUnavailable(e)) throw e
     mockFallback(endpoint, e instanceof Error ? e.message : 'unavailable')
     return sample()
   }
@@ -41,10 +41,10 @@ export const fetchParticipants = (ev: EventItem): Promise<Participant[]> =>
   orSample('GET /api/event/{id}/participants', async () => toPage<Raw>(await apiFetch(`/api/event/${enc(ev.id)}/participants`, { query: { page: 0, size: 100 } }), 100).items.map(toParticipant), () => eventParticipants(ev))
 
 export const fetchMaterials = (ev: EventItem): Promise<Material[]> =>
-  orSample('GET /api/event/{id}/materials', async () => arr<Raw>(await apiFetch(`/api/event/${enc(ev.id)}/materials`)).map(toMaterial), () => sampleMaterials(ev))
+  orSample('GET /api/event/{id}/materials', async () => arr<Raw>(await apiFetch(`/api/event/${enc(ev.id)}/materials`)).map(toMaterial), () => sampleMaterials(ev).map((m) => ({ ...m, sample: true })))
 
 export const fetchRecap = (ev: EventItem): Promise<Recap> =>
-  orSample('GET /api/event/{id}/recap', async () => toRecap(await apiFetch<Raw>(`/api/event/${enc(ev.id)}/recap`)), () => getRecap(ev))
+  orSample('GET /api/event/{id}/recap', async () => toRecap(await apiFetch<Raw>(`/api/event/${enc(ev.id)}/recap`)), () => ({ ...getRecap(ev), sample: true }))
 
 export const fetchMyRegistrations = async (): Promise<RegistrationFull[]> =>
   toPage<Raw>(await apiFetch('/api/event/registrations/my', { query: { page: 0, size: 100 } }), 100).items.map(toRegistrationFull)

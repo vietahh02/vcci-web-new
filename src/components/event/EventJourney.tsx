@@ -144,9 +144,9 @@ function Prep({ ev }: { ev: EventItem }) {
   }
   const tasks: PrepRow[] = lp
     ? lp.tasks.map((t) => ({ id: t.id, title: t.title, hint: t.hint, dl: t.deadline ? new Date(t.deadline) : null }))
-    : prepTasks(ev).map((t) => ({ id: t.id, title: t.title, hint: t.hint, dl: due(t.due) }))
+    : USE_MOCK || prepR.error ? prepTasks(ev).map((t) => ({ id: t.id, title: t.title, hint: t.hint, dl: due(t.due) })) : []
   const done = lp ? lp.doneTaskIds : localDone
-  const pct = lp ? lp.percent : tasks.length ? Math.round((done.filter((d) => tasks.some((t) => t.id === d)).length / tasks.length) * 100) : 100
+  const pct = lp ? lp.percent : tasks.length ? Math.round((done.filter((d) => tasks.some((t) => t.id === d)).length / tasks.length) * 100) : 0
   const fail = (e: Error) => toast({ kind: 'info', title: e.message })
 
   const toggle = (tid: string) => {
@@ -154,13 +154,13 @@ function Prep({ ev }: { ev: EventItem }) {
     if (!lp || !regId) return setLocalDone(next)
     savePrep(regId, next).then((r) => { setPrepOverride(r); invalidate('myreg') }, fail)
   }
-  const thread: ChatRow[] = liveMsgs
-    ? [...liveMsgs, ...sentMsgs.filter((m) => !liveMsgs.some((x) => x.id === m.id))]
-    : localThread
+  const thread: ChatRow[] = USE_MOCK
+    ? localThread
+    : [...(liveMsgs ?? []), ...sentMsgs.filter((m) => !liveMsgs?.some((x) => x.id === m.id))]
   const send = () => {
     const text = msg.trim()
     if (!text) return
-    if (liveMsgs) {
+    if (!USE_MOCK) {
       sendMessage(ev.id, text).then((m) => { setSentMsgs((p) => [...p, m]); setMsg(''); toast({ kind: 'success', title: tx('Đã gửi tin nhắn', 'Message sent', '메시지 전송됨') }) }, fail)
       return
     }
@@ -280,7 +280,7 @@ function PostEvent({ ev, registered }: { ev: EventItem; registered: boolean }) {
                 <span className="grid size-10 place-items-center rounded-lg bg-primary-soft text-primary"><Icon className="size-5" /></span>
                 <div className="min-w-0 flex-1"><p className="font-semibold">{L(m.title)}</p><p className="text-xs text-muted-foreground">{m.meta}</p></div>
                 {m.url ? <Button size="sm" variant={m.kind === 'RECORDING' ? 'default' : 'outline'} onClick={() => window.open(m.url, '_blank', 'noopener,noreferrer')}>{m.kind === 'RECORDING' ? <><PlayCircle /> {tx('Xem lại', 'Watch', '다시보기')}</> : <><Download /> {tx('Tải', 'Download', '다운로드')}</>}</Button>
-                  : m.kind === 'RECORDING' ? <Button size="sm" onClick={() => toast({ kind: 'info', title: tx('Bản mẫu', 'Prototype', '프로토타입'), description: tx('Trình phát bản ghi sẽ nối với hạ tầng webinar/livestream.', 'The recording player connects to the webinar/livestream infrastructure.', '녹화 플레이어는 웨비나/라이브 인프라와 연동됩니다.') })}><PlayCircle /> {tx('Xem lại', 'Watch', '다시보기')}</Button>
+                  : !USE_MOCK && !m.sample ? null : m.kind === 'RECORDING' ? <Button size="sm" onClick={() => toast({ kind: 'info', title: tx('Bản mẫu', 'Prototype', '프로토타입'), description: tx('Trình phát bản ghi sẽ nối với hạ tầng webinar/livestream.', 'The recording player connects to the webinar/livestream infrastructure.', '녹화 플레이어는 웨비나/라이브 인프라와 연동됩니다.') })}><PlayCircle /> {tx('Xem lại', 'Watch', '다시보기')}</Button>
                   : <Button size="sm" variant="outline" onClick={() => toast({ kind: 'info', title: tx('Bản mẫu — chưa có tệp thật', 'Prototype — no real file yet') })}><Download /> {tx('Tải', 'Download', '다운로드')}</Button>}
               </li>
             )

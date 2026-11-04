@@ -3,6 +3,7 @@ import { Award, CheckCircle2, CreditCard, Heart, MapPin, MessageSquare, Package,
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { catalogApi, getCategory, getProduct, liveApi, tokens, USE_MOCK, useBusiness, useRelatedProducts } from '@/api'
+import { openBusinessChat } from '@/api/chat'
 import { tx } from '@/lib/tx'
 import { businessStub } from '@/api/adapters/business'
 import { type Product } from '@/data/mock'
@@ -43,6 +44,12 @@ export default function ProductDetail() {
 function ProductView({ product }: { product: Product }) {
   const { t, L, locale } = useI18n()
   const toast = useToast()
+  const share = async () => {
+    const url = window.location.href
+    if (navigator.share) return navigator.share({ title: L(product.productName), url }).catch(() => undefined) // user closed the sheet
+    await navigator.clipboard.writeText(url)
+    toast({ kind: 'success', title: t.product.share, description: url })
+  }
   const supplier = useBusiness(product.organizationId).data?.business ?? businessStub(product.organizationId, product.organizationName)
   const category = getCategory(product.categoryId)
   const [active, setActive] = useState(0)
@@ -148,11 +155,11 @@ function ProductView({ product }: { product: Product }) {
 
           <div className="mt-6 flex flex-wrap gap-2.5">
             <RfqDialog product={product} />
-            <Button variant="outline" size="lg" onClick={() => toast({ kind: 'info', title: t.product.chatNow, description: supplier.name })}>
+            <Button variant="outline" size="lg" onClick={() => { if (USE_MOCK) toast({ kind: 'info', title: t.product.chatNow, description: supplier.name }); else openBusinessChat(product.organizationId) }}>
               <MessageSquare /> {t.product.chatNow}
             </Button>
             <FavoriteButton product={product} />
-            <Button variant="ghost" size="icon" className="size-12 rounded-xl" aria-label={t.product.share} onClick={() => toast({ kind: 'info', title: t.product.share })}><Share2 /></Button>
+            <Button variant="ghost" size="icon" className="size-12 rounded-xl" aria-label={t.product.share} onClick={() => void share()}><Share2 /></Button>
           </div>
 
           <div className="mt-10">
