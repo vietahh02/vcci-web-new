@@ -190,8 +190,8 @@ export const payBooth = async (id: string, bill: File, transactionCode?: string)
 }
 /* ------------------------------------------------- products in an ONLINE show (CR-2026-008 §4.6) */
 export interface OnlineShow { id: string; name: string; status: string; startDate: string; endDate: string }
-export interface ShowProductRow { productId: string; name: string; image?: string }
-const toShowProduct = (r: Raw): ShowProductRow => ({ productId: String(r.productId ?? r.id), name: r.name ?? r.productName ?? '', image: r.image ?? undefined })
+export interface ShowProductRow { productId: string; name: string; image?: string; visible: boolean }
+const toShowProduct = (r: Raw): ShowProductRow => ({ productId: String(r.productId ?? r.id), name: r.name ?? r.productName ?? '', image: r.image ?? undefined, visible: r.visible !== false })
 /** ONLINE shows a business can still put products into: under way first, then the soonest upcoming. */
 export async function onlineShows(): Promise<OnlineShow[]> {
   const byStatus = (status: string) => apiFetch('/api/public/shows', { query: { status, page: 0, size: 50 }, anon: true }).then((r) => toPage<Raw>(r, 50).items)
@@ -200,8 +200,8 @@ export async function onlineShows(): Promise<OnlineShow[]> {
 }
 /** GET /api/shows/{id}/my-products */
 export const myShowProducts = async (showId: string) => {
-  const r = await apiFetch<unknown>(`/api/shows/${encodeURIComponent(showId)}/my-products`)
-  return toPage<Raw>(r, 100).items.map(toShowProduct)
+  const r = await apiFetch<Raw>(`/api/shows/${encodeURIComponent(showId)}/my-products`)
+  return (Array.isArray(r?.products) ? (r.products as Raw[]) : []).map(toShowProduct)
 }
 /** POST /api/shows/{id}/my-products: the products must be mine and public; consent is required. */
 export const addShowProducts = (showId: string, productIds: string[], consentPublic: boolean) =>

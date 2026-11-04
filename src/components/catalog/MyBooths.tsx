@@ -157,7 +157,7 @@ function OnlineShowProducts() {
                     <ul className="flex flex-wrap gap-2">
                       {placed[s.id]!.map((p) => (
                         <li key={p.productId} className="flex items-center gap-2 rounded-full border py-1 pl-3 pr-1 text-xs">
-                          {p.name}
+                          {p.name} {!p.visible && <Badge variant="outline">{tx('Đang ẩn', 'Hidden', '숨김')}</Badge>}
                           <button aria-label={tx('Gỡ sản phẩm', 'Remove product', '제품 제거')} className="rounded-full p-1 hover:bg-muted" onClick={() => void remove(s, p)}><Trash2 className="size-3" /></button>
                         </li>
                       ))}
