@@ -45,6 +45,13 @@ export const fetchParticipants = (ev: EventItem): Promise<Participant[]> =>
 export const fetchMaterials = (ev: EventItem): Promise<Material[]> =>
   orEmpty('GET /api/event/{id}/materials', async () => arr<Raw>(await apiFetch(`/api/event/${enc(ev.id)}/materials`)).map(toMaterial), [])
 
+/** GET /api/public/shows/{id}/materials (Show ENDED): public ones for everyone, restricted ones need a badge or an account with a registration. */
+export const fetchShowMaterials = (feId: string, email?: string, badgeCode?: string): Promise<Material[]> =>
+  orEmpty('GET /api/public/shows/{id}/materials', async () => {
+    const r = await apiFetch<Raw>(`/api/public/shows/${enc(feId.replace(/^s-/, ''))}/materials`, { query: { email, badgeCode } })
+    return toPage<Raw>(r?.materials ?? r, 100).items.map(toMaterial)
+  }, [])
+
 export const fetchRecap = (ev: EventItem): Promise<Recap> =>
   orEmpty('GET /api/event/{id}/recap', async () => toRecap(await apiFetch<Raw>(`/api/event/${enc(ev.id)}/recap`)), EMPTY_RECAP)
 

@@ -42,7 +42,7 @@ export function toProgramme(r: Raw): EventProgramme | null {
 
 export const toTradedProduct = (r: Raw): TradedProduct => ({ product: toProduct(r.product ?? r) as Product, quotes: num(r.quotes) })
 
-export const toMaterial = (r: Raw): Material => ({ id: id(r.id), kind: (str(r.kind, 'REPORT') as Material['kind']), title: biAny(r.title), meta: str(r.meta), url: r.url ? url(r.url, '') : undefined })
+export const toMaterial = (r: Raw): Material => ({ id: id(r.id), kind: (str(r.kind, 'REPORT') as Material['kind']), title: biAny(r.title), meta: str(r.meta), url: (r.url ?? r.downloadUrl) ? url(r.url ?? r.downloadUrl, '') : undefined })
 
 const toRecapProducts = (v: unknown): RecapProduct[] => arr(v).map((x) => {
   const p = x.product ?? x

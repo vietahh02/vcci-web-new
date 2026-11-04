@@ -13,6 +13,7 @@ import { eventTimeRange, isOnlineFormat } from '@/lib/eventStatus'
 import { showOrganisations, showStartsAt, showToEvent } from '@/lib/showEvent'
 import { tx } from '@/lib/tx'
 import { ShowFeedbackDialog } from '@/components/show/ShowFeedback'
+import { ShowMaterials } from '@/components/show/ShowMaterials'
 import { BusinessChatButton } from '@/components/chat/BusinessChatButton'
 import { showLivePath } from '@/components/live/liveRef'
 import { SessionWatch } from '@/components/live/SessionWatch'
@@ -163,7 +164,7 @@ export function ShowEventDetail({ show }: { show: Show }) {
       <div id="show-tabs" className="container-page mt-8">
         <UnderlineTabs layoutId="show-tabs" value={tab} onValueChange={(v) => setTab(v as Tab)} items={tabs} />
         <div className="py-8">
-          {tab === 'overview' && show.status === 'ENDED' && <div id="show-recap" className="mb-12"><EventRecap ev={showToEvent(show)} /></div>}
+          {tab === 'overview' && show.status === 'ENDED' && <div id="show-recap" className="mb-12 space-y-10"><EventRecap ev={showToEvent(show)} /><ShowMaterials show={show} badge={visitor.badge} /></div>}
           {tab === 'overview' && <Overview show={show} />}
           {tab === 'overview' && <div className="-mx-4 sm:mx-0"><EventParticipants ev={showToEvent(show)} listed={online ? showOrganisations(show) : undefined} /></div>}
           {tab === 'booths' && !online && <Booths show={show} onOpen={setBooth} />}
