@@ -12,7 +12,7 @@ import { categoryIcons, CompanyMark, SectionHeader, VerifiedBadge } from '@/comp
 import { ReputationStars } from '@/components/reputation/Reputation'
 import { EventCard } from '@/components/cards'
 import { CountUp, Marquee, Reveal, Stagger, StaggerItem } from '@/components/effects'
-import { goldSponsors, mainSponsor, partnerSponsors, SponsorMark } from '@/components/sponsor'
+import { goldSponsors, mainSponsor, partnerSponsors } from '@/components/sponsor'
 import { Pager, usePaged } from '@/components/ui/pager'
 import { Badge, buttonClass } from '@/components/ui/primitives'
 import { useI18n } from '@/lib/i18n'
@@ -294,9 +294,10 @@ export function Testimonials() {
           <p className="mt-4 text-white/75 md:text-lg">{t.home.testimonialsSub}</p>
         </Reveal>
 
-        <div className="relative mt-12" onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)}>
+        <div className="relative mt-6" onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)}>
           {/* safe center: canh giữa khi ít thẻ, tự về đầu hàng khi tràn để không mất thẻ đầu */}
-          <div ref={scroller} className="no-scrollbar -mx-4 flex snap-x snap-mandatory gap-5 overflow-x-auto scroll-smooth px-4 pb-4 pt-8 [justify-content:safe_center] md:-mx-7 md:px-7">
+          {/* overflow-x cắt luôn chiều dọc: pt/pb phải đủ chỗ cho avatar nhô lên, viền trắng, thẻ nhấc khi hover và shadow */}
+          <div ref={scroller} className="no-scrollbar -mx-4 -mb-8 flex snap-x snap-mandatory gap-5 overflow-x-auto scroll-smooth px-4 pb-12 pt-14 [justify-content:safe_center] md:-mx-7 md:px-7">
             {testimonials.map((q, i) => (
               <motion.article
                 key={q.id}
@@ -385,85 +386,56 @@ export function WhyList() {
 }
 
 /* ================================================================ SPONSOR TIERS */
+/** Set like the credits page of a printed fair programme: hairlines and names, rank carried by type size alone. */
 export function SponsorTiers() {
   const { t, L } = useI18n()
   const s = mainSponsor
   // only what the CMS has published: no sponsors, no section
   if (!s && !goldSponsors.length && !partnerSponsors.length) return null
-  const hasBoard = goldSponsors.length > 0 || partnerSponsors.length > 0
-  // Bảng đứng một mình thì đủ rộng để nhãn hạng nằm bên trái; đứng cạnh thẻ nhà tài trợ chính thì nhãn nằm trên
-  const tierRow = cn('grid gap-4 p-5 md:p-7', !s && 'lg:grid-cols-[13rem_minmax(0,1fr)] lg:gap-8')
-  const focusRing = 'outline-none focus-visible:ring-2 focus-visible:ring-primary'
+  const nameLink = 'rounded-sm decoration-gold decoration-2 underline-offset-[6px] outline-none [&[href]:hover]:underline focus-visible:ring-2 focus-visible:ring-primary'
   return (
     <section className="container-page mt-24">
-      <SectionHeader title={`${t.home.sponsorMain} & ${t.home.sponsorPartners.toLowerCase()}`} />
+      <SectionHeader title={`${s ? t.home.sponsorMain : t.live.sponsors} & ${t.home.sponsorPartners.toLowerCase()}`} />
 
-      <div className={cn('grid gap-4', s && hasBoard && 'lg:grid-cols-[1.25fr_1fr]')}>
-        {/* main sponsor */}
-        {s && <Reveal>
-          <a href={s.url} className="border-spin group relative flex h-full min-h-64 flex-col justify-between overflow-hidden rounded-3xl p-7 text-white md:p-9" style={{ background: `linear-gradient(125deg, ${s.color} 0%, #08082e 75%)` }}>
-            <div className="absolute -right-16 -top-16 size-72 rounded-full bg-gold-bright/20 blur-3xl transition-transform duration-700 group-hover:scale-125" />
-            <div className="bg-grid absolute inset-0 opacity-30" />
-            <span aria-hidden className="pointer-events-none absolute inset-y-0 left-0 w-1/4 animate-shine bg-gradient-to-r from-transparent via-white/10 to-transparent" />
-            <div className="relative flex items-start justify-between gap-4">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-gold-bright/20 px-3 py-1 text-xs font-bold uppercase tracking-wider text-gold-bright ring-1 ring-gold-bright/30">
-                <Crown className="size-3.5" /> {t.home.sponsorMain}
-              </span>
-              <SponsorMark mark={s.mark} color="#ffffff1f" className="size-16 rounded-2xl text-xl ring-1 ring-white/25" />
-            </div>
-            <div className="relative mt-8">
-              <p className="text-3xl font-extrabold tracking-tight md:text-4xl">{s.name}</p>
-              {s.tagline && <p className="mt-3 max-w-lg text-white/75">{L(s.tagline)}</p>}
-              <span className="mt-6 inline-flex items-center gap-1.5 rounded-full bg-white px-4 py-2 text-sm font-bold text-navy transition group-hover:gap-2.5">
-                {t.home.sponsorVisit} <ArrowUpRight className="size-4" />
-              </span>
-            </div>
-          </a>
-        </Reveal>}
+      <Reveal>
+        <dl className="divide-y border-y border-t-2 border-t-foreground">
+          {s && <SponsorTier label={t.home.sponsorMain}>
+            <a href={s.url} className={cn('text-4xl font-extrabold tracking-tight md:text-5xl', nameLink)}>{s.name}</a>
+            {s.tagline && <p className="mt-3 max-w-2xl text-muted-foreground">{L(s.tagline)}</p>}
+            {s.url && <a href={s.url} className="mt-4 inline-flex items-center gap-1 rounded-sm text-sm font-semibold text-primary outline-none hover:underline focus-visible:ring-2 focus-visible:ring-primary">
+              {t.home.sponsorVisit} <ArrowUpRight className="size-4" />
+            </a>}
+          </SponsorTier>}
 
-        {/* bảng nhà tài trợ: mỗi hạng một hàng, hạng cao có logo lớn hơn */}
-        {hasBoard && <Reveal delay={s ? 0.1 : 0}>
-          <div className="h-full divide-y overflow-hidden rounded-3xl border bg-card shadow-lg shadow-navy/5">
-            {goldSponsors.length > 0 && <div className={cn(tierRow, 'bg-gradient-to-r from-gold-soft/70 to-transparent')}>
-              <p className="flex items-center gap-2.5 self-start text-sm font-bold lg:mt-6">
-                <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-gold-soft text-gold ring-1 ring-gold/25"><Crown className="size-4" /></span>
-                {t.home.sponsorGold}
-              </p>
-              <ul className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,18rem),1fr))] gap-2">
-                {goldSponsors.map((g) => (
-                  <li key={g.id}>
-                    <a href={g.url} className={cn('group flex items-center gap-4 rounded-2xl p-3 transition hover:bg-background hover:shadow-md', focusRing)}>
-                      <SponsorMark mark={g.mark} color={g.color} className="size-14 rounded-2xl text-base transition-transform duration-300 group-hover:scale-105" />
-                      <span className="min-w-0 flex-1">
-                        <span className="block font-bold leading-snug">{g.name}</span>
-                        {g.tagline && <span className="mt-0.5 line-clamp-2 block text-sm text-muted-foreground">{L(g.tagline)}</span>}
-                      </span>
-                      <ArrowUpRight className="size-4 shrink-0 text-muted-foreground transition group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-gold" />
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </div>}
+          {goldSponsors.length > 0 && <SponsorTier label={t.home.sponsorGold}>
+            <ul className="grid gap-x-10 gap-y-6 sm:grid-cols-2 xl:grid-cols-3">
+              {goldSponsors.map((g) => (
+                <li key={g.id}>
+                  <a href={g.url} className={cn('text-2xl font-bold tracking-tight', nameLink)}>{g.name}</a>
+                  {g.tagline && <p className="mt-1 text-sm text-muted-foreground">{L(g.tagline)}</p>}
+                </li>
+              ))}
+            </ul>
+          </SponsorTier>}
 
-            {partnerSponsors.length > 0 && <div className={tierRow}>
-              <p className="flex items-center gap-2.5 self-start text-sm font-bold lg:mt-2.5">
-                <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-primary-soft text-primary ring-1 ring-primary/15"><Handshake className="size-4" /></span>
-                {t.home.sponsorPartners}
-              </p>
-              <ul className="flex flex-wrap gap-1">
-                {partnerSponsors.map((p) => (
-                  <li key={p.id}>
-                    <a href={p.url} className={cn('inline-flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-semibold text-foreground/80 transition hover:bg-muted hover:text-foreground', focusRing)}>
-                      <SponsorMark mark={p.mark} color={p.color} className="size-9 rounded-lg text-[11px]" />
-                      {p.name}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </div>}
-          </div>
-        </Reveal>}
-      </div>
+          {partnerSponsors.length > 0 && <SponsorTier label={t.home.sponsorPartners}>
+            <ul className="flex flex-wrap gap-x-9 gap-y-2">
+              {partnerSponsors.map((p) => (
+                <li key={p.id}><a href={p.url} className={cn('text-[17px] font-semibold', nameLink)}>{p.name}</a></li>
+              ))}
+            </ul>
+          </SponsorTier>}
+        </dl>
+      </Reveal>
     </section>
+  )
+}
+
+function SponsorTier({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="grid gap-3 py-7 md:grid-cols-[12rem_minmax(0,1fr)] md:gap-8 md:py-9">
+      <dt className="text-sm font-semibold text-muted-foreground md:pt-1.5">{label}</dt>
+      <dd>{children}</dd>
+    </div>
   )
 }
