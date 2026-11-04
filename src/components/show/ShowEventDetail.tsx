@@ -12,7 +12,7 @@ import { showStartsAt, showToEvent } from '@/lib/showEvent'
 import { tx } from '@/lib/tx'
 import { BadgeCard, VisitorRegistration } from '@/components/show/VisitorRegistration'
 import { Dialog, DialogContent, UnderlineTabs, useToast } from '@/components/ui/overlay'
-import { Badge, Button, Field, Input, Progress, Textarea } from '@/components/ui/primitives'
+import { Badge, Button, buttonClass, Field, Input, Progress, Textarea } from '@/components/ui/primitives'
 import { Select } from '@/components/ui/select'
 import { showLabel, type Show, type ShowBooth, type ShowLabel, type ShowProduct, type ShowSession } from '@/data/shows'
 import { useI18n } from '@/lib/i18n'
@@ -374,7 +374,7 @@ function BoothDialog({ show, booth, onClose, onAsk }: { show: Show; booth: ShowB
                   <p className="line-clamp-1 text-sm font-semibold">{L(p.name)} {p.featured && <Badge variant="gold" className="ml-1">{x.featured}</Badge>}</p>
                   <p className="line-clamp-1 text-xs text-muted-foreground">{L(p.blurb)}{p.moq ? ` · ${x.moq} ${p.moq}` : ''}</p>
                   <div className="mt-1.5 flex gap-3 text-xs font-semibold">
-                    <button type="button" className="text-primary hover:underline" onClick={() => onAsk(booth, p)}>{x.askPrice}</button>
+                    {p.linkId ? <Link to={`/products/${p.linkId}`} className="text-primary hover:underline">{x.askPrice}</Link> : <button type="button" className="text-primary hover:underline" onClick={() => onAsk(booth, p)}>{x.askPrice}</button>}
                     {p.linkId && <Link to={`/products/${p.linkId}`} className="text-muted-foreground hover:text-foreground">{x.viewProduct}</Link>}
                   </div>
                 </div>
@@ -435,7 +435,8 @@ function ProductsTab({ show, onAsk, onOpenBooth }: { show: Show; onAsk: (b: Show
           <p className="mt-3 line-clamp-2 font-semibold leading-snug">{L(p.name)}</p>
           <button type="button" onClick={() => onOpenBooth(b)} className="mt-0.5 text-xs text-muted-foreground hover:text-primary">{L(b.org)}</button>
           <p className="mt-1 text-xs text-muted-foreground">{x.priceOnRequest}{p.moq ? ` · ${x.moq} ${p.moq}` : ''}</p>
-          <Button size="sm" variant="outline" className="mt-2" onClick={() => onAsk(b, p)}>{x.askPrice}</Button>
+          {/* DEC-EV8-08: a catalogue product is quoted on its own page (RfqDialog); the booth dialog stays for unlinked products */}
+          {p.linkId ? <Link to={`/products/${p.linkId}`} className={buttonClass('outline', 'sm', 'mt-2')}>{x.askPrice}</Link> : <Button size="sm" variant="outline" className="mt-2" onClick={() => onAsk(b, p)}>{x.askPrice}</Button>}
         </div>
       ))}
     </div>

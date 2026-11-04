@@ -97,7 +97,7 @@ export function MyBooths() {
   )
 }
 
-/** Trạng thái duyệt sản phẩm trên gian (BTC duyệt ở CMS). */
+/** Sản phẩm công khai gắn vào gian là APPROVED ngay (CR-2026-008); PENDING và REJECTED còn ở dữ liệu trước đó nên vẫn phải hiện đúng. */
 const PRODUCT_STATUS = (): Record<string, string> => ({
   PENDING: tx('Chờ duyệt', 'Pending review', '검토 대기'),
   APPROVED: tx('Đã duyệt', 'Approved', '승인됨'),
@@ -132,7 +132,7 @@ function ProductPicker({ booth, onClose }: { booth: MyBooth; onClose: (saved: bo
   const on = new Set(booth.products.map((p) => p.productId))
   return (
     <Dialog open onOpenChange={(v) => { if (!v) onClose(false) }}>
-      <DialogContent title={tx('Gắn sản phẩm vào gian', 'Add product to booth', '부스에 제품 추가')} description={tx('Chỉ sản phẩm đang hiển thị của bạn.', 'Only your visible products.', '공개 중인 제품만 표시됩니다.')}>
+      <DialogContent title={tx('Gắn sản phẩm vào gian', 'Add product to booth', '부스에 제품 추가')} description={tx('Chỉ sản phẩm đang hiển thị của bạn. Sản phẩm gắn vào gian không cần duyệt lại.', 'Only your visible products. Products added to a booth need no second review.', '공개 중인 제품만 표시됩니다. 부스에 추가한 제품은 다시 검토할 필요가 없습니다.')}>
         <div className="max-h-[60dvh] space-y-2 overflow-y-auto p-6">
           {!items ? <Skeleton className="h-20" /> : items.length === 0 ? <p className="text-sm text-muted-foreground">{tx('Bạn chưa có sản phẩm đang hiển thị.', 'You have no visible products yet.', '공개 중인 제품이 없습니다.')}</p> : items.filter((i) => !on.has(i.id)).map((i) => (
             <div key={i.id} className="flex items-center justify-between rounded-lg border p-3 text-sm">
