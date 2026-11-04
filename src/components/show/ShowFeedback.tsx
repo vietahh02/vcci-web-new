@@ -37,6 +37,7 @@ export function ShowFeedbackDialog({ show, visitor }: { show: Show; visitor: Ret
   const [comment, setComment] = useState('')
   const [consent, setConsent] = useState(false)
   const [busy, setBusy] = useState(false)
+  const [closed, setClosed] = useState(false)
 
   // the badge code came in the URL: take it out of the address bar and history as soon as it is read
   useEffect(() => {
@@ -48,30 +49,41 @@ export function ShowFeedbackDialog({ show, visitor }: { show: Show; visitor: Ret
   const email = link?.email ?? saved?.email
   const badgeCode = link?.badgeCode ?? saved?.code
   const signedIn = !!session
-  const settled = !!visitor.feedback
+  // The automatic prompt respects an earlier skip; a mail link is the reader asking for the form, so only the server's answer stops it.
+  const blocked = closed || (!link && !!visitor.feedback)
 
   useEffect(() => {
-    if (show.status !== 'ENDED' || settled) return
+    if (show.status !== 'ENDED' || blocked) return
     let stale = false
     const quiet = (e: unknown) => console.warn(`[show] feedback prompt skipped: ${e instanceof Error ? e.message : 'unavailable'}`)
     if (email && badgeCode) {
-      const mine = USE_MOCK ? Promise.resolve({ canSubmit: true }) : liveApi.showFeedbackMine(show.id, email, badgeCode)
-      mine.then((m) => { if (!stale && m.canSubmit) setAuthor({ email, badgeCode }) }, quiet)
+      const mine = USE_MOCK ? Promise.resolve({ submitted: false, canSubmit: true }) : liveApi.showFeedbackMine(show.id, email, badgeCode)
+      mine.then((m) => {
+        if (stale) return
+        if (m.canSubmit) setAuthor({ email, badgeCode })
+        else if (link) toast({ kind: 'info', title: m.submitted ? tx('Bạn đã gửi cảm nhận cho Show này', 'You have already sent feedback for this show', '이미 이 쇼의 후기를 보냈습니다') : tx('Đã hết hạn gửi cảm nhận cho Show này', 'The feedback period for this show has ended', '이 쇼의 후기 작성 기간이 끝났습니다') })
+      }, (e: Error) => { if (!stale && link) toast({ kind: 'info', title: e.message }); else quiet(e) })
     } else if (signedIn && !USE_MOCK) {
       // refused for a business without an approved booth at this show: nothing to invite then
       liveApi.showOrgFeedbackMine(show.id).then((m) => { if (!stale && m.canSubmit) setAuthor('ORG') }, quiet)
     }
     return () => { stale = true }
-  }, [show.id, show.status, settled, email, badgeCode, signedIn])
+  }, [show.id, show.status, blocked, email, badgeCode, signedIn])
 
-  if (!author || settled) return null
+  if (!author) return null
+
+  const finish = (state: 'SENT' | 'SKIPPED') => {
+    setClosed(true)
+    setAuthor(null)
+    visitor.setFeedback(state)
+  }
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!rating) return
     const body = { rating, comment: comment.trim() || undefined, consentPublic: consent }
     const done = () => {
-      visitor.setFeedback('SENT')
+      finish('SENT')
       toast({ kind: 'success', title: tx('Cảm ơn bạn đã gửi cảm nhận', 'Thanks for your feedback', '후기를 보내주셔서 감사합니다') })
     }
     if (USE_MOCK) return done()
@@ -79,13 +91,13 @@ export function ShowFeedbackDialog({ show, visitor }: { show: Show; visitor: Ret
     const call = author === 'ORG' ? liveApi.showOrgFeedback(show.id, body) : liveApi.showVisitorFeedback(show.id, { ...author, ...body })
     call.then(done, (err: Error) => {
       setBusy(false)
-      if (err instanceof ApiError && err.code === DUPLICATE) visitor.setFeedback('SENT')
+      if (err instanceof ApiError && err.code === DUPLICATE) finish('SENT')
       toast({ kind: 'info', title: err.message })
     })
   }
 
   return (
-    <Dialog open onOpenChange={(o) => { if (!o && !busy) visitor.setFeedback('SKIPPED') }}>
+    <Dialog open onOpenChange={(o) => { if (!o && !busy) finish('SKIPPED') }}>
       <DialogContent title={tx('Bạn thấy Show này thế nào?', 'How was this show?', '이 쇼는 어떠셨나요?')} description={L(show.title)}>
         <form className="space-y-4 p-6" onSubmit={submit}>
           <div className="flex gap-1" role="radiogroup" aria-label={tx('Chấm điểm', 'Rating', '평점')}>
@@ -99,7 +111,7 @@ export function ShowFeedbackDialog({ show, visitor }: { show: Show; visitor: Ret
             {tx('Tôi đồng ý để cảm nhận này hiển thị công khai trên trang Show, kèm tên và đơn vị của tôi, sau khi Ban tổ chức duyệt.', 'I agree that this feedback may appear publicly on the show page with my name and organisation, after organizer review.', '주최측 검토 후 이 후기가 제 이름 및 소속과 함께 쇼 페이지에 공개되는 것에 동의합니다.')}
           </label>
           <div className="flex justify-end gap-2">
-            <Button type="button" variant="ghost" disabled={busy} onClick={() => visitor.setFeedback('SKIPPED')}>{tx('Bỏ qua', 'Skip', '건너뛰기')}</Button>
+            <Button type="button" variant="ghost" disabled={busy} onClick={() => finish('SKIPPED')}>{tx('Bỏ qua', 'Skip', '건너뛰기')}</Button>
             <Button type="submit" disabled={!rating || busy}><Send /> {busy ? '…' : tx('Gửi cảm nhận', 'Send feedback', '후기 보내기')}</Button>
           </div>
         </form>
