@@ -17,8 +17,6 @@ export interface Recap {
   participants: { name: string; country: string }[]
   testimonials: { quote: Bilingual; name: string; org: string }[]
   next?: { title: Bilingual; inDays: number }
-  /** Sample data served because the API failed. */
-  sample?: boolean
 }
 
 const people = [

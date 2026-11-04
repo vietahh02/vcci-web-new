@@ -1,8 +1,8 @@
 /**
  * Event detail data access (programme, products, participants, materials, recap, my registrations, prep, messages,
  * speaker questions, feedback, connections). Kept apart from realApi.ts so the business module can edit that file freely.
- * Live mode calls the portal BE; a read that fails (404/405/5xx/network) falls back to the in-repo sample data with a console log; other 4xx stay real errors.
- * Mock mode (VITE_USE_MOCK=true) never touches the network.
+ * Live mode calls the portal BE and never shows sample data: a read that fails (404/405/5xx/network) comes back empty so its block hides, with a console warning; other 4xx stay real errors.
+ * Mock mode (VITE_USE_MOCK=true) never touches the network and serves the sample data through the hooks below.
  */
 import { eventParticipants, type Participant } from '@/data/eventParticipants'
 import { materials as sampleMaterials, type Material } from '@/data/eventExtras'
@@ -19,32 +19,34 @@ import { ApiError, apiFetch, apiUnavailable, toPage } from './http'
 const enc = encodeURIComponent
 const missing = (e: unknown) => e instanceof ApiError && (e.status === 404 || e.status === 405 || e.status === 0)
 
-async function orSample<T>(endpoint: string, live: () => Promise<T>, sample: () => T): Promise<T> {
+async function orEmpty<T>(endpoint: string, live: () => Promise<T>, empty: T): Promise<T> {
   try {
     return await live()
   } catch (e) {
     if (!apiUnavailable(e)) throw e
-    mockFallback(endpoint, e instanceof Error ? e.message : 'unavailable')
-    return sample()
+    console.warn(`[api] ${endpoint} unavailable, block hidden: ${e instanceof Error ? e.message : 'unavailable'}`)
+    return empty
   }
 }
 
+const EMPTY_RECAP: Recap = { stats: [], takeaways: [], gallery: [], video: { title: { vi: '', en: '' }, duration: '' }, participants: [], testimonials: [] }
+
 /* ------------------------------------------------------------------ reads */
 export const fetchProgramme = (ev: EventItem): Promise<EventProgramme | null> =>
-  orSample('GET /api/event/{id}/programme', async () => toProgramme(await apiFetch<Raw>(`/api/event/${enc(ev.id)}/programme`)), () => getProgramme(ev.id))
+  orEmpty('GET /api/event/{id}/programme', async () => toProgramme(await apiFetch<Raw>(`/api/event/${enc(ev.id)}/programme`)), null)
 
 export const fetchEventProducts = (ev: EventItem): Promise<TradedProduct[]> =>
-  orSample('GET /api/event/{id}/products', async () => arr<Raw>(await apiFetch(`/api/event/${enc(ev.id)}/products`)).map(toTradedProduct), () => eventProducts(ev))
+  orEmpty('GET /api/event/{id}/products', async () => arr<Raw>(await apiFetch(`/api/event/${enc(ev.id)}/products`)).map(toTradedProduct), [])
 
 /** All sides, first 100 (the tab shows 3 featured per column and expands locally). */
 export const fetchParticipants = (ev: EventItem): Promise<Participant[]> =>
-  orSample('GET /api/event/{id}/participants', async () => toPage<Raw>(await apiFetch(`/api/event/${enc(ev.id)}/participants`, { query: { page: 0, size: 100 } }), 100).items.map(toParticipant), () => eventParticipants(ev))
+  orEmpty('GET /api/event/{id}/participants', async () => toPage<Raw>(await apiFetch(`/api/event/${enc(ev.id)}/participants`, { query: { page: 0, size: 100 } }), 100).items.map(toParticipant), [])
 
 export const fetchMaterials = (ev: EventItem): Promise<Material[]> =>
-  orSample('GET /api/event/{id}/materials', async () => arr<Raw>(await apiFetch(`/api/event/${enc(ev.id)}/materials`)).map(toMaterial), () => sampleMaterials(ev).map((m) => ({ ...m, sample: true })))
+  orEmpty('GET /api/event/{id}/materials', async () => arr<Raw>(await apiFetch(`/api/event/${enc(ev.id)}/materials`)).map(toMaterial), [])
 
 export const fetchRecap = (ev: EventItem): Promise<Recap> =>
-  orSample('GET /api/event/{id}/recap', async () => toRecap(await apiFetch<Raw>(`/api/event/${enc(ev.id)}/recap`)), () => ({ ...getRecap(ev), sample: true }))
+  orEmpty('GET /api/event/{id}/recap', async () => toRecap(await apiFetch<Raw>(`/api/event/${enc(ev.id)}/recap`)), EMPTY_RECAP)
 
 export const fetchMyRegistrations = async (): Promise<RegistrationFull[]> =>
   toPage<Raw>(await apiFetch('/api/event/registrations/my', { query: { page: 0, size: 100 } }), 100).items.map(toRegistrationFull)

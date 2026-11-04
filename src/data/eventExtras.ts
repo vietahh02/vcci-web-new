@@ -6,7 +6,7 @@ const b = (vi: string, en: string): Bilingual => ({ vi, en })
 
 export interface PrepTask { id: string; title: Bilingual; hint?: Bilingual; /** days before start */ due: number }
 export interface Faq { q: Bilingual; a: Bilingual }
-export interface Material { id: string; kind: 'RECORDING' | 'SLIDES' | 'REPORT' | 'PHOTOS'; title: Bilingual; meta: string; url?: string; sample?: boolean }
+export interface Material { id: string; kind: 'RECORDING' | 'SLIDES' | 'REPORT' | 'PHOTOS'; title: Bilingual; meta: string; url?: string }
 
 const commonFaq: Faq[] = [
   { q: b('Tôi có thể đổi người tham dự không?', 'Can I change the attendee?'), a: b('Được, trước hạn đăng ký. Nhắn Ban Tổ chức ở mục "Trao đổi với Ban Tổ chức".', 'Yes, before the registration deadline. Message the organizers below.') },

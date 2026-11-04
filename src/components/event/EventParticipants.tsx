@@ -90,6 +90,9 @@ export function EventParticipants({ ev, onRegister }: { ev: EventItem; onRegiste
     </li>
   )
 
+  // Show overview: no block without data. Webinar tab (onRegister set) keeps its "no organisations yet" columns and register prompt.
+  if (!all.length && !onRegister) return null
+
   return (
     <section className="mt-14 w-full px-4 sm:px-6 lg:px-10" aria-label="participants">
       <div className="flex flex-wrap items-end justify-between gap-3">

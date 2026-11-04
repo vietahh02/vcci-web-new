@@ -24,8 +24,11 @@ export function EventRecap({ ev }: { ev: EventItem }) {
 
   if (!r) return null
   const playVideo = () => { if (r.video.url) window.open(r.video.url, '_blank', 'noopener,noreferrer'); else demo() }
-  const sample = USE_MOCK || !!r.sample
+  const sample = USE_MOCK
   const hasVideo = sample || !!r.video.url
+  const hasSessions = ev.agendaOptions.length > 0
+  // API failed or nothing recorded yet: no empty headings on the page
+  if (!r.stats.length && !hasVideo && !r.takeaways.length && !hasSessions && !r.gallery.length && !r.participants.length && !r.testimonials.length && !r.next) return null
   return (
     <section aria-label="recap" className="space-y-10">
       {r.stats.length > 0 && <div>
@@ -55,7 +58,7 @@ export function EventRecap({ ev }: { ev: EventItem }) {
         </div>}
       </div>}
 
-      <div>
+      {hasSessions && <div>
         <h3 className="text-xl font-extrabold">{tx('Các phiên & xem lại', 'Sessions & replays', '세션 및 다시보기')}</h3>
         <ul className="mt-3 divide-y rounded-2xl border bg-card">
           {ev.agendaOptions.map((a, i) => (
@@ -73,7 +76,7 @@ export function EventRecap({ ev }: { ev: EventItem }) {
             {ev.speakers.map((s) => <span key={s.name} className="rounded-full border px-3 py-1.5 text-sm"><b>{s.name}</b> · <span className="text-muted-foreground">{L(s.title)}</span></span>)}
           </div>
         )}
-      </div>
+      </div>}
 
       {r.gallery.length > 0 && <div>
         <h3 className="flex items-center gap-2 text-xl font-extrabold"><Camera className="size-5 text-primary" /> {tx('Hình ảnh sự kiện', 'Photo gallery', '행사 사진')}</h3>
