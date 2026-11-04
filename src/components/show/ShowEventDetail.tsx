@@ -7,7 +7,10 @@ import { CompanyMark, CountryChip } from '@/components/brand'
 import { useEventProducts, useEventRecap } from '@/api/eventApi'
 import { Countdown, LiveDot, Reveal } from '@/components/effects'
 import { EventParticipants } from '@/components/event/EventParticipants'
+import { AddToCalendar } from '@/components/event/AddToCalendar'
 import { EventRecap } from '@/components/event/EventRecap'
+import { ShareButtons } from '@/components/event/ShareButtons'
+import { useCancelRegistration } from '@/components/show/useCancelRegistration'
 import { FavoriteButton } from '@/components/catalog/FavoriteButton'
 import { eventTimeRange, isOnlineFormat } from '@/lib/eventStatus'
 import { showOrganisations, showStartsAt, showToEvent } from '@/lib/showEvent'
@@ -50,6 +53,7 @@ export function ShowEventDetail({ show }: { show: Show }) {
   const { t, L, locale } = useI18n()
   const x = useShowT(show)
   const visitor = useShowVisitor(show.id)
+  const cancelRegistration = useCancelRegistration(visitor)
   // ONLINE: products go straight into the show, so nothing about booths exists on this page (EV8-16). OFFLINE/HYBRID keep all of it.
   const online = isOnlineFormat(show.format)
   const [tab, setTab] = useState<Tab>('overview')
@@ -117,6 +121,7 @@ export function ShowEventDetail({ show }: { show: Show }) {
                 <div key={l}><dd className="text-xl font-extrabold tabular-nums md:text-2xl">{formatNumber(Number(n), locale)}</dd><dt className="text-[11px] font-semibold uppercase tracking-wider text-white/60">{l}</dt></div>
               ))}
             </dl>
+            <ShareButtons url={`${window.location.origin}/events/${show.id}`} tone="dark" className="mt-5" />
           </Reveal>
 
           <Reveal delay={0.15} className="glass-dark h-fit rounded-2xl p-5">
@@ -146,6 +151,7 @@ export function ShowEventDetail({ show }: { show: Show }) {
                 </Badge>
                 {visitor.badge.status === 'ISSUED' && <BadgeCard show={show} badge={visitor.badge} />}
                 <Button variant="white" className="w-full" onClick={() => setRegOpen(true)}>{x.myBadge}</Button>
+                {!ended && show.status !== 'CANCELED' && <button type="button" className="block w-full text-center text-xs font-semibold text-white/70 hover:text-white hover:underline" onClick={() => void cancelRegistration()}>{x.reg.cancelReg}</button>}
               </div>
             ) : regClosed ? (
               <Button variant="white" size="lg" className="mt-6 w-full" disabled>{show.status === 'CANCELED' ? x.canceledReg : label === 'FULL' || label === 'REG_NOT_OPEN' ? x.label[label] : x.closedReg}</Button>
@@ -157,6 +163,7 @@ export function ShowEventDetail({ show }: { show: Show }) {
                 <LiveDot /> {x.joinLive}
               </Button>
             )}
+            {!ended && show.status !== 'CANCELED' && <AddToCalendar ev={showToEvent(show)} className="mt-4" />}
           </Reveal>
         </div>
       </section>

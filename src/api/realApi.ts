@@ -244,6 +244,10 @@ export function showUploadReceipt(visitorId: string, file: File) {
 }
 /** POST/DELETE /api/public/shows/launch-slots/{id}/follow (badge holder: email + badgeCode) */
 export const showLaunchFollow = (slotId: string, on: boolean, email: string, badgeCode: string) => apiFetch(`/api/public/shows/launch-slots/${slotId}/follow`, on ? { method: 'POST', json: { email, badgeCode } } : { method: 'DELETE', query: { email, badgeCode } })
+/** DELETE /api/shows/visitors/{id} (signed in, own registration) */
+export const showCancelVisit = (visitorId: string) => apiFetch(`/api/shows/visitors/${encodeURIComponent(visitorId)}`, { method: 'DELETE' })
+/** POST /api/public/shows/visitors/cancel (guest: email + badgeCode) */
+export const showCancelByBadge = (email: string, badgeCode: string) => apiFetch('/api/public/shows/visitors/cancel', { method: 'POST', json: { email, badgeCode } })
 /* Post-show feedback (CR-2026-008 §4.2). */
 export interface ShowFeedbackInput { rating: number; comment?: string; consentPublic: boolean }
 export interface ShowFeedbackMine { submitted: boolean; canSubmit: boolean; closedReason?: string }

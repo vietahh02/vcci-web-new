@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useState } from 'react'
 
 export type BadgeStatus = 'ISSUED' | 'PENDING_PAYMENT' | 'PENDING_APPROVAL'
-export interface VisitorBadge { code: string; name: string; email: string; company: string; visitorType: string; status: BadgeStatus; issuedAt: string }
+export interface VisitorBadge { visitorId?: string; code: string; name: string; email: string; company: string; visitorType: string; status: BadgeStatus; issuedAt: string }
 export type BookingState = 'BOOKED' | 'WAITLIST'
 /** What happened to the post-show feedback invitation in this browser. */
 export type FeedbackState = 'SENT' | 'SKIPPED'

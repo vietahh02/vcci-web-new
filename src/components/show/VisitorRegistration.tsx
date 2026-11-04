@@ -1,13 +1,17 @@
 /** Visitor registration → email OTP → (receipt / approval) → e-badge. BR-SHB-20/21/28. */
-import { CheckCircle2, Clock, FileUp, Loader2, MailCheck, ShieldAlert } from 'lucide-react'
+import { CheckCircle2, Clock, FileUp, Loader2, LogIn, MailCheck, ShieldAlert } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { liveApi, USE_MOCK } from '@/api'
+import { Link } from 'react-router-dom'
+import { liveApi, tokens, USE_MOCK } from '@/api'
 import { Dialog, DialogContent, useToast } from '@/components/ui/overlay'
-import { Button, Field, Input } from '@/components/ui/primitives'
+import { useCancelRegistration } from '@/components/show/useCancelRegistration'
+import { Button, buttonClass, Field, Input } from '@/components/ui/primitives'
 import { Select } from '@/components/ui/select'
 import type { Show } from '@/data/shows'
 import { SELLER_BUYER_TYPES, VISITOR_TYPES } from '@/data/shows'
 import { useI18n } from '@/lib/i18n'
+import { useProfile } from '@/lib/profile'
+import { tx } from '@/lib/tx'
 import { newBadgeCode, type useShowVisitor, type VisitorBadge } from '@/lib/showReg'
 import { useShowT } from '@/lib/showText'
 import { formatMoney } from '@/lib/utils'
@@ -44,6 +48,10 @@ export function VisitorRegistration({ show, open, onOpenChange, visitor }: { sho
   const toast = useToast()
   const paid = show.visitorTicketFee > 0
   const needAge = (show.minAge ?? 0) > 0
+  // the receipt upload needs an account (no anonymous endpoint), so a paid show asks for sign-in before the form, not at its last step
+  const needLogin = !USE_MOCK && paid && !tokens.access()
+  const { session, profile } = useProfile()
+  const cancelRegistration = useCancelRegistration(visitor)
   const [step, setStep] = useState(0)
   const [form, setForm] = useState({ name: '', email: '', phone: '', company: '', country: 'VN', visitorType: 'BUYER', businessType: 'TRADER', share: true, consent: false, adult: false })
   const [err, setErr] = useState('')
@@ -56,6 +64,13 @@ export function VisitorRegistration({ show, open, onOpenChange, visitor }: { sho
   const [pending, setPending] = useState<{ code: string; visitorId: string; status: string } | null>(null)
   const set = (k: keyof typeof form, v: string | boolean) => setForm((f) => ({ ...f, [k]: v }))
   const locked = tries >= MAX_TRIES
+
+  // signed in: start from the profile; whatever the person already typed stays
+  useEffect(() => {
+    if (!session || !open) return
+    const r = profile.registration
+    setForm((f) => ({ ...f, name: f.name || r.repName, email: f.email || r.repEmail || r.email, phone: f.phone || r.repPhone || r.phone, company: f.company || session.companyName || profile.general.nameVi }))
+  }, [session, profile, open])
 
   useEffect(() => {
     if (cooldown <= 0) return
@@ -93,7 +108,7 @@ export function VisitorRegistration({ show, open, onOpenChange, visitor }: { sho
           setErr('')
           const status = (r.badgeStatus ?? 'ISSUED') as VisitorBadge['status']
           if (status === 'PENDING_PAYMENT') { setPending({ code: r.badgeCode, visitorId: r.visitorId, status }); return setStep(2) }
-          visitor.saveBadge({ code: r.badgeCode, name: form.name, email: form.email, company: form.company, visitorType: form.visitorType, status, issuedAt: new Date().toISOString() })
+          visitor.saveBadge({ visitorId: r.visitorId, code: r.badgeCode, name: form.name, email: form.email, company: form.company, visitorType: form.visitorType, status, issuedAt: new Date().toISOString() })
           setStep(3)
         },
         (e: Error) => { setBusy(false); setTries((n) => n + 1); setErr(e.message) },
@@ -113,7 +128,7 @@ export function VisitorRegistration({ show, open, onOpenChange, visitor }: { sho
   const submitReceiptLive = () => {
     if (!pending) return
     setBusy(true)
-    const save = () => { visitor.saveBadge({ code: pending.code, name: form.name, email: form.email, company: form.company, visitorType: form.visitorType, status: 'PENDING_PAYMENT', issuedAt: new Date().toISOString() }); setBusy(false); setStep(3) }
+    const save = () => { visitor.saveBadge({ visitorId: pending.visitorId, code: pending.code, name: form.name, email: form.email, company: form.company, visitorType: form.visitorType, status: 'PENDING_PAYMENT', issuedAt: new Date().toISOString() }); setBusy(false); setStep(3) }
     liveApi.showUploadReceipt(pending.visitorId, receiptFile!).then(save, (e: Error) => { toast({ title: e.message, kind: 'info' }); save() })
   }
   const issue = (receiptPicked = false) => {
@@ -141,9 +156,17 @@ export function VisitorRegistration({ show, open, onOpenChange, visitor }: { sho
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent title={x.reg.title} description={L(show.title)}>
-        {stepper}
+        {!(needLogin && view === 0) && stepper}
         <div className="space-y-4 p-6">
-          {view === 0 && (
+          {view === 0 && needLogin && (
+            <div className="py-4 text-center">
+              <LogIn className="mx-auto size-10 text-primary" />
+              <p className="mt-3 text-lg font-bold">{tx('Show có phí: vui lòng đăng nhập trước', 'This show is paid: please sign in first', '유료 쇼입니다. 먼저 로그인하세요')}</p>
+              <p className="mt-1 text-sm text-muted-foreground">{tx('Nộp biên lai cần tài khoản đăng nhập, nên bạn đăng nhập trước khi điền thông tin.', 'Uploading the receipt needs an account, so sign in before filling in your details.', '영수증 제출에는 계정이 필요하므로 정보를 입력하기 전에 로그인하세요.')}</p>
+              <Link to={`/login?return=${encodeURIComponent(`/events/${show.id}`)}`} className={buttonClass('default', 'lg', 'mt-5 w-full')}><LogIn /> {tx('Đăng nhập', 'Sign in', '로그인')}</Link>
+            </div>
+          )}
+          {view === 0 && !needLogin && (
             <>
               <div className="grid gap-4 sm:grid-cols-2">
                 <Field label={`${x.reg.name} *`} htmlFor="v-name"><Input id="v-name" value={form.name} onChange={(e) => set('name', e.target.value)} /></Field>
@@ -221,7 +244,7 @@ export function VisitorRegistration({ show, open, onOpenChange, visitor }: { sho
               )}
               <div className="flex gap-3">
                 <Button className="flex-1" onClick={() => onOpenChange(false)}>OK</Button>
-                <Button variant="outline" onClick={() => { visitor.cancelBadge(); setStep(0); setTries(0); toast({ title: x.reg.cancelled, kind: 'info' }); onOpenChange(false) }}>{x.reg.cancelReg}</Button>
+                <Button variant="outline" onClick={() => void cancelRegistration().then((done) => { if (done) { setStep(0); setTries(0); onOpenChange(false) } })}>{x.reg.cancelReg}</Button>
               </div>
             </>
           )}

@@ -4,6 +4,7 @@ import { BellRing, Building2, Camera, Heart, MessageSquareQuote, PlayCircle, Quo
 import { useState, type ComponentType } from 'react'
 import { Link } from 'react-router-dom'
 import { CountryChip } from '@/components/brand'
+import { ShareButtons } from '@/components/event/ShareButtons'
 import { CountUp } from '@/components/effects'
 import { Dialog, DialogContent, useToast } from '@/components/ui/overlay'
 import { Badge, Button } from '@/components/ui/primitives'
@@ -171,6 +172,11 @@ export function EventRecap({ ev }: { ev: EventItem }) {
           </div>
         </div>}
       </div>
+
+      {ev.eventType === 'SHOW' && <div className="flex flex-wrap items-center gap-3">
+        <p className="text-sm font-semibold">{tx('Chia sẻ tổng kết', 'Share these highlights', '하이라이트 공유')}</p>
+        <ShareButtons url={`${window.location.origin}/events/${ev.id}`} />
+      </div>}
 
       {r.next && (
         <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl bg-gradient-to-r from-navy to-navy-2 p-6 text-white">
