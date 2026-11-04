@@ -10,7 +10,7 @@ import { CompanyMark, CountryChip, VerifiedBadge } from '@/components/brand'
 import { ReputationStars } from '@/components/reputation/Reputation'
 import { LiveDot, SmartImage, Tilt } from '@/components/effects'
 import { Badge } from '@/components/ui/primitives'
-import { eventStartTime } from '@/lib/eventStatus'
+import { eventStartTime, isOnAir } from '@/lib/eventStatus'
 import { useI18n } from '@/lib/i18n'
 import { cn, daysLeft, formatDate, formatMoney, formatNumber, img } from '@/lib/utils'
 
@@ -132,7 +132,7 @@ export function EventCard({ event }: { event: EventItem }) {
         <img src={img(event.coverImage, 800, 500)} alt="" loading="lazy" className={cn('size-full object-cover transition-transform duration-700 group-hover:scale-105', event.eventStatus === 'ENDED' && 'grayscale-[50%]')} />
         <div className="absolute left-3 top-3 flex gap-1.5">
           {isLive ? (
-            <Badge variant="live" className="gap-1.5"><LiveDot /> {t.events.live}</Badge>
+            <Badge variant="live" className="gap-1.5"><LiveDot /> {isOnAir(event) ? t.events.live : t.events.status.ONGOING}</Badge>
           ) : (
             <Badge variant="outline" className="border-white/30 bg-black/45 text-white backdrop-blur">{t.events.status[event.eventStatus]}</Badge>
           )}

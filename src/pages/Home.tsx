@@ -14,6 +14,7 @@ import { Tabs } from '@/components/ui/overlay'
 import { Pager, usePaged } from '@/components/ui/pager'
 import { Badge, Button, buttonClass, Input } from '@/components/ui/primitives'
 import { Select } from '@/components/ui/select'
+import { isOnAir } from '@/lib/eventStatus'
 import { useI18n } from '@/lib/i18n'
 import { CategoryTiles, EventsAgenda, FeaturedBusiness, SponsorTiers, Testimonials, TrustBand, WhyList } from '@/pages/home/sections'
 import { formatNumber, img } from '@/lib/utils'
@@ -192,7 +193,7 @@ function SourcingDock() {
               <motion.div key={ev.id} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.45 }}>
                 <div className="flex gap-2">
                   {ev.eventStatus === 'ONGOING' ? (
-                    <Badge variant="live" className="gap-1.5"><LiveDot /> {t.events.live}</Badge>
+                    <Badge variant="live" className="gap-1.5"><LiveDot /> {isOnAir(ev) ? t.events.live : t.events.status.ONGOING}</Badge>
                   ) : (
                     <Badge variant="gold">{t.home.dock.promoTag}</Badge>
                   )}
@@ -200,8 +201,9 @@ function SourcingDock() {
                 </div>
                 <h3 className="mt-3 max-w-lg text-xl font-extrabold leading-tight md:text-[26px]">{L(ev.title)}</h3>
                 <p className="mt-2 line-clamp-2 max-w-md text-sm text-white/70">{L(ev.introduction)}</p>
-                <Link to={ev.eventStatus === 'ONGOING' ? `/live/${ev.id}` : `/events/${ev.id}`} className={buttonClass('white', 'md', 'mt-5')}>
-                  {ev.eventStatus === 'ONGOING' ? t.events.watchNow : t.events.register} <ArrowRight />
+                {/* the live room is for webinars and livestreams; a Show's sessions are on its own page */}
+                <Link to={ev.eventStatus === 'ONGOING' && ev.eventType !== 'SHOW' ? `/live/${ev.id}` : `/events/${ev.id}`} className={buttonClass('white', 'md', 'mt-5')}>
+                  {ev.eventStatus !== 'ONGOING' ? t.events.register : ev.eventType === 'SHOW' ? t.common.viewDetail : t.events.watchNow} <ArrowRight />
                 </Link>
               </motion.div>
             </AnimatePresence>}

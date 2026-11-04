@@ -151,12 +151,16 @@ export function EventExplorer({ list }: { list: EventItem[] }) {
    */
   const hasFormats = offlineFormatsEnabled && list.some((e) => (e.format ?? 'ONLINE') !== 'ONLINE')
   const fmt = hasFormats ? format : 'ALL'
+  // The BE decides which kinds are listed (vcci.event.visible-source-kinds); with one kind left a type filter has nothing to choose.
+  const types = useMemo(() => TYPES.filter((x) => list.some((e) => e.eventType === x)), [list])
+  const hasTypes = types.length > 1
+  const typeFilter = hasTypes ? type : 'ALL'
 
   const filtered = useMemo(() => {
     const k = q.trim().toLowerCase()
-    return list.filter((e) => (type === 'ALL' || e.eventType === type) && (fmt === 'ALL' || (e.format ?? 'ONLINE') === fmt)
+    return list.filter((e) => (typeFilter === 'ALL' || e.eventType === typeFilter) && (fmt === 'ALL' || (e.format ?? 'ONLINE') === fmt)
       && (!free || !e.participationFee) && (!k || [L(e.title), L(e.organizedBy), L(e.location)].some((s) => s.toLowerCase().includes(k))))
-  }, [list, type, fmt, free, q, L])
+  }, [list, typeFilter, fmt, free, q, L])
 
   const byStatus = (s: EventStatus) => filtered.filter((e) => e.eventStatus === s)
   const upcoming = byStatus('UPCOMING').sort((a, b) => a.startDate.localeCompare(b.startDate))
@@ -200,16 +204,16 @@ export function EventExplorer({ list }: { list: EventItem[] }) {
         </div>
       </div>
 
-      <div className={cn('mt-5 grid gap-3', hasFormats ? 'md:grid-cols-[1fr_220px_160px_auto]' : 'md:grid-cols-[1fr_220px_auto]')}>
+      <div className={cn('mt-5 grid gap-3', hasTypes && hasFormats ? 'md:grid-cols-[1fr_220px_160px_auto]' : hasTypes ? 'md:grid-cols-[1fr_220px_auto]' : hasFormats ? 'md:grid-cols-[1fr_160px_auto]' : 'md:grid-cols-[1fr_auto]')}>
         <div className="relative"><Search className="absolute left-3 top-3 size-4 text-muted-foreground" /><Input className="pl-9" value={q} onChange={(e) => setQ(e.target.value)} placeholder={tx('Tìm sự kiện, đơn vị tổ chức, địa điểm…', 'Search events, organizers, venues…', '행사, 주최, 장소 검색…')} aria-label="search" /></div>
-        <Select value={type} onValueChange={setType} aria-label={tx('Loại sự kiện', 'Event type', '행사 유형')} options={[{ value: 'ALL', label: tx('Mọi loại sự kiện', 'All event types', '모든 유형') }, ...TYPES.map((x) => ({ value: x, label: t.events.type[x] }))]} />
+        {hasTypes && <Select value={type} onValueChange={setType} aria-label={tx('Loại sự kiện', 'Event type', '행사 유형')} options={[{ value: 'ALL', label: tx('Mọi loại sự kiện', 'All event types', '모든 유형') }, ...TYPES.map((x) => ({ value: x, label: t.events.type[x] }))]} />}
         {hasFormats && <Select value={fmt} onValueChange={setFormat} aria-label={tx('Hình thức', 'Format', '형식')} options={[{ value: 'ALL', label: tx('Mọi hình thức', 'Any format', '모든 형식') }, ...(['ONLINE', 'OFFLINE', 'HYBRID'] as const).map((x) => ({ value: x, label: formatLabel(x) }))]} />}
         <label className="flex h-10 items-center gap-2 whitespace-nowrap text-sm font-medium"><input type="checkbox" checked={free} onChange={(e) => setFree(e.target.checked)} /> {tx('Miễn phí', 'Free only', '무료만')}</label>
       </div>
 
       <div className="mt-8">
         {view === 'CAL' ? (
-          <CalendarView list={filtered} />
+          <CalendarView list={filtered} types={types} />
         ) : empty ? (
           <p className="text-muted-foreground">{t.common.noResults}</p>
         ) : scope === 'MINE' && hasMine ? (
@@ -241,7 +245,7 @@ export function EventExplorer({ list }: { list: EventItem[] }) {
 }
 
 /* ---------------------------------------------------------------- month calendar */
-function CalendarView({ list }: { list: EventItem[] }) {
+function CalendarView({ list, types }: { list: EventItem[]; types: EventType[] }) {
   const { t, L, locale } = useI18n()
   const [month, setMonth] = useState(() => { const d = new Date(); d.setDate(1); d.setHours(0, 0, 0, 0); return d })
   const [selected, setSelected] = useState<string>(() => new Date().toDateString())
@@ -290,9 +294,9 @@ function CalendarView({ list }: { list: EventItem[] }) {
             )
           })}
         </div>
-        <div className="mt-4 flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-muted-foreground">
-          {TYPES.map((x) => <span key={x} className="inline-flex items-center gap-1.5"><span className={cn('size-2 rounded-full', typeTone[x])} /> {t.events.type[x]}</span>)}
-        </div>
+        {types.length > 1 && <div className="mt-4 flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-muted-foreground">
+          {types.map((x) => <span key={x} className="inline-flex items-center gap-1.5"><span className={cn('size-2 rounded-full', typeTone[x])} /> {t.events.type[x]}</span>)}
+        </div>}
       </div>
 
       <aside className="rounded-2xl border bg-card p-4">

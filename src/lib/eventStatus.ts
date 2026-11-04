@@ -6,6 +6,9 @@ import type { EventItem, EventStatus } from '@/data/mock'
 
 export type RegState = 'OPEN' | 'CLOSING' | 'FULL' | 'CLOSED' | 'NOT_OPEN' | 'NONE'
 
+/** On air right now? A Show under way is not necessarily broadcasting: only its API label says so. */
+export const isOnAir = (ev: Pick<EventItem, 'eventStatus' | 'eventType' | 'displayLabel'>) => ev.eventStatus === 'ONGOING' && (ev.eventType !== 'SHOW' || ev.displayLabel === 'LIVE')
+
 /** "09:00–17:00", or '' for an all-day event: the catalog encodes "no time" as 00:00–23:59, which must never reach the screen. */
 export function eventTimeRange(ev: Pick<EventItem, 'startTime' | 'endTime'>): string {
   const start = ev.startTime === '00:00' && (!ev.endTime || ev.endTime === '23:59') ? '' : ev.startTime

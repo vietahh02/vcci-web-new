@@ -8,7 +8,7 @@ import type { EventItem } from '@/data/mock'
 import { EventExplorer, formatLabel } from '@/components/event/EventExplorer'
 import { LiveDot, useCountdown } from '@/components/effects'
 import { buttonClass, Skeleton } from '@/components/ui/primitives'
-import { eventTimeRange } from '@/lib/eventStatus'
+import { eventTimeRange, isOnAir } from '@/lib/eventStatus'
 import { useI18n } from '@/lib/i18n'
 import { formatDate, img } from '@/lib/utils'
 
@@ -22,7 +22,7 @@ export default function Events() {
 
   if (!list) return <div className="container-page py-10"><Skeleton className="h-[480px] rounded-3xl" /></div>
 
-  const live = list.find((e) => e.eventStatus === 'ONGOING' && e.eventType === 'LIVESTREAM')
+  const live = list.find((e) => e.eventStatus === 'ONGOING' && e.eventType === 'LIVESTREAM') ?? list.find((e) => e.eventStatus === 'ONGOING' && e.eventType === 'SHOW')
   const upcoming = list.filter((e) => e.eventStatus === 'UPCOMING').sort((a, b) => a.startDate.localeCompare(b.startDate))
   const next = upcoming[0]
 
@@ -40,12 +40,13 @@ export default function Events() {
 
 function LiveStrip({ ev }: { ev: EventItem }) {
   const { t, L } = useI18n()
+  const show = ev.eventType === 'SHOW'
   return (
-    <Link to={`/live/${ev.id}`} className="group block bg-live text-white">
+    <Link to={show ? `/events/${ev.id}` : `/live/${ev.id}`} className="group block bg-live text-white">
       <div className="container-page flex items-center gap-3 py-2.5 text-sm">
-        <span className="inline-flex shrink-0 items-center gap-1.5 rounded bg-white/20 px-2 py-0.5 text-xs font-bold"><LiveDot /> {t.events.live}</span>
+        <span className="inline-flex shrink-0 items-center gap-1.5 rounded bg-white/20 px-2 py-0.5 text-xs font-bold"><LiveDot /> {isOnAir(ev) ? t.events.live : t.events.status.ONGOING}</span>
         <span className="min-w-0 flex-1 truncate font-semibold">{L(ev.title)}</span>
-        <span className="hidden shrink-0 items-center gap-1 font-semibold sm:inline-flex">{t.events.watchNow} <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" /></span>
+        <span className="hidden shrink-0 items-center gap-1 font-semibold sm:inline-flex">{show ? t.common.viewDetail : t.events.watchNow} <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" /></span>
       </div>
     </Link>
   )
