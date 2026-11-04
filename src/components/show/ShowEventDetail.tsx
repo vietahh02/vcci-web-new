@@ -22,7 +22,7 @@ import { showLabel, type Show, type ShowBooth, type ShowLabel, type ShowProduct,
 import { useI18n } from '@/lib/i18n'
 import { liveApi, USE_MOCK } from '@/api'
 import { useShowVisitor, type VisitorBadge } from '@/lib/showReg'
-import { useShowT } from '@/lib/showText'
+import { ShowFormatContext, useShowT } from '@/lib/showText'
 import { cn, formatDate, formatMoney, formatNumber, img } from '@/lib/utils'
 
 type Tab = 'overview' | 'booths' | 'products' | 'launches' | 'agenda' | 'speakers'
@@ -45,7 +45,7 @@ export function ShowLabelBadge({ show, className }: { show: Show; className?: st
 
 export function ShowEventDetail({ show }: { show: Show }) {
   const { t, L, locale } = useI18n()
-  const x = useShowT()
+  const x = useShowT(show)
   const visitor = useShowVisitor(show.id)
   // ONLINE: products go straight into the show, so nothing about booths exists on this page (EV8-16). OFFLINE/HYBRID keep all of it.
   const online = isOnlineFormat(show.format)
@@ -71,9 +71,21 @@ export function ShowEventDetail({ show }: { show: Show }) {
   ]
 
   const openInquiry = (b: ShowBooth, p?: ShowProduct) => (hasValidBadge ? setInquiry({ booth: b, product: p }) : setRegOpen(true))
+  // ONLINE main button follows the show's state: register before, enter the live session during, replay and highlights after
+  const ended = show.status === 'ENDED'
+  const hasReplay = show.sessions.some((s) => s.status === 'ENDED' && (s.hasReplay || !!s.recordingUrl))
+  const goTo = (next: Tab, anchor: string) => {
+    setTab(next)
+    window.setTimeout(() => document.getElementById(anchor)?.scrollIntoView({ behavior: 'smooth' }), 80)
+  }
+  const enterLive = () => {
+    const onAir = show.sessions.find((s) => s.status === 'LIVE')
+    if (onAir) setSession(onAir)
+    else goTo('agenda', 'show-tabs')
+  }
 
   return (
-    <>
+    <ShowFormatContext.Provider value={show.format}>
       <section className="relative isolate overflow-hidden bg-navy text-white">
         <img src={img(show.banner ?? show.cover, 1800, 800)} alt="" className="absolute inset-0 -z-20 size-full animate-kenburns object-cover opacity-40" />
         <div className="absolute inset-0 -z-10 bg-gradient-to-r from-navy via-navy/85 to-navy/40" />
@@ -84,7 +96,7 @@ export function ShowEventDetail({ show }: { show: Show }) {
               <ShowLabelBadge show={show} />
               {show.heroBadge && <Badge variant="outline" className="border-gold-bright/40 text-gold-bright">{L(show.heroBadge)}</Badge>}
               <Badge variant="outline" className="border-white/30 text-white"><Store /> {t.events.type.SHOW}</Badge>
-              <Badge variant="outline" className="border-white/30 text-white"><Globe2 /> {show.physicalVenue ? x.onlineFirst : x.online}</Badge>
+              <Badge variant="outline" className="border-white/30 text-white"><Globe2 /> {!online && show.physicalVenue ? x.onlineFirst : x.online}</Badge>
               {show.industries.slice(0, 4).map((i) => <Badge key={i} variant="outline" className="border-white/20 text-white/80">{i}</Badge>)}
             </div>
             <h1 className="mt-3 max-w-3xl text-2xl font-extrabold leading-tight tracking-tight text-balance md:text-4xl">{L(show.heroTitle ?? show.title)}</h1>
@@ -92,8 +104,8 @@ export function ShowEventDetail({ show }: { show: Show }) {
             <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-sm text-white/80">
               <span className="inline-flex items-center gap-2"><CalendarDays className="size-4 text-gold-bright" /> {formatDate(show.startDate, locale, { day: '2-digit', month: 'long' })} – {formatDate(show.endDate, locale, { day: '2-digit', month: 'long', year: 'numeric' })}</span>
               {time && <span className="inline-flex items-center gap-2"><Clock className="size-4 text-gold-bright" /> {time} (GMT+7)</span>}
-              <span className="inline-flex items-center gap-2"><Globe2 className="size-4 text-gold-bright" /> {L(show.virtualVenue)}</span>
-              {show.physicalVenue && <span className="inline-flex items-center gap-2 text-white/60"><MapPin className="size-4" /> {x.physicalVenue}: {L(show.physicalVenue)}</span>}
+              <span className="inline-flex items-center gap-2"><Globe2 className="size-4 text-gold-bright" /> {online ? tx('Trực tuyến', 'Online', '온라인') : L(show.virtualVenue)}</span>
+              {!online && show.physicalVenue && <span className="inline-flex items-center gap-2 text-white/60"><MapPin className="size-4" /> {x.physicalVenue}: {L(show.physicalVenue)}</span>}
               <span className="inline-flex items-center gap-2"><Building2 className="size-4 text-gold-bright" /> {L(show.organizer)}</span>
             </div>
             <dl className={cn('mt-5 grid max-w-xl gap-4', online ? 'grid-cols-3' : 'grid-cols-4')}>
@@ -110,14 +122,19 @@ export function ShowEventDetail({ show }: { show: Show }) {
                 <Countdown target={showStartsAt(show)} labels={t.common.countdown} dark className="mt-2" />
               </>
             )}
-            <div className="mt-5 flex items-baseline justify-between">
+            {!(online && ended) && <div className="mt-5 flex items-baseline justify-between">
               <span className="text-sm text-white/65">{x.fee}</span>
               <span className="text-2xl font-extrabold">{show.visitorTicketFee ? formatMoney(show.visitorTicketFee, show.ticketCurrency, locale) : x.ticketFree}</span>
-            </div>
-            {show.requireVisitorApproval && <p className="mt-2 text-xs text-gold-bright">{x.needApproval}</p>}
-            {show.registrationDeadline && <p className="mt-3 text-xs text-white/60">{x.regDeadline}: {formatDate(show.registrationDeadline, locale)}</p>}
+            </div>}
+            {!ended && show.requireVisitorApproval && <p className="mt-2 text-xs text-gold-bright">{x.needApproval}</p>}
+            {!(online && ended) && show.registrationDeadline && <p className="mt-3 text-xs text-white/60">{x.regDeadline}: {formatDate(show.registrationDeadline, locale)}</p>}
 
-            {visitor.badge ? (
+            {online && ended ? (
+              <div className="space-y-3">
+                {hasReplay && <Button variant="gold" size="lg" className="w-full" onClick={() => goTo('agenda', 'show-tabs')}><PlayCircle /> {x.watchReplay}</Button>}
+                <Button variant="white" size="lg" className="w-full" onClick={() => goTo('overview', 'show-recap')}>{tx('Xem tổng kết', 'View highlights', '하이라이트 보기')}</Button>
+              </div>
+            ) : visitor.badge ? (
               <div className="mt-5 space-y-3">
                 <Badge variant={visitor.badge.status === 'ISSUED' ? 'success' : 'gold'} className="gap-1.5">
                   {visitor.badge.status === 'ISSUED' ? <CheckCircle2 /> : <Clock />}
@@ -131,8 +148,8 @@ export function ShowEventDetail({ show }: { show: Show }) {
             ) : (
               <Button variant="gold" size="lg" className="mt-6 w-full" onClick={() => setRegOpen(true)}><Ticket /> {x.registerVisit}</Button>
             )}
-            {label === 'LIVE' && (
-              <Button variant="default" size="lg" className="mt-3 w-full bg-live hover:bg-live/90" onClick={() => setSession(show.sessions.find((s) => s.status === 'LIVE') ?? null)}>
+            {(online ? show.status === 'ONGOING' && hasValidBadge : label === 'LIVE') && (
+              <Button variant="default" size="lg" className="mt-3 w-full bg-live hover:bg-live/90" onClick={online ? enterLive : () => setSession(show.sessions.find((s) => s.status === 'LIVE') ?? null)}>
                 <LiveDot /> {x.joinLive}
               </Button>
             )}
@@ -140,10 +157,10 @@ export function ShowEventDetail({ show }: { show: Show }) {
         </div>
       </section>
 
-      <div className="container-page mt-8">
+      <div id="show-tabs" className="container-page mt-8">
         <UnderlineTabs layoutId="show-tabs" value={tab} onValueChange={(v) => setTab(v as Tab)} items={tabs} />
         <div className="py-8">
-          {tab === 'overview' && show.status === 'ENDED' && <div className="mb-12"><EventRecap ev={showToEvent(show)} /></div>}
+          {tab === 'overview' && show.status === 'ENDED' && <div id="show-recap" className="mb-12"><EventRecap ev={showToEvent(show)} /></div>}
           {tab === 'overview' && <Overview show={show} />}
           {tab === 'overview' && <div className="-mx-4 sm:mx-0"><EventParticipants ev={showToEvent(show)} listed={online ? showOrganisations(show) : undefined} /></div>}
           {tab === 'booths' && !online && <Booths show={show} onOpen={setBooth} />}
@@ -159,7 +176,7 @@ export function ShowEventDetail({ show }: { show: Show }) {
       {!online && <BoothDialog show={show} booth={booth} onClose={() => setBooth(null)} onAsk={openInquiry} />}
       {!online && <InquiryDialog show={show} ctx={inquiry} badge={visitor.badge} onClose={() => setInquiry(null)} onSent={(id) => visitor.addInquiry(id)} />}
       <SessionDialog show={show} session={session} badgeOk={hasValidBadge} onClose={() => setSession(null)} onRegister={() => { setSession(null); setRegOpen(true) }} />
-    </>
+    </ShowFormatContext.Provider>
   )
 }
 

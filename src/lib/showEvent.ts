@@ -2,7 +2,7 @@
 import type { Participant } from '@/data/eventParticipants'
 import type { EventItem, EventStatus } from '@/data/mock'
 import type { Show } from '@/data/shows'
-import { withComputedStatus } from '@/lib/eventStatus'
+import { isOnlineFormat, withComputedStatus } from '@/lib/eventStatus'
 
 const hhmm = (iso: string) => new Date(iso).toTimeString().slice(0, 5)
 
@@ -23,7 +23,7 @@ export function showToEvent(s: Show): EventItem {
   const status: EventStatus = s.status === 'CANCELED' ? 'ENDED' : s.status
   return withComputedStatus({
     id: s.id,
-    format: 'ONLINE',
+    format: s.format ?? 'ONLINE',
     eventType: 'SHOW',
     title: s.title,
     introduction: s.introduction,
@@ -41,7 +41,7 @@ export function showToEvent(s: Show): EventItem {
     // the /full payload has no visitor capacity; 0 means "no limit shown"
     maxSlots: 0,
     organizedBy: s.organizer,
-    location: s.virtualVenue,
+    location: isOnlineFormat(s.format) ? { vi: '', en: '' } : s.physicalVenue ?? s.virtualVenue,
     agendaOptions: s.sessions.map((x) => ({ agendaStartTime: hhmm(x.start), agendaEndTime: hhmm(x.end), agendaTitle: x.title })),
     registrationDeadline: s.registrationDeadline || undefined,
   })

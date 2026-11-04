@@ -98,7 +98,7 @@ function RecapLine({ ev }: { ev: EventItem }) {
   const { locale } = useI18n()
   if (!USE_MOCK) {
     // live: real counts only (attendance statistics come from the recap endpoint on the detail page)
-    return <p className="mt-2 text-sm"><span className="font-semibold text-foreground">{formatNumber(ev.registeredSlots, locale)} <span className="font-normal text-muted-foreground">{tx('đơn vị đăng ký', 'registrations', '등록')}</span></span></p>
+    return <p className="mt-2 text-sm"><span className="font-semibold text-foreground">{formatNumber(ev.registeredSlots, locale)} <span className="font-normal text-muted-foreground">{ev.eventType === 'SHOW' ? tx('người đăng ký', 'registered', '명 등록') : tx('đơn vị đăng ký', 'registrations', '등록')}</span></span></p>
   }
   const r = getRecap(ev)
   const [att, ctry] = r.stats
@@ -155,6 +155,9 @@ export function EventExplorer({ list }: { list: EventItem[] }) {
   const types = useMemo(() => TYPES.filter((x) => list.some((e) => e.eventType === x)), [list])
   const hasTypes = types.length > 1
   const typeFilter = hasTypes ? type : 'ALL'
+  // the wording follows what is listed: only shows, and an address only when some event has one
+  const onlyShows = types.length === 1 && types[0] === 'SHOW'
+  const hasVenue = list.some((e) => L(e.location))
 
   const filtered = useMemo(() => {
     const k = q.trim().toLowerCase()
@@ -193,7 +196,7 @@ export function EventExplorer({ list }: { list: EventItem[] }) {
   return (
     <section className="container-page mt-16" id="explorer">
       <div className="flex flex-wrap items-end justify-between gap-4">
-        <h2 className="text-3xl font-extrabold tracking-tight">{tx('Tất cả sự kiện', 'All events', '전체 행사')}</h2>
+        <h2 className="text-3xl font-extrabold tracking-tight">{onlyShows ? tx('Tất cả hội chợ', 'All trade shows', '전체 박람회') : tx('Tất cả sự kiện', 'All events', '전체 행사')}</h2>
         <div className="flex flex-wrap gap-2">
           {hasMine && (
             <Tabs layoutId="ev-scope" size="sm" value={scope} onValueChange={(v) => setScope(v as typeof scope)}
@@ -205,7 +208,9 @@ export function EventExplorer({ list }: { list: EventItem[] }) {
       </div>
 
       <div className={cn('mt-5 grid gap-3', hasTypes && hasFormats ? 'md:grid-cols-[1fr_220px_160px_auto]' : hasTypes ? 'md:grid-cols-[1fr_220px_auto]' : hasFormats ? 'md:grid-cols-[1fr_160px_auto]' : 'md:grid-cols-[1fr_auto]')}>
-        <div className="relative"><Search className="absolute left-3 top-3 size-4 text-muted-foreground" /><Input className="pl-9" value={q} onChange={(e) => setQ(e.target.value)} placeholder={tx('Tìm sự kiện, đơn vị tổ chức, địa điểm…', 'Search events, organizers, venues…', '행사, 주최, 장소 검색…')} aria-label="search" /></div>
+        <div className="relative"><Search className="absolute left-3 top-3 size-4 text-muted-foreground" /><Input className="pl-9" value={q} onChange={(e) => setQ(e.target.value)} placeholder={onlyShows
+          ? (hasVenue ? tx('Tìm hội chợ, đơn vị tổ chức, địa điểm…', 'Search trade shows, organizers, venues…', '박람회, 주최, 장소 검색…') : tx('Tìm hội chợ, đơn vị tổ chức…', 'Search trade shows, organizers…', '박람회, 주최 검색…'))
+          : (hasVenue ? tx('Tìm sự kiện, đơn vị tổ chức, địa điểm…', 'Search events, organizers, venues…', '행사, 주최, 장소 검색…') : tx('Tìm sự kiện, đơn vị tổ chức…', 'Search events, organizers…', '행사, 주최 검색…'))} aria-label="search" /></div>
         {hasTypes && <Select value={type} onValueChange={setType} aria-label={tx('Loại sự kiện', 'Event type', '행사 유형')} options={[{ value: 'ALL', label: tx('Mọi loại sự kiện', 'All event types', '모든 유형') }, ...TYPES.map((x) => ({ value: x, label: t.events.type[x] }))]} />}
         {hasFormats && <Select value={fmt} onValueChange={setFormat} aria-label={tx('Hình thức', 'Format', '형식')} options={[{ value: 'ALL', label: tx('Mọi hình thức', 'Any format', '모든 형식') }, ...(['ONLINE', 'OFFLINE', 'HYBRID'] as const).map((x) => ({ value: x, label: formatLabel(x) }))]} />}
         <label className="flex h-10 items-center gap-2 whitespace-nowrap text-sm font-medium"><input type="checkbox" checked={free} onChange={(e) => setFree(e.target.checked)} /> {tx('Miễn phí', 'Free only', '무료만')}</label>

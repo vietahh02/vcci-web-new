@@ -23,7 +23,7 @@ export function BadgeCard({ show, badge }: { show: Show; badge: VisitorBadge }) 
   return (
     <div className="overflow-hidden rounded-2xl border bg-card shadow-sm">
       <div className="bg-gradient-to-r from-navy to-navy-2 p-4 text-white">
-        <p className="text-[11px] font-semibold uppercase tracking-widest text-gold-bright">E-badge</p>
+        <p className="text-[11px] font-semibold uppercase tracking-widest text-gold-bright">{x.badgeLabel}</p>
         <p className="mt-1 line-clamp-2 text-sm font-bold leading-snug">{L(show.title)}</p>
       </div>
       <div className="flex items-center gap-4 p-4">
@@ -43,6 +43,7 @@ export function VisitorRegistration({ show, open, onOpenChange, visitor }: { sho
   const x = useShowT()
   const toast = useToast()
   const paid = show.visitorTicketFee > 0
+  const needAge = (show.minAge ?? 0) > 0
   const [step, setStep] = useState(0)
   const [form, setForm] = useState({ name: '', email: '', phone: '', company: '', country: 'VN', visitorType: 'BUYER', businessType: 'TRADER', share: true, consent: false, adult: false })
   const [err, setErr] = useState('')
@@ -66,13 +67,14 @@ export function VisitorRegistration({ show, open, onOpenChange, visitor }: { sho
   const view = existing ? 3 : step
 
   const toOtp = () => {
-    if (!form.name.trim() || !form.email.trim() || !form.consent || !form.adult) return setErr(x.reg.required)
+    if (!form.name.trim() || !form.email.trim() || !form.consent || (needAge && !form.adult)) return setErr(x.reg.required)
     if (!emailOk(form.email)) return setErr(x.reg.invalidEmail)
     setErr('')
     setOtp('')
     if (!USE_MOCK) {
       setBusy(true)
-      liveApi.showRegisterVisitor(show.id, form).then(
+      // The BE asks for ageConfirmed on every show, even with no minimum age; there is nothing to confirm then, so it is not asked of the visitor.
+      liveApi.showRegisterVisitor(show.id, { ...form, adult: needAge ? form.adult : true, phaseIds: show.phases.length > 1 ? show.phases.map((p) => p.id) : undefined }).then(
         (r) => { setBusy(false); setPending({ code: '', visitorId: r.visitorId, status: r.badgeStatus ?? '' }); setCooldown(r.resendAfterSeconds); setStep(1) },
         (e: Error) => { setBusy(false); setErr(e.message) },
       )
@@ -159,7 +161,7 @@ export function VisitorRegistration({ show, open, onOpenChange, visitor }: { sho
               {show.requireVisitorApproval && <p className="rounded-lg bg-primary-soft p-3 text-sm text-primary">{x.needApproval}</p>}
               <label className="flex items-start gap-2 text-sm"><input type="checkbox" className="mt-1" checked={form.share} onChange={(e) => set('share', e.target.checked)} /> {x.reg.shareContact}</label>
               <label className="flex items-start gap-2 text-sm"><input type="checkbox" className="mt-1" checked={form.consent} onChange={(e) => set('consent', e.target.checked)} /> {x.reg.consent} *</label>
-              <label className="flex items-start gap-2 text-sm"><input type="checkbox" className="mt-1" checked={form.adult} onChange={(e) => set('adult', e.target.checked)} /> {x.reg.ageConfirm.replace('{n}', String(show.minAge ?? 18))} *</label>
+              {needAge && <label className="flex items-start gap-2 text-sm"><input type="checkbox" className="mt-1" checked={form.adult} onChange={(e) => set('adult', e.target.checked)} /> {x.reg.ageConfirm.replace('{n}', String(show.minAge))} *</label>}
               {err && <p className="text-sm font-medium text-destructive">{err}</p>}
               <Button className="w-full" size="lg" disabled={busy} onClick={toOtp}><MailCheck /> {x.reg.sendOtp}</Button>
             </>

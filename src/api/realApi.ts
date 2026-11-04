@@ -214,13 +214,13 @@ export const myRegistrations = async () => listOf<Raw>(await apiFetch('/api/even
 /* ------------------------------------------------------------ show visitors */
 export interface VisitorResult { visitorId: string; status: string; badgeStatus?: string; resendAfterSeconds: number; maxOtpAttempts: number; otpRequired: boolean }
 const toVisitor = (r: Raw): VisitorResult => ({ visitorId: id(r.visitorId), status: str(r.status), badgeStatus: r.badgeStatus ? str(r.badgeStatus) : undefined, resendAfterSeconds: num(r.resendAfterSeconds, 30), maxOtpAttempts: num(r.maxOtpAttempts, 5), otpRequired: r.otpRequired !== false })
-export interface VisitorForm { name: string; email: string; phone: string; company: string; country: string; visitorType: string; businessType: string; share: boolean; consent: boolean; adult?: boolean }
+export interface VisitorForm { name: string; email: string; phone: string; company: string; country: string; visitorType: string; businessType: string; share: boolean; consent: boolean; adult?: boolean; phaseIds?: string[] }
 /** POST /api/public/shows/{id}/visitors (sends the OTP email) */
 export async function showRegisterVisitor(feId: string, f: VisitorForm) {
   const [firstName, ...rest] = f.name.trim().split(/\s+/)
   return toVisitor(await apiFetch<Raw>(`/api/public/shows/${beShowId(feId)}/visitors`, {
     method: 'POST',
-    json: { fullName: f.name.trim(), firstName, lastName: rest.join(' '), email: f.email, phone: f.phone, companyName: f.company, country: f.country, visitorType: f.visitorType, businessType: f.businessType, consentTerms: f.consent, consentShareExhibitors: f.share, ageConfirmed: f.adult === true },
+    json: { fullName: f.name.trim(), firstName, lastName: rest.join(' '), email: f.email, phone: f.phone, companyName: f.company, country: f.country, visitorType: f.visitorType, businessType: f.businessType, consentTerms: f.consent, consentShareExhibitors: f.share, ageConfirmed: f.adult === true, phaseIds: f.phaseIds?.map(Number) },
   }))
 }
 export async function showVerifyOtp(feId: string, email: string, otp: string) {

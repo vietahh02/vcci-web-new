@@ -32,8 +32,8 @@ const tasks: Record<EventType, PrepTask[]> = {
     { id: 'slots', title: b('Chọn khung giờ gặp 1-1 phù hợp', 'Choose your 1-on-1 meeting slots'), due: 3 },
   ],
   SHOW: [
-    { id: 'badge', title: b('Nhận thẻ tham dự điện tử', 'Get your e-badge'), due: 3 },
-    { id: 'plan', title: b('Chọn phiên và gian muốn xem', 'Pick sessions and booths to visit'), due: 1 },
+    { id: 'badge', title: b('Nhận xác nhận tham gia', 'Get your confirmation'), due: 3 },
+    { id: 'plan', title: b('Chọn phiên và sản phẩm muốn xem', 'Pick sessions and products to see'), due: 1 },
   ],
   CONFERENCE: [
     { id: 'id', title: b('Mang CCCD/hộ chiếu để đối chiếu khi đón khách', 'Bring ID for check-in'), due: 1 },

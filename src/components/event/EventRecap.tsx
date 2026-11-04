@@ -10,6 +10,7 @@ import { USE_MOCK } from '@/api'
 import { useEventRecap } from '@/api/eventApi'
 import type { EventItem } from '@/data/mock'
 import { useI18n } from '@/lib/i18n'
+import { isOnlineShowEvent } from '@/lib/eventStatus'
 import { tx } from '@/lib/tx'
 import { formatDate, formatNumber, img } from '@/lib/utils'
 
@@ -114,7 +115,7 @@ export function EventRecap({ ev }: { ev: EventItem }) {
       {r.next && (
         <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl bg-gradient-to-r from-navy to-navy-2 p-6 text-white">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-widest text-gold-bright">{tx('Kỳ tiếp theo (dự kiến)', 'Next edition (planned)', '다음 회차 (예정)')} · {formatDate(next.toISOString(), locale, { month: 'long', year: 'numeric' })}</p>
+            <p className="text-xs font-semibold uppercase tracking-widest text-gold-bright">{isOnlineShowEvent(ev) ? tx('Sự kiện tiếp theo (dự kiến)', 'Next event (planned)', '다음 행사 (예정)') : tx('Kỳ tiếp theo (dự kiến)', 'Next edition (planned)', '다음 회차 (예정)')} · {formatDate(next.toISOString(), locale, { month: 'long', year: 'numeric' })}</p>
             <p className="mt-1 text-lg font-bold">{L(r.next.title)}</p>
           </div>
           {USE_MOCK && <Button variant={notify ? 'secondary' : 'gold'} onClick={() => { setNotify(true); toast({ kind: 'success', title: tx('Sẽ báo cho bạn khi mở đăng ký', 'We will notify you when registration opens', '등록이 열리면 알려드립니다') }) }} disabled={notify}><BellRing /> {notify ? tx('Đã đăng ký nhận tin', 'You will be notified', '알림 신청됨') : tx('Báo cho tôi', 'Notify me', '알림 받기')}</Button>}

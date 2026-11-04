@@ -1,6 +1,6 @@
 import type { EventFormat, EventItem, EventStatus, EventType } from '@/data/mock'
 import { IMG } from '@/data/mock'
-import { withComputedStatus } from '@/lib/eventStatus'
+import { isOnlineFormat, withComputedStatus } from '@/lib/eventStatus'
 import type { SectionKey } from '@/lib/profile'
 import { arr, bi, id, num, str, url, type Raw } from './common'
 import { toShowLabel } from './show'
@@ -30,7 +30,8 @@ export function toEvent(r: Raw): EventItem {
     registeredSlots: num(r.registeredSlots),
     maxSlots: num(r.maxSlots),
     organizedBy: bi(r.organizedBy),
-    location: bi(r.location),
+    // an ONLINE show has no address, whatever is left in the catalog row: the UI says "Online"
+    location: bi(str(r.eventType) === 'SHOW' && isOnlineFormat(str(r.format)) ? '' : r.location),
     format: (str(r.format, 'ONLINE') || 'ONLINE') as EventFormat,
     platform: r.platform ? str(r.platform) : undefined,
     // BE contract: {startTime,endTime,title,description}; the older FE-shaped keys are still accepted
@@ -63,7 +64,7 @@ export function showCardToEvent(r: Raw): EventItem {
   return withComputedStatus({
     id: `s-${r.id}`,
     eventType: 'SHOW',
-    format: 'ONLINE',
+    format: (str(r.format, 'ONLINE') || 'ONLINE') as EventFormat,
     title: bi(r.name),
     introduction: bi(r.shortDescription),
     coverImage: url(r.coverImage, IMG.handshake),
@@ -79,7 +80,7 @@ export function showCardToEvent(r: Raw): EventItem {
     registeredSlots: num(r.visitorCount),
     maxSlots: 0,
     organizedBy: bi('VCCI'),
-    location: bi(str(r.venueName || r.city)),
+    location: bi(isOnlineFormat(str(r.format)) ? '' : str(r.venueName || r.city)),
     agendaOptions: [],
   })
 }

@@ -577,7 +577,7 @@ function Sidebar({ ev }: { ev: EventItem }) {
         <div className="space-y-2 p-5 text-sm">
           <p className="font-bold leading-snug">{L(ev.title)}</p>
           <p className="flex items-center gap-2 text-muted-foreground"><CalendarDays className="size-4" /> {formatDate(ev.startDate, locale)}{eventStartTime(ev) && ` · ${eventStartTime(ev)}`}</p>
-          <p className="flex items-center gap-2 text-muted-foreground"><MapPin className="size-4" /> {L(ev.location)}</p>
+          {L(ev.location) && <p className="flex items-center gap-2 text-muted-foreground"><MapPin className="size-4" /> {L(ev.location)}</p>}
           <p className="flex items-center gap-2 text-muted-foreground"><Users className="size-4" /> {ev.registeredSlots}{ev.maxSlots > 0 && `/${ev.maxSlots}`} {t.events.registered}</p>
         </div>
       </div>
