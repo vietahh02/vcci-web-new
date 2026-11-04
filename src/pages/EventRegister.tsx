@@ -19,6 +19,7 @@ import { useToast } from '@/components/ui/overlay'
 import { Button, buttonClass, Field, Input, Textarea } from '@/components/ui/primitives'
 import { Select } from '@/components/ui/select'
 import NotFound from '@/pages/NotFound'
+import { eventStartTime, eventTimeRange } from '@/lib/eventStatus'
 import { useI18n, type Bilingual } from '@/lib/i18n'
 import { markRegistered } from '@/lib/eventUser'
 import { useProfile } from '@/lib/profile'
@@ -291,7 +292,7 @@ function RegisterFlow({ ev }: { ev: EventItem }) {
                     ) : (
                       <p className="rounded-xl border px-4 py-3 text-sm">
                         <Check className="mr-2 inline size-4 text-success" />
-                        {formatDate(ev.startDate, locale, { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })} · {ev.startTime}–{ev.endTime}
+                        {formatDate(ev.startDate, locale, { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}{eventTimeRange(ev) && ` · ${eventTimeRange(ev)}`}
                       </p>
                     )}
                   </Section>
@@ -575,9 +576,9 @@ function Sidebar({ ev }: { ev: EventItem }) {
         <img src={img(ev.coverImage, 700, 320)} alt="" className="h-36 w-full object-cover" />
         <div className="space-y-2 p-5 text-sm">
           <p className="font-bold leading-snug">{L(ev.title)}</p>
-          <p className="flex items-center gap-2 text-muted-foreground"><CalendarDays className="size-4" /> {formatDate(ev.startDate, locale)} · {ev.startTime}</p>
+          <p className="flex items-center gap-2 text-muted-foreground"><CalendarDays className="size-4" /> {formatDate(ev.startDate, locale)}{eventStartTime(ev) && ` · ${eventStartTime(ev)}`}</p>
           <p className="flex items-center gap-2 text-muted-foreground"><MapPin className="size-4" /> {L(ev.location)}</p>
-          <p className="flex items-center gap-2 text-muted-foreground"><Users className="size-4" /> {ev.registeredSlots}/{ev.maxSlots} {t.events.registered}</p>
+          <p className="flex items-center gap-2 text-muted-foreground"><Users className="size-4" /> {ev.registeredSlots}{ev.maxSlots > 0 && `/${ev.maxSlots}`} {t.events.registered}</p>
         </div>
       </div>
       <div className="rounded-2xl border bg-gradient-to-br from-primary-soft/70 to-card p-5">

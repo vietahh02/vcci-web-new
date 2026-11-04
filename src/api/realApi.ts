@@ -15,7 +15,7 @@ import { showCardToEvent, toEvent, toRegistration } from './adapters/event'
 import { toRemoteProfile, type RemoteProfile } from './adapters/profile'
 import { toProduct } from './adapters/product'
 import { fromImportRequestInput, toImportRequest, type ImportRequestInput } from './adapters/request'
-import { beShowId, isShowId, toShow } from './adapters/show'
+import { beShowId, isShowId, toShow, toShowLabel } from './adapters/show'
 import { mockFallback } from './config'
 import { registerUploadToken, fileIdOf } from './uploads'
 import { ApiError, apiFetch, apiUnavailable, toPage, type Page } from './http'
@@ -161,12 +161,17 @@ export function sendQuote(rid: string, f: { cc: string; bcc: string; subject: st
 }
 
 /* ----------------------------------------------------------------- events */
-/** GET /api/event/search. The BE catalog now merges Shows (ids `s-N`); only if none came back do we ask GET /api/public/shows as a safety net. */
+/**
+ * GET /api/event/search. The BE catalog merges Shows (ids `s-N`) and filters by its source-kind flag, so the FE never filters by kind.
+ * GET /api/public/shows supplies the one thing the catalog lacks, `displayLabel`, so the list and the detail page show the same label;
+ * it is also the safety net when the catalog returned no Show. If it fails, the list still works with labels computed from the dates.
+ */
 export async function searchEvents(): Promise<EventItem[]> {
   const ev = toPage<Raw>(await apiFetch<unknown>('/api/event/search', { query: { page: 0, size: 100 } }), 100).items.map(toEvent)
-  if (ev.some((e) => e.id.startsWith('s-'))) return ev
-  const sh = await apiFetch<unknown>('/api/public/shows', { query: { page: 0, size: 50 } }).then((r) => toPage<Raw>(r, 50).items.map(showCardToEvent)).catch(() => [] as EventItem[])
-  return [...ev, ...sh]
+  const cards = await apiFetch<unknown>('/api/public/shows', { query: { page: 0, size: 100 } }).then((r) => toPage<Raw>(r, 100).items).catch(() => [] as Raw[])
+  if (!ev.some((e) => e.id.startsWith('s-'))) return [...ev, ...cards.map(showCardToEvent)]
+  const labels = new Map(cards.map((c) => [`s-${c.id}`, toShowLabel(c.displayLabel)]))
+  return ev.map((e) => (labels.get(e.id) ? { ...e, displayLabel: labels.get(e.id) } : e))
 }
 /** GET /api/event/{id}; Show ids (`s-3`) load the full show and adapt it. */
 export async function fetchEvent(eid: string): Promise<EventItem | null> {

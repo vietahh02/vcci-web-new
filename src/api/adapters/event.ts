@@ -3,6 +3,7 @@ import { IMG } from '@/data/mock'
 import { withComputedStatus } from '@/lib/eventStatus'
 import type { SectionKey } from '@/lib/profile'
 import { arr, bi, id, num, str, url, type Raw } from './common'
+import { toShowLabel } from './show'
 
 const hhmm = (s: unknown) => {
   const v = str(s)
@@ -71,6 +72,7 @@ export function showCardToEvent(r: Raw): EventItem {
     startTime: '00:00',
     endTime: '23:59',
     eventStatus: (status === 'CANCELED' ? 'ENDED' : status) as EventStatus,
+    displayLabel: toShowLabel(r.displayLabel),
     industry: [],
     participationFee: 0,
     participationFeeCurrency: 'VND',

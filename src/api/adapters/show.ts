@@ -1,6 +1,6 @@
 /** GET /api/public/shows/{idOrSlug}/full -> FE Show (data/shows.ts). BE sends Bilingual {vi,en,ko} for content fields. */
 import { IMG } from '@/data/mock'
-import type { Show, ShowBooth, ShowFaq, ShowHighlight, ShowLaunch, ShowSession, ShowSpeaker, ShowStat, ShowWhyAttend } from '@/data/shows'
+import type { Show, ShowBooth, ShowFaq, ShowHighlight, ShowLabel, ShowLaunch, ShowSession, ShowSpeaker, ShowStat, ShowWhyAttend } from '@/data/shows'
 import type { Bilingual } from '@/lib/i18n'
 import { arr, biAny, id, num, str, url, type Raw } from './common'
 
@@ -8,6 +8,16 @@ const showKey = (v: unknown) => `s-${String(v).replace(/^s-/, '')}`
 /** FE show id (`s-3`) -> numeric BE id used by /api/public/shows/{id}/... and /api/shows/{id}/... */
 export const beShowId = (feId: string) => feId.replace(/^s-/, '')
 export const isShowId = (feId: string) => /^s-\d+$/.test(feId)
+
+/** API `displayLabel` (ShowRules.displayLabel, used by /api/public/shows and /full) -> FE label. Unknown or missing stays undefined. */
+const LABELS: Record<string, ShowLabel> = {
+  CANCELED: 'CANCELED', LIVE_NOW: 'LIVE', ONGOING: 'ONGOING', REGISTRATION_OPEN: 'REG_OPEN', REGISTRATION_NOT_OPEN: 'REG_NOT_OPEN',
+  REGISTRATION_CLOSED: 'REG_CLOSED', FULL: 'FULL', ENDED: 'ENDED', ENDED_REPLAY: 'REPLAY',
+}
+export const toShowLabel = (v: unknown): ShowLabel | undefined => LABELS[str(v)]
+
+/** `HH:mm` or `HH:mm:ss` -> `HH:mm`; null means all day. */
+const optTime = (v: unknown) => /^\d{2}:\d{2}/.exec(str(v))?.[0]
 
 const filled = (b: Bilingual) => !!(b.vi || b.en || b.ko)
 /** Optional content field: missing or blank stays undefined so the UI falls back to what it shows today. */
@@ -49,10 +59,11 @@ export function toShow(r: Raw): Show {
     id: showKey(r.id),
     title: biAny(r.title), tagline: biAny(r.tagline), introduction: biAny(r.introduction), cover: url(r.cover, IMG.handshake),
     status: str(r.status, 'UPCOMING') as Show['status'],
+    displayLabel: toShowLabel(r.displayLabel),
     direction: str(r.direction, 'EXPORT') === 'IMPORT' ? 'IMPORT' : 'EXPORT',
     exhibitorScope: str(r.exhibitorScope, 'DOMESTIC') === 'FOREIGN' ? 'FOREIGN' : 'DOMESTIC',
     targetMarkets: arr<string>(r.targetMarkets), industries: arr<string>(r.industries),
-    startDate: str(r.startDate), endDate: str(r.endDate), organizer: biAny(r.organizer), virtualVenue: biAny(r.virtualVenue),
+    startDate: str(r.startDate), endDate: str(r.endDate), startTime: optTime(r.startTime), endTime: optTime(r.endTime), organizer: biAny(r.organizer), virtualVenue: biAny(r.virtualVenue),
     format: (['ONLINE', 'OFFLINE', 'HYBRID'].includes(str(r.format)) ? str(r.format) : undefined) as Show['format'],
     physicalVenue: r.physicalVenue ? biAny(r.physicalVenue) : undefined,
     minAge: num(r.minAge) || undefined,

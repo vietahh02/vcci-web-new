@@ -6,6 +6,7 @@
  */
 import type { Bilingual } from '@/lib/i18n'
 import type { SectionKey } from '@/lib/profile'
+import type { ShowLabel } from '@/data/shows'
 import { withComputedStatus } from '@/lib/eventStatus'
 
 export const IMG = {
@@ -611,6 +612,8 @@ export interface EventItem {
   location: Bilingual
   /** ONLINE / OFFLINE / HYBRID — defaults to ONLINE when omitted. Show Hub is always ONLINE. */
   format?: EventFormat
+  /** Show only: the API's label (GET /api/public/shows, /full). */
+  displayLabel?: ShowLabel
   /** Optional label for the online room; VCCI events stream on the VCCI platform itself. */
   platform?: string
   agendaOptions: EventAgendaOption[]

@@ -7,7 +7,8 @@ import { CompanyMark, CountryChip } from '@/components/brand'
 import { Countdown, LiveDot, Reveal } from '@/components/effects'
 import { EventParticipants } from '@/components/event/EventParticipants'
 import { EventRecap } from '@/components/event/EventRecap'
-import { showToEvent } from '@/lib/showEvent'
+import { eventTimeRange } from '@/lib/eventStatus'
+import { showStartsAt, showToEvent } from '@/lib/showEvent'
 import { tx } from '@/lib/tx'
 import { BadgeCard, VisitorRegistration } from '@/components/show/VisitorRegistration'
 import { Dialog, DialogContent, UnderlineTabs, useToast } from '@/components/ui/overlay'
@@ -25,7 +26,7 @@ const fmtTime = (iso: string, locale: string) => new Date(iso).toLocaleTimeStrin
 const fmtDay = (iso: string, locale: string) => formatDate(iso, locale, { weekday: 'short', day: '2-digit', month: '2-digit' })
 
 const labelVariant: Record<ShowLabel, 'live' | 'success' | 'gold' | 'muted' | 'secondary'> = {
-  LIVE: 'live', REG_OPEN: 'success', REPLAY: 'secondary', FULL: 'gold', ENDED: 'muted', CANCELED: 'muted', UPCOMING: 'secondary',
+  LIVE: 'live', ONGOING: 'success', REG_OPEN: 'success', REG_NOT_OPEN: 'secondary', REG_CLOSED: 'muted', REPLAY: 'secondary', FULL: 'gold', ENDED: 'muted', CANCELED: 'muted', UPCOMING: 'secondary',
 }
 
 export function ShowLabelBadge({ show, className }: { show: Show; className?: string }) {
@@ -49,8 +50,10 @@ export function ShowEventDetail({ show }: { show: Show }) {
   const [session, setSession] = useState<ShowSession | null>(null)
   const label = showLabel(show)
   const productCount = show.booths.reduce((n, b) => n + b.products.length, 0)
-  const regClosed = show.status === 'ENDED' || show.status === 'CANCELED'
+  // the API's label also closes registration while the show is upcoming (mock data computes FULL from booths, which says nothing about visitors)
+  const regClosed = show.status === 'ENDED' || show.status === 'CANCELED' || show.displayLabel === 'FULL' || show.displayLabel === 'REG_NOT_OPEN' || show.displayLabel === 'REG_CLOSED'
   const hasValidBadge = visitor.badge?.status === 'ISSUED'
+  const time = eventTimeRange({ startTime: show.startTime ?? '00:00', endTime: show.endTime ?? '23:59' })
 
   const tabs: { value: Tab; label: string }[] = [
     { value: 'overview', label: x.tabs.overview },
@@ -82,6 +85,7 @@ export function ShowEventDetail({ show }: { show: Show }) {
             <p className="mt-2 max-w-2xl text-white/75 md:text-base">{L(show.tagline)}</p>
             <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-sm text-white/80">
               <span className="inline-flex items-center gap-2"><CalendarDays className="size-4 text-gold-bright" /> {formatDate(show.startDate, locale, { day: '2-digit', month: 'long' })} – {formatDate(show.endDate, locale, { day: '2-digit', month: 'long', year: 'numeric' })}</span>
+              {time && <span className="inline-flex items-center gap-2"><Clock className="size-4 text-gold-bright" /> {time} (GMT+7)</span>}
               <span className="inline-flex items-center gap-2"><Globe2 className="size-4 text-gold-bright" /> {L(show.virtualVenue)}</span>
               {show.physicalVenue && <span className="inline-flex items-center gap-2 text-white/60"><MapPin className="size-4" /> {x.physicalVenue}: {L(show.physicalVenue)}</span>}
               <span className="inline-flex items-center gap-2"><Building2 className="size-4 text-gold-bright" /> {L(show.organizer)}</span>
@@ -97,7 +101,7 @@ export function ShowEventDetail({ show }: { show: Show }) {
             {show.status === 'UPCOMING' && (
               <>
                 <p className="text-xs font-semibold uppercase tracking-wider text-white/60">{t.events.startsIn}</p>
-                <Countdown target={show.startDate} labels={t.common.countdown} dark className="mt-2" />
+                <Countdown target={showStartsAt(show)} labels={t.common.countdown} dark className="mt-2" />
               </>
             )}
             <div className="mt-5 flex items-baseline justify-between">
@@ -105,7 +109,7 @@ export function ShowEventDetail({ show }: { show: Show }) {
               <span className="text-2xl font-extrabold">{show.visitorTicketFee ? formatMoney(show.visitorTicketFee, show.ticketCurrency, locale) : x.ticketFree}</span>
             </div>
             {show.requireVisitorApproval && <p className="mt-2 text-xs text-gold-bright">{x.needApproval}</p>}
-            <p className="mt-3 text-xs text-white/60">{x.regDeadline}: {formatDate(show.registrationDeadline, locale)}</p>
+            {show.registrationDeadline && <p className="mt-3 text-xs text-white/60">{x.regDeadline}: {formatDate(show.registrationDeadline, locale)}</p>}
 
             {visitor.badge ? (
               <div className="mt-5 space-y-3">
@@ -117,7 +121,7 @@ export function ShowEventDetail({ show }: { show: Show }) {
                 <Button variant="white" className="w-full" onClick={() => setRegOpen(true)}>{x.myBadge}</Button>
               </div>
             ) : regClosed ? (
-              <Button variant="white" size="lg" className="mt-6 w-full" disabled>{show.status === 'CANCELED' ? x.canceledReg : x.closedReg}</Button>
+              <Button variant="white" size="lg" className="mt-6 w-full" disabled>{show.status === 'CANCELED' ? x.canceledReg : label === 'FULL' || label === 'REG_NOT_OPEN' ? x.label[label] : x.closedReg}</Button>
             ) : (
               <Button variant="gold" size="lg" className="mt-6 w-full" onClick={() => setRegOpen(true)}><Ticket /> {x.registerVisit}</Button>
             )}
@@ -157,6 +161,7 @@ function Overview({ show }: { show: Show }) {
   const { L, locale } = useI18n()
   const x = useShowT()
   const now = new Date().toISOString().slice(0, 10)
+  const contact = [show.contact.name, show.contact.email, show.contact.phone].filter(Boolean)
   return (
     <div className="grid gap-10 lg:grid-cols-[1fr_380px]">
       <div className="space-y-10">
@@ -165,7 +170,7 @@ function Overview({ show }: { show: Show }) {
           <p className="mt-4 inline-flex items-center gap-2 rounded-lg bg-primary-soft px-3 py-2 text-sm font-medium text-primary"><Globe2 className="size-4" /> {x.direction[show.direction]}</p>
         </section>
         <HomeBlocks show={show} />
-        <section>
+        {show.phases.length > 0 && <section>
           <h2 className="text-xl font-extrabold">{x.phasesTitle}</h2>
           <ol className="relative mt-5 space-y-4 border-l-2 border-dashed border-border pl-6">
             {show.phases.map((p) => {
@@ -182,8 +187,8 @@ function Overview({ show }: { show: Show }) {
               )
             })}
           </ol>
-        </section>
-        <section>
+        </section>}
+        {show.pavilions.length > 0 && <section>
           <h2 className="text-xl font-extrabold">{x.pavTitle}</h2>
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
             {show.pavilions.map((pv) => (
@@ -193,28 +198,28 @@ function Overview({ show }: { show: Show }) {
               </div>
             ))}
           </div>
-        </section>
+        </section>}
         <ShowFaqBlock show={show} />
       </div>
 
       <aside className="space-y-6">
-        <div className="rounded-2xl border bg-card p-5">
+        {show.rules.length > 0 && <div className="rounded-2xl border bg-card p-5">
           <h3 className="font-bold">{x.rulesTitle}</h3>
           <ul className="mt-3 space-y-2.5 text-sm text-muted-foreground">
             {show.rules.map((r, i) => <li key={i} className="flex gap-2"><CheckCircle2 className="mt-0.5 size-4 shrink-0 text-success" /> {L(r)}</li>)}
           </ul>
-        </div>
-        <div className="rounded-2xl border bg-card p-5 text-sm">
+        </div>}
+        {(show.targetMarkets.length > 0 || show.industries.length > 0 || contact.length > 0 || show.boothCapacity > 0) && <div className="rounded-2xl border bg-card p-5 text-sm">
           <dl className="space-y-3">
-            <div><dt className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{x.markets}</dt><dd className="mt-1 flex flex-wrap gap-1.5">{show.targetMarkets.map((c) => <CountryChip key={c} code={c} />)}</dd></div>
-            <div><dt className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{x.industries}</dt><dd className="mt-1 flex flex-wrap gap-1.5">{show.industries.map((i) => <Badge key={i} variant="muted">{i}</Badge>)}</dd></div>
-            <div><dt className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{x.contact}</dt><dd className="mt-1">{show.contact.name}<br />{show.contact.email}<br />{show.contact.phone}</dd></div>
+            {show.targetMarkets.length > 0 && <div><dt className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{x.markets}</dt><dd className="mt-1 flex flex-wrap gap-1.5">{show.targetMarkets.map((c) => <CountryChip key={c} code={c} />)}</dd></div>}
+            {show.industries.length > 0 && <div><dt className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{x.industries}</dt><dd className="mt-1 flex flex-wrap gap-1.5">{show.industries.map((i) => <Badge key={i} variant="muted">{i}</Badge>)}</dd></div>}
+            {contact.length > 0 && <div><dt className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{x.contact}</dt><dd className="mt-1">{contact.map((v) => <span key={v} className="block">{v}</span>)}</dd></div>}
           </dl>
-          <div className="mt-4">
+          {show.boothCapacity > 0 && <div className="mt-4">
             <div className="mb-1.5 flex justify-between text-xs text-muted-foreground"><span>{x.stats.booths}</span><span>{show.booths.length}/{show.boothCapacity}</span></div>
             <Progress value={(show.booths.length / show.boothCapacity) * 100} />
-          </div>
-        </div>
+          </div>}
+        </div>}
       </aside>
     </div>
   )
@@ -316,10 +321,10 @@ function Booths({ show, onOpen }: { show: Show; onOpen: (b: ShowBooth) => void }
   }, [show, phase, pav, q, L])
   return (
     <>
-      <div className="mb-6 grid gap-3 md:grid-cols-[1fr_200px_240px]">
+      <div className={cn('mb-6 grid gap-3', show.phases.length > 0 && show.pavilions.length > 0 ? 'md:grid-cols-[1fr_200px_240px]' : show.phases.length > 0 ? 'md:grid-cols-[1fr_200px]' : show.pavilions.length > 0 && 'md:grid-cols-[1fr_240px]')}>
         <div className="relative"><Search className="absolute left-3 top-3 size-4 text-muted-foreground" /><Input className="pl-9" placeholder={x.search} value={q} onChange={(e) => setQ(e.target.value)} aria-label={x.search} /></div>
-        <Select value={phase} onValueChange={setPhase} aria-label={x.filterPhase} options={[{ value: 'ALL', label: `${x.filterPhase}: ${x.all}` }, ...show.phases.map((p) => ({ value: p.id, label: L(p.name) }))]} />
-        <Select value={pav} onValueChange={setPav} aria-label={x.filterPav} options={[{ value: 'ALL', label: `${x.filterPav}: ${x.all}` }, ...show.pavilions.map((p) => ({ value: p.id, label: L(p.name) }))]} />
+        {show.phases.length > 0 && <Select value={phase} onValueChange={setPhase} aria-label={x.filterPhase} options={[{ value: 'ALL', label: `${x.filterPhase}: ${x.all}` }, ...show.phases.map((p) => ({ value: p.id, label: L(p.name) }))]} />}
+        {show.pavilions.length > 0 && <Select value={pav} onValueChange={setPav} aria-label={x.filterPav} options={[{ value: 'ALL', label: `${x.filterPav}: ${x.all}` }, ...show.pavilions.map((p) => ({ value: p.id, label: L(p.name) }))]} />}
       </div>
       {list.length === 0 && <p className="text-muted-foreground">{x.noBooth}</p>}
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -494,6 +499,9 @@ function Launches({ show, visitor, onRegister, onOpenBooth }: { show: Show; visi
 }
 
 /* ------------------------------------------------------------ agenda */
+/** Capacity 0 means no seat limit was set, not a full session. */
+const isFull = (s: ShowSession) => s.capacity > 0 && s.booked >= s.capacity
+
 function Agenda({ show, visitor, onRegister, onOpen }: { show: Show; visitor: ReturnType<typeof useShowVisitor>; onRegister: () => void; onOpen: (s: ShowSession) => void }) {
   const { L, locale } = useI18n()
   const x = useShowT()
@@ -505,7 +513,7 @@ function Agenda({ show, visitor, onRegister, onOpen }: { show: Show; visitor: Re
 
   const book = (s: ShowSession) => {
     if (!badgeOk) return onRegister()
-    const full = s.booked >= s.capacity
+    const full = isFull(s)
     const apply = (waitlist: boolean) => {
       visitor.setBooking(s.id, waitlist ? 'WAITLIST' : 'BOOKED')
       toast({ title: waitlist ? x.waitlistToast : x.bookedToast, kind: 'success' })
@@ -526,7 +534,7 @@ function Agenda({ show, visitor, onRegister, onOpen }: { show: Show; visitor: Re
           <ul className="divide-y rounded-2xl border bg-card">
             {list.map((s) => {
               const mine = visitor.bookings[s.id]
-              const full = s.booked >= s.capacity
+              const full = isFull(s)
               const speakers = s.speakerIds.map((id) => show.speakers.find((sp) => sp.id === id)).filter((v) => v !== undefined)
               const canceled = s.status === 'CANCELED'
               return (
@@ -542,7 +550,7 @@ function Agenda({ show, visitor, onRegister, onOpen }: { show: Show; visitor: Re
                     <p className="mt-1 text-xs text-muted-foreground">
                       {x.room}: {L(s.room)}{speakers.length ? ` · ${speakers.map((sp) => sp.name).join(', ')}` : ''}
                     </p>
-                    {!canceled && s.status !== 'ENDED' && (
+                    {!canceled && s.status !== 'ENDED' && s.capacity > 0 && (
                       <p className="mt-1 inline-flex items-center gap-1.5 text-xs text-muted-foreground"><Users className="size-3.5" /> {s.booked}/{s.capacity} {x.seats}{full ? ` · ${x.waitlist}` : ` · ${x.left} ${s.capacity - s.booked}`}</p>
                     )}
                   </div>

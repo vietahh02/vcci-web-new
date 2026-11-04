@@ -25,7 +25,7 @@ import { UnderlineTabs } from '@/components/ui/overlay'
 import { Badge, Button, buttonClass, Progress } from '@/components/ui/primitives'
 import NotFound from '@/pages/NotFound'
 import { useI18n } from '@/lib/i18n'
-import { registrationState } from '@/lib/eventStatus'
+import { eventTimeRange, registrationState } from '@/lib/eventStatus'
 import { isRegistered } from '@/lib/eventUser'
 import { useProfile } from '@/lib/profile'
 import { tx } from '@/lib/tx'
@@ -114,7 +114,7 @@ function WebinarView({ ev }: { ev: EventItem }) {
                 {formatDate(ev.startDate, locale, { day: '2-digit', month: 'long', year: 'numeric' })}
                 {ev.endDate.slice(0, 10) !== ev.startDate.slice(0, 10) && ` – ${formatDate(ev.endDate, locale, { day: '2-digit', month: 'long', year: 'numeric' })}`}
               </span>
-              <span className="inline-flex items-center gap-2"><Clock className="size-4 text-gold-bright" /> {ev.startTime} – {ev.endTime} (GMT+7)</span>
+              {eventTimeRange(ev) && <span className="inline-flex items-center gap-2"><Clock className="size-4 text-gold-bright" /> {eventTimeRange(ev)} (GMT+7)</span>}
               {/* online-first (Leader 01/11/2026): joining online is the main path, the venue is secondary and only shown when set */}
               {ev.format !== 'OFFLINE' && <span className="inline-flex items-center gap-2 font-semibold text-white"><Video className="size-4 text-gold-bright" /> {formatLabel(ev.format)}{ev.platform ? ` · ${ev.platform}` : ` · ${tx('trên hệ thống VCCI', 'on the VCCI platform', 'VCCI 플랫폼')}`}</span>}
               {L(ev.location) && <span className={ev.format === 'OFFLINE' ? 'inline-flex items-center gap-2' : 'inline-flex items-center gap-2 text-xs text-white/60'}><MapPin className={ev.format === 'OFFLINE' ? 'size-4 text-gold-bright' : 'size-3.5'} /> {L(ev.location)}</span>}
@@ -134,12 +134,12 @@ function WebinarView({ ev }: { ev: EventItem }) {
             </div>
             {ev.eventStatus !== 'ENDED' && <div className="mt-4">
               <div className="mb-1.5 flex justify-between text-xs text-white/70">
-                <span className="inline-flex items-center gap-1.5"><Users className="size-3.5" /> {formatNumber(ev.registeredSlots, locale)}/{formatNumber(ev.maxSlots, locale)} {t.events.slots}</span>
-                <span>{Math.round(pct)}%</span>
+                <span className="inline-flex items-center gap-1.5"><Users className="size-3.5" /> {formatNumber(ev.registeredSlots, locale)}{ev.maxSlots > 0 && `/${formatNumber(ev.maxSlots, locale)}`} {t.events.slots}</span>
+                {ev.maxSlots > 0 && <span>{Math.round(pct)}%</span>}
               </div>
-              <Progress value={pct} className="bg-white/15" barClassName="bg-gradient-to-r from-gold-bright to-amber-400" />
+              {ev.maxSlots > 0 && <Progress value={pct} className="bg-white/15" barClassName="bg-gradient-to-r from-gold-bright to-amber-400" />}
             </div>}
-            {ev.eventStatus === 'ENDED' && <p className="mt-4 flex items-center gap-2 text-sm text-white/80"><Users className="size-4" /> {formatNumber(Math.round(ev.registeredSlots * 0.85), locale)} {tx('người đã tham dự', 'attended', '명 참석')}</p>}
+            {ev.eventStatus === 'ENDED' && <p className="mt-4 flex items-center gap-2 text-sm text-white/80"><Users className="size-4" /> {USE_MOCK ? <>{formatNumber(Math.round(ev.registeredSlots * 0.85), locale)} {tx('người đã tham dự', 'attended', '명 참석')}</> : <>{formatNumber(ev.registeredSlots, locale)} {tx('đơn vị đăng ký', 'registrations', '등록')}</>}</p>}
             {ev.eventStatus === 'ONGOING' && canJoinOnline && (registered || ev.eventType === 'LIVESTREAM') ? (
               <Link to={`/live/${ev.id}`} className={buttonClass('default', 'lg', 'mt-6 w-full bg-live hover:bg-live/90')}><LiveDot /> {t.events.watchNow}</Link>
             ) : ev.eventStatus === 'ENDED' ? (

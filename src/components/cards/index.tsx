@@ -10,6 +10,7 @@ import { CompanyMark, CountryChip, VerifiedBadge } from '@/components/brand'
 import { ReputationStars } from '@/components/reputation/Reputation'
 import { LiveDot, SmartImage, Tilt } from '@/components/effects'
 import { Badge } from '@/components/ui/primitives'
+import { eventStartTime } from '@/lib/eventStatus'
 import { useI18n } from '@/lib/i18n'
 import { cn, daysLeft, formatDate, formatMoney, formatNumber, img } from '@/lib/utils'
 
@@ -146,7 +147,7 @@ export function EventCard({ event }: { event: EventItem }) {
         {event.eventType === 'LIVESTREAM' ? <Radio className="size-3.5" /> : event.eventType === 'SHOW' ? <Store className="size-3.5" /> : <Video className="size-3.5" />}
         {t.events.type[event.eventType]}
         <span>·</span>
-        <CalendarDays className="size-3.5" /> {formatDate(event.startDate, locale)} · {event.startTime}
+        <CalendarDays className="size-3.5" /> {formatDate(event.startDate, locale)}{eventStartTime(event) && ` · ${eventStartTime(event)}`}
       </p>
       <p className="mt-1.5 line-clamp-2 text-[15px] font-semibold leading-snug group-hover:text-primary">{L(event.title)}</p>
       <p className="mt-1 text-xs text-muted-foreground">{L(event.organizedBy)}</p>

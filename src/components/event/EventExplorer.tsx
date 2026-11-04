@@ -18,7 +18,7 @@ import { Select } from '@/components/ui/select'
 import { prepTasks } from '@/data/eventExtras'
 import { getRecap } from '@/data/eventRecap'
 import type { EventFormat, EventItem, EventStatus, EventType } from '@/data/mock'
-import { registrationState } from '@/lib/eventStatus'
+import { eventTimeRange, registrationState } from '@/lib/eventStatus'
 import { isRegistered, readPrepDone } from '@/lib/eventUser'
 import { useI18n } from '@/lib/i18n'
 import { useProfile } from '@/lib/profile'
@@ -46,6 +46,7 @@ export function RegBadge({ ev }: { ev: EventItem }) {
     CLOSING: { v: 'gold' as const, l: tx(`Sắp hết hạn · còn ${Math.max(daysLeft, 0)} ngày`, `Closing · ${Math.max(daysLeft, 0)}d left`, `마감 임박 · ${Math.max(daysLeft, 0)}일`) },
     FULL: { v: 'muted' as const, l: tx('Hết chỗ', 'Full', '정원 마감') },
     CLOSED: { v: 'muted' as const, l: tx('Đã đóng đăng ký', 'Registration closed', '등록 마감') },
+    NOT_OPEN: { v: 'secondary' as const, l: tx('Chưa mở đăng ký', 'Registration not open yet', '등록 오픈 전') },
   }[state]
   return <Badge variant={map.v}>{map.l}</Badge>
 }
@@ -76,7 +77,7 @@ export function EventRow({ ev, hint, i = 0 }: { ev: EventItem; hint?: ReactNode;
           </div>
           <p className="mt-1.5 text-lg font-bold leading-snug transition-colors group-hover:text-primary">{L(ev.title)}</p>
           <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
-            <span>{ev.startTime}–{ev.endTime}</span>
+            {eventTimeRange(ev) && <span>{eventTimeRange(ev)}</span>}
             {/* online-first: the venue is secondary and only shown when the event has one */}
             {L(ev.location) && <span className="inline-flex items-center gap-1 text-xs"><MapPin className="size-3.5" /> {L(ev.location)}</span>}
             <span>{L(ev.organizedBy)}</span>
@@ -302,7 +303,7 @@ function CalendarView({ list }: { list: EventItem[] }) {
               <li key={e.id} className="rounded-xl border p-3">
                 <div className="flex flex-wrap gap-1.5"><Badge variant="secondary"><span className={cn('size-2 rounded-full', typeTone[e.eventType])} /> {t.events.type[e.eventType]}</Badge><Badge variant="outline">{formatLabel(e.format)}</Badge><RegBadge ev={e} /></div>
                 <Link to={`/events/${e.id}`} className="mt-1.5 block font-bold leading-snug hover:text-primary">{L(e.title)}</Link>
-                <p className="mt-0.5 text-xs text-muted-foreground">{e.startTime}–{e.endTime}{L(e.location) ? ` · ${L(e.location)}` : ''}</p>
+                {(eventTimeRange(e) || L(e.location)) && <p className="mt-0.5 text-xs text-muted-foreground">{[eventTimeRange(e), L(e.location)].filter(Boolean).join(' · ')}</p>}
                 <div className="mt-2 flex flex-wrap items-center gap-2">
                   <AddToCalendar ev={e} tone="light" />
                   <Link to={`/events/${e.id}`} className={buttonClass('default', 'sm')}>{t.common.viewDetail}</Link>

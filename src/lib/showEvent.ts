@@ -5,6 +5,10 @@ import { withComputedStatus } from '@/lib/eventStatus'
 
 const hhmm = (iso: string) => new Date(iso).toTimeString().slice(0, 5)
 
+/** Show times are Vietnam time. No time means all day: 00:00–23:59, which eventTimeRange never displays. */
+export const showStartsAt = (s: Show) => `${s.startDate}T${s.startTime ?? '00:00'}:00+07:00`
+export const showEndsAt = (s: Show) => `${s.endDate}T${s.endTime ?? '23:59'}:59+07:00`
+
 export function showToEvent(s: Show): EventItem {
   const status: EventStatus = s.status === 'CANCELED' ? 'ENDED' : s.status
   return withComputedStatus({
@@ -14,19 +18,21 @@ export function showToEvent(s: Show): EventItem {
     title: s.title,
     introduction: s.introduction,
     coverImage: s.cover,
-    startDate: `${s.startDate}T00:00:00`,
-    endDate: `${s.endDate}T23:59:59`,
-    startTime: '00:00',
-    endTime: '23:59',
+    startDate: showStartsAt(s),
+    endDate: showEndsAt(s),
+    startTime: s.startTime ?? '00:00',
+    endTime: s.endTime ?? '23:59',
     eventStatus: status,
+    displayLabel: s.displayLabel,
     industry: s.industries,
     participationFee: s.visitorTicketFee,
-    participationFeeCurrency: 'VND',
+    participationFeeCurrency: s.ticketCurrency,
     registeredSlots: s.issuedBadges,
-    maxSlots: Math.round(s.issuedBadges * 1.4),
+    // the /full payload has no visitor capacity; 0 means "no limit shown"
+    maxSlots: 0,
     organizedBy: s.organizer,
     location: s.virtualVenue,
     agendaOptions: s.sessions.map((x) => ({ agendaStartTime: hhmm(x.start), agendaEndTime: hhmm(x.end), agendaTitle: x.title })),
-    registrationDeadline: s.registrationDeadline,
+    registrationDeadline: s.registrationDeadline || undefined,
   })
 }

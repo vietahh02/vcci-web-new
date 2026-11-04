@@ -15,6 +15,7 @@ import { CountUp, Marquee, Reveal, Stagger, StaggerItem } from '@/components/eff
 import { goldSponsors, mainSponsor, partnerSponsors } from '@/components/sponsor'
 import { Pager, usePaged } from '@/components/ui/pager'
 import { Badge, buttonClass } from '@/components/ui/primitives'
+import { eventTimeRange } from '@/lib/eventStatus'
 import { useI18n } from '@/lib/i18n'
 import { cn, formatDate, formatMoney, formatNumber, img } from '@/lib/utils'
 
@@ -236,11 +237,11 @@ export function EventsAgenda() {
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2 text-[11px] font-semibold text-muted-foreground">
                         <span className="inline-flex items-center gap-1">{e.eventType === 'LIVESTREAM' ? <Radio className="size-3" /> : <Video className="size-3" />}{t.events.type[e.eventType]}</span>
-                        <span className="inline-flex items-center gap-1"><Clock className="size-3" />{e.startTime}–{e.endTime}</span>
+                        {eventTimeRange(e) && <span className="inline-flex items-center gap-1"><Clock className="size-3" />{eventTimeRange(e)}</span>}
                       </div>
                       <p className="mt-1 line-clamp-2 font-bold leading-snug transition-colors group-hover:text-primary">{L(e.title)}</p>
                       <p className="mt-1 text-xs text-muted-foreground">
-                        {e.participationFee ? formatMoney(e.participationFee, e.participationFeeCurrency, locale) : t.common.free} · {formatNumber(e.registeredSlots, locale)}/{formatNumber(e.maxSlots, locale)} {t.events.registered}
+                        {e.participationFee ? formatMoney(e.participationFee, e.participationFeeCurrency, locale) : t.common.free} · {formatNumber(e.registeredSlots, locale)}{e.maxSlots > 0 && `/${formatNumber(e.maxSlots, locale)}`} {t.events.registered}
                       </p>
                     </div>
                     <span className="grid size-10 shrink-0 place-items-center rounded-full border transition-all group-hover:border-primary group-hover:bg-primary group-hover:text-primary-foreground">

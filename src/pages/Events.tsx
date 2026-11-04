@@ -8,6 +8,7 @@ import type { EventItem } from '@/data/mock'
 import { EventExplorer, formatLabel } from '@/components/event/EventExplorer'
 import { LiveDot, useCountdown } from '@/components/effects'
 import { buttonClass, Skeleton } from '@/components/ui/primitives'
+import { eventTimeRange } from '@/lib/eventStatus'
 import { useI18n } from '@/lib/i18n'
 import { formatDate, img } from '@/lib/utils'
 
@@ -53,6 +54,7 @@ function LiveStrip({ ev }: { ev: EventItem }) {
 function CountdownHero({ ev }: { ev: EventItem }) {
   const { t, L, locale } = useI18n()
   const c = useCountdown(ev.startDate)
+  const time = eventTimeRange(ev)
   const parts: [number, string][] = [[c.d, t.common.countdown[0]], [c.h, t.common.countdown[1]], [c.m, t.common.countdown[2]], [c.s, t.common.countdown[3]]]
 
   return (
@@ -67,7 +69,7 @@ function CountdownHero({ ev }: { ev: EventItem }) {
           {L(ev.title)}
         </motion.h1>
         <p className="mt-4 flex flex-wrap gap-x-5 gap-y-1 text-white/75">
-          <span>{formatDate(ev.startDate, locale, { day: '2-digit', month: 'long', year: 'numeric' })} · {ev.startTime}–{ev.endTime}</span>
+          <span>{formatDate(ev.startDate, locale, { day: '2-digit', month: 'long', year: 'numeric' })}{time && ` · ${time}`}</span>
           {/* online-first: format/platform first, venue secondary and only when set */}
           {ev.format !== 'OFFLINE' && <span className="inline-flex items-center gap-1.5"><Video className="size-4" /> {formatLabel(ev.format)}{ev.platform ? ` · ${ev.platform}` : ''}</span>}
           {L(ev.location) && <span className="inline-flex items-center gap-1.5 text-white/60"><MapPin className="size-4" /> {L(ev.location)}</span>}

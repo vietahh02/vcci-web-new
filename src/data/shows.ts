@@ -18,8 +18,8 @@ const dateOnly = (offset: number) => at(offset, 0).slice(0, 10)
 /* ------------------------------------------------------------ types */
 /** Stored show status (BR-SHB-01). Portal only lists these four (BR-SHB-11). */
 export type ShowStatus = 'UPCOMING' | 'ONGOING' | 'ENDED' | 'CANCELED'
-/** Computed display label, never stored (BRL-SHB-02). */
-export type ShowLabel = 'LIVE' | 'CANCELED' | 'REPLAY' | 'ENDED' | 'FULL' | 'REG_OPEN' | 'UPCOMING'
+/** Display label, never stored (BRL-SHB-02). Live mode takes it from the API (`displayLabel`); only mock data computes it (showLabel). */
+export type ShowLabel = 'LIVE' | 'ONGOING' | 'CANCELED' | 'REPLAY' | 'ENDED' | 'FULL' | 'REG_OPEN' | 'REG_NOT_OPEN' | 'REG_CLOSED' | 'UPCOMING'
 /** Direction of the show: who is invited to sell (BR-SHB-19). */
 export type ShowDirection = 'EXPORT' | 'IMPORT'
 /** Seller / buyer / support side derived from BusinessTypeEnum (BR-SHB-16, 5.4.2). */
@@ -99,6 +99,11 @@ export interface Show {
   industries: string[]
   startDate: string
   endDate: string
+  /** HH:mm (Vietnam time); missing means all day. */
+  startTime?: string
+  endTime?: string
+  /** Label from the API, same value as GET /api/public/shows. */
+  displayLabel?: ShowLabel
   organizer: Bilingual
   /** Virtual venue only: Show Hub is online-only (BR-SHB-15). */
   virtualVenue: Bilingual
@@ -357,8 +362,9 @@ export function getShow(id: string) {
   return shows.find((s) => s.id === id) ?? null
 }
 
-/** Server-side label priority (BR-SHB-11): LIVE > CANCELED > REPLAY/ENDED > FULL > REG_OPEN > UPCOMING. */
+/** The API's label when it sent one. Otherwise (mock data, older BE) the priority of BR-SHB-11: LIVE > CANCELED > REPLAY/ENDED > FULL > REG_OPEN > UPCOMING. */
 export function showLabel(show: Show): ShowLabel {
+  if (show.displayLabel) return show.displayLabel
   if (show.status === 'CANCELED') return 'CANCELED'
   if (show.sessions.some((s) => s.status === 'LIVE')) return 'LIVE'
   if (show.status === 'ENDED') return show.sessions.some((s) => s.hasReplay) ? 'REPLAY' : 'ENDED'

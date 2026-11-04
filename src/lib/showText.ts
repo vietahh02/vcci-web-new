@@ -4,7 +4,7 @@ import { useI18n } from '@/lib/i18n'
 const vi = {
   online: 'Chỉ tổ chức trực tuyến',
   onlineFirst: 'Ưu tiên trực tuyến', physicalVenue: 'Địa điểm phụ',
-  label: { LIVE: 'Đang phát trực tiếp', CANCELED: 'Đã huỷ', REPLAY: 'Có xem lại', ENDED: 'Đã kết thúc', FULL: 'Hết chỗ gian', REG_OPEN: 'Đang mở đăng ký', UPCOMING: 'Sắp diễn ra' },
+  label: { LIVE: 'Đang phát trực tiếp', ONGOING: 'Đang diễn ra', CANCELED: 'Đã huỷ', REPLAY: 'Có xem lại', ENDED: 'Đã kết thúc', FULL: 'Hết chỗ', REG_OPEN: 'Đang mở đăng ký', REG_NOT_OPEN: 'Chưa mở đăng ký', REG_CLOSED: 'Đã đóng đăng ký', UPCOMING: 'Sắp diễn ra' },
   direction: { EXPORT: 'Show xuất khẩu · mời bên bán trong nước', IMPORT: 'Show nhập khẩu · dành cho người mua nước ngoài' },
   tabs: { overview: 'Tổng quan', booths: 'Gian ảo', products: 'Sản phẩm', launches: 'Ra mắt sản phẩm', agenda: 'Chương trình', speakers: 'Diễn giả' },
   stats: { booths: 'Gian ảo', products: 'Sản phẩm', sessions: 'Phiên', badges: 'Thẻ đã cấp' },
@@ -46,7 +46,7 @@ type Widen<T> = T extends string ? string : T extends readonly (infer U)[] ? Wid
 const en: Widen<typeof vi> = {
   online: 'Online-only event',
   onlineFirst: 'Online-first event', physicalVenue: 'Also on site',
-  label: { LIVE: 'Live now', CANCELED: 'Cancelled', REPLAY: 'Replay available', ENDED: 'Ended', FULL: 'Booths full', REG_OPEN: 'Registration open', UPCOMING: 'Upcoming' },
+  label: { LIVE: 'Live now', ONGOING: 'Happening now', CANCELED: 'Cancelled', REPLAY: 'Replay available', ENDED: 'Ended', FULL: 'Full', REG_OPEN: 'Registration open', REG_NOT_OPEN: 'Registration not open yet', REG_CLOSED: 'Registration closed', UPCOMING: 'Upcoming' },
   direction: { EXPORT: 'Export show · invites domestic sellers', IMPORT: 'Import show · for overseas buyers' },
   tabs: { overview: 'Overview', booths: 'Virtual booths', products: 'Products', launches: 'Product launches', agenda: 'Programme', speakers: 'Speakers' },
   stats: { booths: 'Booths', products: 'Products', sessions: 'Sessions', badges: 'Badges issued' },

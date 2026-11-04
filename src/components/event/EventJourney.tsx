@@ -15,7 +15,7 @@ import { useToast } from '@/components/ui/overlay'
 import { Badge, Button, buttonClass, Progress, Textarea } from '@/components/ui/primitives'
 import { faqs, prepTasks, type Material } from '@/data/eventExtras'
 import type { EventItem } from '@/data/mock'
-import { registrationState } from '@/lib/eventStatus'
+import { eventStartTime, registrationState } from '@/lib/eventStatus'
 import { isRegistered, registeredAt, usePrepDone, useSpeakerQuestions, useStoredState, useThread } from '@/lib/eventUser'
 import { useI18n, type Bilingual } from '@/lib/i18n'
 import { useProfile } from '@/lib/profile'
@@ -49,7 +49,7 @@ function Steps({ ev, registered }: { ev: EventItem; registered: boolean }) {
     { t: tx('Đăng ký', 'Register', '등록'), d: ev.registrationDeadline ? `${tx('Hạn', 'By', '마감')} ${formatDate(ev.registrationDeadline, locale)}` : tx('Điền form online', 'Fill the online form', '온라인 양식') },
     { t: tx('Xác nhận / duyệt', 'Confirmation', '승인'), d: tx('Email xác nhận kèm đường dẫn', 'Email with access details', '확인 이메일') },
     { t: tx('Chuẩn bị', 'Prepare', '준비'), d: tx('Checklist, câu hỏi, tài liệu', 'Checklist, questions, documents', '체크리스트, 질문, 자료') },
-    { t: tx('Tham dự', 'Attend', '참석'), d: `${formatDate(ev.startDate, locale)} · ${ev.startTime}` },
+    { t: tx('Tham dự', 'Attend', '참석'), d: [formatDate(ev.startDate, locale), eventStartTime(ev)].filter(Boolean).join(' · ') },
     { t: tx('Sau sự kiện', 'After', '행사 후'), d: tx('Bản ghi, tài liệu, đánh giá', 'Recording, materials, feedback', '녹화, 자료, 평가') },
   ]
   return (
