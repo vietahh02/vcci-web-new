@@ -696,7 +696,8 @@ function SessionDialog({ show, session, badgeOk, onClose, onRegister }: { show: 
   if (!session) return null
   const live = session.status === 'LIVE'
   const replay = session.status === 'ENDED' && (session.hasReplay || !!session.recordingUrl)
-  const watchable = live || replay
+  // status của /full tính theo giờ Timeline; có phòng phát thì vẫn cho vào, phòng xem hiện trạng thái thật của phiên
+  const watchable = live || replay || (!!session.live && session.status !== 'CANCELED')
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-2xl" title={L(session.title)} description={`${fmtDay(session.start, locale)} · ${fmtTime(session.start, locale)}–${fmtTime(session.end, locale)} · ${L(session.room)}`}>

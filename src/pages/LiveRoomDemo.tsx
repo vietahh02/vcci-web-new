@@ -38,7 +38,7 @@ export default function LiveRoomDemo() {
   const [showing, setShowing] = useState(0)
   const [msgs, setMsgs] = useState<ChatMsg[]>([])
   const [text, setText] = useState('')
-  const [hearts, setHearts] = useState<number[]>([])
+  const [hearts, setHearts] = useState<{ id: number; x: number }[]>([])
   const listRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -62,9 +62,9 @@ export default function LiveRoomDemo() {
   const ex = exhibitors[showing]!
 
   const react = () => {
-    const id = Date.now() + Math.random()
-    setHearts((h) => [...h, id])
-    setTimeout(() => setHearts((h) => h.filter((x) => x !== id)), 2200)
+    const heart = { id: Date.now() + Math.random(), x: (Math.random() - 0.5) * 60 }
+    setHearts((h) => [...h, heart])
+    setTimeout(() => setHearts((h) => h.filter((x) => x.id !== heart.id)), 2200)
   }
 
   return (
@@ -125,10 +125,10 @@ export default function LiveRoomDemo() {
                 <AnimatePresence>
                   {hearts.map((h) => (
                     <motion.span
-                      key={h}
+                      key={h.id}
                       className="absolute bottom-0 left-1/2"
                       initial={{ y: 0, opacity: 1, scale: 0.6, x: 0 }}
-                      animate={{ y: -220, opacity: 0, scale: 1.3, x: (Math.random() - 0.5) * 60 }}
+                      animate={{ y: -220, opacity: 0, scale: 1.3, x: h.x }}
                       exit={{ opacity: 0 }}
                       transition={{ duration: 2, ease: 'easeOut' }}
                     >

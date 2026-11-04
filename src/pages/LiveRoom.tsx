@@ -22,6 +22,7 @@ import { Badge, Button, buttonClass } from '@/components/ui/primitives'
 import type { EventItem } from '@/data/mock'
 import type { Show } from '@/data/shows'
 import { useI18n, type Bilingual } from '@/lib/i18n'
+import { isOnlineFormat } from '@/lib/eventStatus'
 import { useShowVisitor } from '@/lib/showReg'
 import { cn, formatNumber, img } from '@/lib/utils'
 import NotFound from '@/pages/NotFound'
@@ -137,10 +138,12 @@ function RealLiveRoom() {
         title: L(a.agendaTitle),
         now: !!ev && inToday(ev.startDate, ev.endDate, now) && a.agendaStartTime <= hm(now) && hm(now) < a.agendaEndTime,
       }))
-  const booths = show?.booths.slice(0, 6) ?? []
+  // Doanh nghiệp tham gia lấy từ /full, mỗi doanh nghiệp một dòng; Show ONLINE không có khái niệm gian
+  const companies = [...new Map((show?.booths ?? []).map((b) => [b.businessId ?? L(b.org), b])).values()].slice(0, 6)
+  const online = isOnlineFormat(show?.format)
 
   const stage = needBadge ? (
-    <StagePlaceholder poster={poster} icon={Ticket} title={lt.needBadge} hint={lt.needBadgeHint}>
+    <StagePlaceholder poster={poster} icon={Ticket} title={online ? lt.needRegister : lt.needBadge} hint={online ? lt.needRegisterHint : lt.needBadgeHint}>
       <Link to={backTo} className={buttonClass('gold', 'md', 'mt-2')}>{lt.backToEvent}</Link>
     </StagePlaceholder>
   ) : stream?.kind === 'LIVESTREAM' ? (
@@ -229,11 +232,11 @@ function RealLiveRoom() {
                   </ol>
                 </div>
               )}
-              {booths.length > 0 && (
+              {companies.length > 0 && (
                 <div className="rounded-2xl bg-white/[0.04] p-5 ring-1 ring-white/10">
                   <p className="text-sm font-bold">{t.live.exhibitors}</p>
                   <ul className="mt-3 space-y-2">
-                    {booths.map((b) => {
+                    {companies.map((b) => {
                       const row = (
                         <>
                           <CompanyMark name={L(b.org)} accent={b.accent} className="size-8 rounded-lg text-[10px]" />

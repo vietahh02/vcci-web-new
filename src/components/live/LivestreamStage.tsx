@@ -13,7 +13,7 @@ const POLL_LIVE_MS = 15_000
 const POLL_WAITING_MS = 10_000
 const POLL_ENDED_MS = 30_000
 const RETRY_STREAM_MS = 4_000
-const MAX_STREAM_FAILS = 3
+const MAX_STREAM_FAILS = 5
 
 export function LivestreamStage({ eventId, sessionId, poster, recordingUrl, onRoom }: {
   eventId: string
@@ -45,14 +45,15 @@ export function LivestreamStage({ eventId, sessionId, poster, recordingUrl, onRo
         setPhase('ready')
         report({ status: s?.status ?? null, sessionId: s?.id ?? null })
         if (s?.status === 'LIVE' && s.ingestActive) next = POLL_LIVE_MS
+        else setFails(0) // host mất tín hiệu rồi phát lại: luồng mới, không tính lỗi của lần trước
         if (s?.status === 'ENDED') {
           if (s.vodUrl || recordingUrl) return
           next = POLL_ENDED_MS
         }
       } catch (e) {
         if (stopped) return
-        // Đã có dữ liệu thì giữ hình đang phát, lần hỏi sau tự hồi phục
-        const missing = e instanceof ApiError && e.code === 'E003'
+        // Đã có dữ liệu thì giữ hình đang phát, lần hỏi sau tự hồi phục. E003 kèm HTTP 404 là sai cổng dịch vụ, không phải phiên không tồn tại
+        const missing = e instanceof ApiError && e.code === 'E003' && e.status !== 404
         setPhase((p) => (p === 'ready' && !missing ? p : missing ? 'missing' : 'error'))
       }
       timer = setTimeout(() => void tick(), next)

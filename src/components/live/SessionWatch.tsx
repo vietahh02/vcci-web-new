@@ -20,7 +20,7 @@ export function SessionWatch({ show, session, live }: { show: Show; session: Sho
   if (!live && recording) return <div className="relative aspect-video overflow-hidden rounded-xl bg-navy text-white"><ReplayPlayer url={recording} /></div>
   if (!session.live) return <p role="status" className="rounded-xl border border-dashed p-5 text-center text-sm font-medium text-muted-foreground">{live ? lt.noLiveLink : lt.noRecording}</p>
 
-  const label = live ? x.joinLive : x.watchReplay
+  const label = session.status === 'ENDED' ? x.watchReplay : x.joinLive
   return (
     <Link to={showLivePath(show.id, { session: session.id })} aria-label={label} className="group relative block aspect-video overflow-hidden rounded-xl bg-navy">
       <img src={img(show.cover, 900, 500)} alt="" className="size-full object-cover opacity-50 transition group-hover:opacity-60" />
@@ -28,7 +28,8 @@ export function SessionWatch({ show, session, live }: { show: Show; session: Sho
         <span className="grid size-16 place-items-center rounded-full bg-white/90 text-navy"><PlayCircle className="size-9" /></span>
         <span className="text-sm font-bold">{label}</span>
       </span>
-      <Badge variant={live ? 'live' : 'secondary'} className="absolute left-3 top-3 gap-1.5">{live ? <><LiveDot /> {x.sessionStatus.LIVE}</> : x.replayLabel}</Badge>
+      {live && <Badge variant="live" className="absolute left-3 top-3 gap-1.5"><LiveDot /> {x.sessionStatus.LIVE}</Badge>}
+      {session.status === 'ENDED' && <Badge variant="secondary" className="absolute left-3 top-3">{x.replayLabel}</Badge>}
     </Link>
   )
 }

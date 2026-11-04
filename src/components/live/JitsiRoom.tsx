@@ -43,12 +43,13 @@ const roleConfig = (role: JitsiRole) =>
     ? { startWithAudioMuted: true, startWithVideoMuted: true, disableInitialGUM: true, disableScreensharing: true, iAmVisitor: true, toolbarButtons: ['fullscreen', 'tileview', 'hangup'] }
     : { startWithAudioMuted: true, startWithVideoMuted: false, toolbarButtons: ['microphone', 'camera', 'chat', 'fullscreen', 'tileview'] }
 
-export function JitsiRoom({ roomName, jwt, role, displayName, onLoadError }: { roomName: string; jwt: string; role: JitsiRole; displayName?: string; onLoadError: () => void }) {
+export function JitsiRoom({ roomName, jwt, role, displayName, onLoadError, onLeft }: { roomName: string; jwt: string; role: JitsiRole; displayName?: string; onLoadError: () => void; onLeft: () => void }) {
   useI18n()
   const lt = liveText()
   const container = useRef<HTMLDivElement>(null)
   const [loaded, setLoaded] = useState(false)
   const fail = useEffectEvent(onLoadError)
+  const left = useEffectEvent(onLeft)
   const currentName = useEffectEvent(() => displayName)
 
   useEffect(() => {
@@ -69,6 +70,8 @@ export function JitsiRoom({ roomName, jwt, role, displayName, onLoadError }: { r
           configOverwrite: { prejoinConfig: { enabled: false }, prejoinPageEnabled: false, disableDeepLinking: true, enableClosePage: false, ...roleConfig(role) },
           interfaceConfigOverwrite: { SHOW_JITSI_WATERMARK: false, SHOW_WATERMARK_FOR_GUESTS: false, TOOLBAR_ALWAYS_VISIBLE: true, HIDE_INVITE_MORE_HEADER: true },
         })
+        // Bấm rời phòng: Jitsi không tự đóng iframe, phòng xem đưa về màn vào lại
+        api.addListener('readyToClose', () => { if (!cancelled) left() })
       },
       () => { if (!cancelled) fail() },
     )

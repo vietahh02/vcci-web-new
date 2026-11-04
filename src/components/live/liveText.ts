@@ -23,6 +23,8 @@ export const liveText = () => ({
   backToEvent: tx('Về trang sự kiện', 'Back to the event', '행사 페이지로'),
   needBadge: tx('Cần thẻ tham quan để xem phiên này', 'A visitor badge is required to watch', '이 세션을 보려면 방문 배지가 필요합니다'),
   needBadgeHint: tx('Đăng ký tham quan ở trang sự kiện rồi quay lại.', 'Register as a visitor on the event page, then come back.', '행사 페이지에서 방문 등록 후 다시 오세요.'),
+  needRegister: tx('Cần đăng ký tham gia để xem phiên này', 'Registration is required to watch', '이 세션을 보려면 참가 등록이 필요합니다'),
+  needRegisterHint: tx('Đăng ký tham gia ở trang sự kiện rồi quay lại.', 'Register on the event page, then come back.', '행사 페이지에서 참가 등록 후 다시 오세요.'),
   unmute: tx('Bật tiếng', 'Unmute', '소리 켜기'),
   mute: tx('Tắt tiếng', 'Mute', '소리 끄기'),
 
@@ -44,6 +46,8 @@ export const liveText = () => ({
     '이 페이지는 HTTP로 제공되어 브라우저가 마이크와 카메라를 차단합니다. 시청과 청취는 가능합니다.',
   ),
   dismiss: tx('Đóng', 'Dismiss', '닫기'),
+  leftRoom: tx('Bạn đã rời phòng', 'You left the room', '방에서 나왔습니다'),
+  rejoin: tx('Vào lại', 'Rejoin', '다시 입장'),
 
   // chat
   chatMissing: tx('Chat phiên chưa được cấu hình.', 'Session chat is not configured.', '세션 채팅이 구성되지 않았습니다.'),

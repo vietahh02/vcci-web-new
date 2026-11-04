@@ -2,7 +2,7 @@
  * Khung player của phiên WEBINAR. Vai do server quyết: đăng nhập gọi join-token (đăng ký APPROVED thành PARTICIPANT, còn lại OBSERVER);
  * khách nhập tên rồi gọi observer-token. Luồng clone từ webinar-room của Portal cũ, nhưng phân loại lỗi theo mã thay vì dò chữ trong message.
  */
-import { CalendarClock, CircleOff, KeyRound, Settings2, UserRound, WifiOff, X } from 'lucide-react'
+import { CalendarClock, CircleOff, DoorOpen, KeyRound, Settings2, UserRound, WifiOff, X } from 'lucide-react'
 import { useEffect, useEffectEvent, useRef, useState, type FormEvent } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { ApiError, tokens } from '@/api/http'
@@ -27,6 +27,7 @@ type View =
   | { k: 'ended' }
   | { k: 'room'; token: JitsiToken; name?: string }
   | { k: 'jitsi-error' }
+  | { k: 'left' }
   | { k: 'error'; message?: string }
 
 const isEnded = (w: WebinarInfo) => w.status === 'ENDED' || w.roomClosed
@@ -69,7 +70,7 @@ export function WebinarStage({ eventId, poster, recordingUrl, onRole, onRoom }: 
     if (!guest && (code === 'E004' || (e instanceof ApiError && e.status === 401))) return setView({ k: 'name' }) // tài khoản không thuộc tổ chức nào: chỉ dự thính
     if (code === 'E002' && !guest && registration.current === 'APPROVED') return setView({ k: 'key', error: message })
     if (code === 'E002') return setView(guest ? { k: 'name', error: message } : { k: 'error', message })
-    return setView({ k: 'error' })
+    return setView({ k: 'error', message: e instanceof ApiError && e.status >= 400 && e.status < 500 ? message : undefined })
   }
 
   /** silent: lần hỏi định kỳ gặp lỗi mạng thì giữ nguyên màn đang hiện, không đá người xem khỏi màn chờ. */
@@ -95,7 +96,9 @@ export function WebinarStage({ eventId, poster, recordingUrl, onRole, onRoom }: 
   })
 
   useEffect(() => {
-    void enter(false)
+    // Hoãn một nhịp: StrictMode gắn effect hai lần, không xin token Jitsi hai lần
+    const t = setTimeout(() => void enter(false))
+    return () => clearTimeout(t)
   }, [eventId, loggedIn, attempt])
 
   const retry = () => {
@@ -154,6 +157,8 @@ export function WebinarStage({ eventId, poster, recordingUrl, onRole, onRoom }: 
       return <StagePlaceholder poster={poster} icon={CalendarClock} title={lt.notStarted} hint={lt.notStartedHint} />
     case 'ended':
       return replay ? <ReplayPlayer url={replay} /> : <StagePlaceholder poster={poster} icon={CircleOff} title={lt.ended} hint={lt.endedNoVod} />
+    case 'left':
+      return <StagePlaceholder poster={poster} icon={DoorOpen} title={lt.leftRoom}><Button variant="white" className="mt-2" onClick={retry}>{lt.rejoin}</Button></StagePlaceholder>
     case 'jitsi-error':
       return <StagePlaceholder poster={poster} icon={WifiOff} alert title={lt.jitsiLoadError} hint={lt.connectErrorHint}><Button variant="white" className="mt-2" onClick={retry}>{lt.retry}</Button></StagePlaceholder>
     case 'error':
@@ -182,7 +187,7 @@ export function WebinarStage({ eventId, poster, recordingUrl, onRole, onRoom }: 
     case 'room':
       return (
         <>
-          <JitsiRoom roomName={view.token.roomName} jwt={view.token.token} role={view.token.role} displayName={view.name} onLoadError={() => setView({ k: 'jitsi-error' })} />
+          <JitsiRoom roomName={view.token.roomName} jwt={view.token.token} role={view.token.role} displayName={view.name} onLoadError={() => setView({ k: 'jitsi-error' })} onLeft={() => setView({ k: 'left' })} />
           {view.token.role === 'PARTICIPANT' && !window.isSecureContext && !insecureSeen && (
             <div role="status" className="absolute inset-x-3 top-3 flex items-start gap-2 rounded-lg bg-amber-500/90 px-3 py-2 text-xs font-medium text-black">
               <span className="flex-1">{lt.insecureMedia}</span>
