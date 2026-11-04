@@ -23,7 +23,7 @@ export interface PublicProfile {
     representative: { name: string; title: string }; contact: { name: string; title: string; phone: string; email: string }
     legalVerified: string[]
   }
-  capability: { factoryArea: string; productionLines: string; monthlyCapacity: string; exportPct: string; moq: string; oem: string; supply: string; mainProducts: string[]; keyCustomers: string; qcProcess: string; highlights: Bilingual[] }
+  capability: { factoryArea: string; productionLines: string; monthlyCapacity: string; exportPct: string; moq: string; oem: string; supply: string; mainProducts: string[]; qcProcess: string; highlights: Bilingual[] }
   exports: { share: string; markets: string[]; modes: string[]; traceability: string }
   certificates: PublicCert[]
   gallery: MediaItem[]
@@ -74,7 +74,7 @@ export function buildPublicProfile(biz: Business, own: CompanyProfile | null): P
     },
     capability: {
       factoryArea: n.area, productionLines: n.lines, monthlyCapacity: n.cap, exportPct: n.pct, moq: n.moq, oem: 'YES', supply: 'LARGE',
-      mainProducts: products.map((p) => p.productName.vi).slice(0, 5), keyCustomers: '', qcProcess: '', highlights: biz.capabilities,
+      mainProducts: products.map((p) => p.productName.vi).slice(0, 5), qcProcess: '', highlights: biz.capabilities,
     },
     exports: { share: n.share, markets: biz.markets, modes: ['DIRECT', 'OEM'], traceability: 'LOT' },
     certificates: certNames.map((c) => ({ name: c, issuer: '', expiry: `${year + 1}-12-31` })),
@@ -112,7 +112,7 @@ export function buildPublicProfile(biz: Business, own: CompanyProfile | null): P
     capability: {
       factoryArea: own.capability.factoryArea, productionLines: own.capability.productionLines, monthlyCapacity: own.capability.monthlyCapacity,
       exportPct: own.capability.exportCapacityPct, moq: own.capability.moq, oem: opt(OPTIONS.oem, own.capability.oem), supply: opt(OPTIONS.supplyCapacity, own.capability.supplyCapacity),
-      mainProducts: own.capability.mainProducts.filter(Boolean), keyCustomers: own.capability.keyCustomers, qcProcess: own.capability.qcProcess, highlights: [],
+      mainProducts: own.capability.mainProducts.filter(Boolean), qcProcess: own.capability.qcProcess, highlights: [],
     },
     exports: { share: own.exports.exportShare, markets: own.exports.markets.length ? own.exports.markets : biz.markets, modes: own.exports.modes, traceability: own.exports.traceability },
     certificates: own.capability.certificates.filter((c) => c.name).map((c) => ({ name: c.name, issuer: c.issuer, expiry: c.expiry, preview: c.preview })),

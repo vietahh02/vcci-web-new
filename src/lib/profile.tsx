@@ -18,11 +18,13 @@ const o = (value: string, vi: string, en: string): Opt => ({ value, vi, en, ko: 
 /* ---------------------------------------------------------------- option sets (from VCCI/GIZ survey) */
 export const OPTIONS = {
   ownership: [o('DOMESTIC', '100% vốn trong nước', '100% domestic capital'), o('FDI_PARTIAL', 'Có vốn nước ngoài', 'Partly foreign-owned'), o('FOREIGN_100', '100% vốn nước ngoài', '100% foreign-owned')],
-  sectors: [
-    o('FOOD', 'Thực phẩm chất lượng cao', 'Premium food'), o('PACKAGING', 'Bao bì & vật liệu tái chế', 'Packaging & recycled materials'),
-    o('COSMETICS', 'Hoá mỹ phẩm thiên nhiên', 'Natural cosmetics'), o('CRAFT', 'Thủ công mỹ nghệ & gốm sứ', 'Handicrafts & ceramics'),
-    o('MECH', 'Cơ khí chính xác & tự động hoá', 'Precision engineering & automation'), o('ELEC', 'Điện – Điện tử', 'Electrical & electronics'),
-    o('TEXTILE', 'Dệt may & da giày', 'Textiles & footwear'), o('FURNITURE', 'Đồ gỗ & nội thất', 'Furniture & wood'),
+  industries: [
+    o('ELECTRONICS_TECH', 'Điện tử & công nghệ', 'Electronics & technology'), o('HOME_LIVING', 'Nhà cửa & đời sống', 'Home & living'),
+    o('FASHION_BEAUTY', 'Thời trang & làm đẹp', 'Fashion & beauty'), o('HEALTH', 'Sức khỏe', 'Health'),
+    o('SPORTS_ENTERTAINMENT', 'Thể thao & giải trí', 'Sports & entertainment'), o('AUTOMOTIVE_VEHICLES', 'Ô tô & phương tiện', 'Automotive & vehicles'),
+    o('FOOD_DRINK', 'Thực phẩm & đồ uống', 'Food & drink'), o('INDUSTRIAL_MANUFACTURING', 'Công nghiệp & sản xuất', 'Industrial & manufacturing'),
+    o('PACKAGING_PRINTING', 'Bao bì & in ấn', 'Packaging & printing'), o('OFFICE_EDUCATION', 'Văn phòng & giáo dục', 'Office & education'),
+    o('MOTHER_BABY', 'Mẹ & bé', 'Mother & baby'), o('SERVICES', 'Dịch vụ', 'Services'), o('AGRICULTURE', 'Nông nghiệp', 'Agriculture'),
   ],
   supplyCapacity: [
     o('SMALL', 'Chỉ đáp ứng đơn hàng nhỏ', 'Small orders only'), o('MEDIUM', 'Đáp ứng đơn hàng vừa', 'Medium orders'),
@@ -123,7 +125,7 @@ export interface Attendee { id: string; name: string; title: string; email: stri
 
 export interface CompanyProfile {
   general: { nameVi: string; nameEn: string; shortName: string; taxCode: string; ownership: string; foundedYear: string; channels: string; womenOwned: '' | 'YES' | 'NO'; factoryAddress: string; contactName: string; contactTitle: string; contactPhone: string; contactEmail: string; totalAssets: string; keyLeaders: KeyLeaders; branches: Branch[] }
-  capability: { sectors: string[]; mainProducts: string[]; servedIndustries: string; keyCustomers: string; supplyCapacity: string; oem: string; monthlyCapacity: string; exportCapacityPct: string; moq: string; factoryArea: string; productionLines: string; qcProcess: string; certificates: Certificate[] }
+  capability: { mainProducts: string[]; supplyCapacity: string; oem: string; monthlyCapacity: string; exportCapacityPct: string; moq: string; factoryArea: string; productionLines: string; qcProcess: string; certificates: Certificate[] }
   exports: { exportShare: string; markets: string[]; modes: string[]; traceability: string; euExperience: string; evidence: string; evidenceFileId?: string }
   finance: { revenues: RevenueRow[]; visibility: 'BAND' | 'HIDDEN' }
   needs: { partnerTypes: string[]; opportunities: string[]; targetMarkets: string[]; readiness: string; barriers: string[]; documents: string[]; note: string }
@@ -136,7 +138,7 @@ export interface CompanyProfile {
 export type SectionKey = 'general' | 'capability' | 'media' | 'exports' | 'finance' | 'needs' | 'attendees' | 'consent'
 
 const SECTIONS_RAW: { key: SectionKey; title: Bilingual; hint: Bilingual }[] = [
-  { key: 'general', title: { vi: 'Thông tin chung', en: 'General information' }, hint: { vi: 'Tên, loại hình sở hữu, kênh online, người liên hệ', en: 'Names, ownership, channels, contact' } },
+  { key: 'general', title: { vi: 'Thông tin chung', en: 'General information' }, hint: { vi: 'Tên, loại hình sở hữu, kênh online, chi nhánh', en: 'Names, ownership, channels, branches' } },
   { key: 'capability', title: { vi: 'Sản phẩm & năng lực', en: 'Products & capability' }, hint: { vi: 'Sản phẩm chủ lực, công suất, MOQ, chứng nhận', en: 'Key products, capacity, MOQ, certificates' } },
   { key: 'media', title: { vi: 'Hình ảnh & tài liệu', en: 'Photos & documents' }, hint: { vi: 'Logo, ảnh bìa, nhà xưởng, video, hồ sơ năng lực PDF', en: 'Logo, cover, factory photos, video, brochure PDF' } },
   { key: 'exports', title: { vi: 'Xuất nhập khẩu', en: 'Export experience' }, hint: { vi: 'Thị trường, hình thức, truy xuất nguồn gốc', en: 'Markets, modes, traceability' } },
@@ -150,8 +152,8 @@ export const SECTIONS = SECTIONS_RAW.map((x) => ({ ...x, title: withKo(x.title),
 /** Section is "done" when these checks pass — events declare which sections they need. */
 export function sectionDone(p: CompanyProfile, key: SectionKey): boolean {
   switch (key) {
-    case 'general': return !!(p.general.nameVi && p.general.nameEn && p.general.ownership && p.general.contactName && p.general.contactEmail)
-    case 'capability': return p.capability.sectors.length > 0 && p.capability.mainProducts.filter(Boolean).length > 0 && !!p.capability.supplyCapacity && !!p.capability.oem && !!p.capability.moq
+    case 'general': return tabDone(p, 'general') && tabDone(p, 'members')
+    case 'capability': return p.capability.mainProducts.filter(Boolean).length > 0 && !!p.capability.supplyCapacity && !!p.capability.oem && !!p.capability.moq
     case 'exports': return !!p.exports.exportShare && p.exports.modes.length > 0 && !!p.exports.traceability && !!p.exports.euExperience
     case 'finance': return p.finance.revenues.some((r) => r.band)
     case 'needs': return p.needs.partnerTypes.length > 0 && p.needs.opportunities.length > 0 && !!p.needs.readiness
@@ -161,6 +163,19 @@ export function sectionDone(p: CompanyProfile, key: SectionKey): boolean {
   }
 }
 
+/** Tab "Thành viên" chỉ là cách hiển thị: dữ liệu nằm trong `general`, BE và % hoàn thiện vẫn tính 8 mục. */
+export type ProfileTab = SectionKey | 'members'
+const MEMBERS_TAB = { key: 'members' as ProfileTab, title: withKo({ vi: 'Thành viên công ty', en: 'Company members' }), hint: withKo({ vi: 'Người liên hệ, lãnh đạo chủ chốt', en: 'Contacts, key leaders' }) }
+export const PROFILE_TABS: { key: ProfileTab; title: (typeof SECTIONS)[number]['title']; hint: (typeof SECTIONS)[number]['hint'] }[] = [SECTIONS[0]!, MEMBERS_TAB, ...SECTIONS.slice(1)]
+export const tabSection = (t: ProfileTab): SectionKey => (t === 'members' ? 'general' : t)
+export function tabDone(p: CompanyProfile, t: ProfileTab): boolean {
+  if (t === 'general') return !!(p.general.nameVi && p.general.nameEn && p.general.ownership)
+  if (t === 'members') return !!(p.general.contactName && p.general.contactEmail)
+  return sectionDone(p, t)
+}
+/** Tab cần mở để bổ sung một mục còn thiếu: general thiếu người liên hệ thì sang tab Thành viên. */
+export const missingTab = (p: CompanyProfile, k: SectionKey): ProfileTab => (k === 'general' && tabDone(p, 'general') ? 'members' : k)
+
 export const completion = (p: CompanyProfile) => Math.round((SECTIONS.filter((s) => sectionDone(p, s.key)).length / SECTIONS.length) * 100)
 
 const emptyPerson = (): LeaderPerson => ({ fullName: '', gender: '', landline: '', mobile: '', email: '' })
@@ -169,7 +184,7 @@ export const emptyLeaders = (): KeyLeaders => ({ chairman: emptyPerson(), ceo: e
 const thisYear = new Date().getFullYear()
 export const emptyProfile = (name = '', taxCode = ''): CompanyProfile => ({
   general: { nameVi: name, nameEn: '', shortName: '', taxCode, ownership: '', foundedYear: '', channels: '', womenOwned: '', factoryAddress: '', contactName: '', contactTitle: '', contactPhone: '', contactEmail: '', totalAssets: '', keyLeaders: emptyLeaders(), branches: [] },
-  capability: { sectors: [], mainProducts: ['', '', ''], servedIndustries: '', keyCustomers: '', supplyCapacity: '', oem: '', monthlyCapacity: '', exportCapacityPct: '', moq: '', factoryArea: '', productionLines: '', qcProcess: '', certificates: [] },
+  capability: { mainProducts: ['', '', ''], supplyCapacity: '', oem: '', monthlyCapacity: '', exportCapacityPct: '', moq: '', factoryArea: '', productionLines: '', qcProcess: '', certificates: [] },
   exports: { exportShare: '', markets: [], modes: [], traceability: '', euExperience: '', evidence: '' },
   finance: {
     revenues: [thisYear - 1, thisYear - 2, thisYear - 3].map((year) => ({ year, band: '', amount: '', proofType: '', proofFile: '', status: 'SELF' as VerifyStatus })),
@@ -191,11 +206,11 @@ const U = (id: string, w = 1200) => `https://images.unsplash.com/photo-${id}?w=$
 const demoProfile = (): CompanyProfile => {
   const p = emptyProfile('Công ty CP Nội thất Gỗ Phương Nam', '3700 884 512')
   p.general = { ...p.general, nameEn: 'Southwood Furniture JSC', ownership: 'DOMESTIC', foundedYear: '2006', channels: 'southwood.example.vn, linkedin.com/company/southwood', womenOwned: 'NO', contactName: 'Trần Minh Quân', contactTitle: 'Giám đốc xuất khẩu', contactPhone: '0912 000 111', contactEmail: 'export@southwood.example.vn' }
-  p.capability = { ...p.capability, sectors: ['FURNITURE'], mainProducts: ['Sofa khung gỗ sồi', 'Bộ bàn ăn gỗ keo', 'Nội thất ngoài trời'], supplyCapacity: 'LARGE', oem: 'YES', monthlyCapacity: '180 container, 70% xuất khẩu', exportCapacityPct: '70', moq: '1 container 40HQ', factoryArea: '120.000', productionLines: '6', qcProcess: 'Kiểm tra nguyên liệu đầu vào (độ ẩm gỗ ≤ 12%), kiểm tra công đoạn tại từng chuyền, kiểm tra thành phẩm theo AQL 2.5 trước khi đóng container.', certificates: [{ name: 'FSC CoC', issuer: 'Control Union', expiry: `${thisYear + 1}-06-30`, file: 'FSC_CoC.jpg', preview: U('1586528116311-ad8dd3c8310d', 600) }] }
+  p.capability = { ...p.capability, mainProducts: ['Sofa khung gỗ sồi', 'Bộ bàn ăn gỗ keo', 'Nội thất ngoài trời'], supplyCapacity: 'LARGE', oem: 'YES', monthlyCapacity: '180 container, 70% xuất khẩu', exportCapacityPct: '70', moq: '1 container 40HQ', factoryArea: '120.000', productionLines: '6', qcProcess: 'Kiểm tra nguyên liệu đầu vào (độ ẩm gỗ ≤ 12%), kiểm tra công đoạn tại từng chuyền, kiểm tra thành phẩm theo AQL 2.5 trước khi đóng container.', certificates: [{ name: 'FSC CoC', issuer: 'Control Union', expiry: `${thisYear + 1}-06-30`, file: 'FSC_CoC.jpg', preview: U('1586528116311-ad8dd3c8310d', 600) }] }
   p.attendees = [{ id: 'a1', name: 'Trần Minh Quân', title: 'Giám đốc xuất khẩu', email: 'quan.tm@southwood.example.vn', phone: '0912 000 111' }]
   p.finance.revenues[0] = { ...p.finance.revenues[0]!, band: '200_300', amount: '246', proofType: 'AUDITED', proofFile: `BCTC_kiem_toan_${thisYear - 1}.pdf`, status: 'VERIFIED' }
   p.registration = {
-    ...p.registration, businessForm: 'JOINT_STOCK', businessType: 'VN_EXPORTER', industries: ['FURNITURE'], charterCapital: '150.000.000.000', charterCurrency: 'VND', totalRevenue: '246.000.000.000', reportYear: String(thisYear - 1),
+    ...p.registration, businessForm: 'JOINT_STOCK', businessType: 'VN_EXPORTER', industries: ['HOME_LIVING'], charterCapital: '150.000.000.000', charterCurrency: 'VND', totalRevenue: '246.000.000.000', reportYear: String(thisYear - 1),
     employees: '1.000 – 2.000', website: 'southwood.example.vn', country: 'VN', province: 'Bình Dương', address: 'KCN VSIP II, TP. Thủ Dầu Một', email: 'hello@southwood.example.vn', phone: '+84 274 3 635 900',
     repName: 'Nguyễn Văn Phương', repTitle: 'Tổng giám đốc', repEmail: 'ceo@southwood.example.vn', repPhone: '0903 111 222',
     legalDocs: { license: { id: 'l1', name: 'GCN_DKDN_Southwood.pdf', kind: 'legal', size: 1_840_000 }, tax: null },
@@ -296,7 +311,6 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
             if (reg) {
               p.registration = { ...p.registration, ...reg }
               p.general = { ...p.general, nameEn: extra?.nameEn ?? '', channels: reg.website ?? '', contactName: reg.repName ?? '', contactTitle: reg.repTitle ?? '', contactEmail: reg.repEmail ?? '', contactPhone: reg.repPhone ?? '' }
-              if (reg.industries?.length) p.capability = { ...p.capability, sectors: reg.industries }
             }
             if (extra?.logo) p.media = { ...p.media, logo: extra.logo }
             return { ...prev, session: { companyName: name, taxCode: s?.taxCode ?? '' }, profile: p }

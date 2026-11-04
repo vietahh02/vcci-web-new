@@ -1,14 +1,14 @@
 /** /account/profile — "Hồ sơ doanh nghiệp của tôi": fill once after sign-up, reused for every event. */
 import { AnimatePresence, motion } from 'motion/react'
 import { ArrowLeft, ArrowRight, BadgeCheck, Check, CircleDashed, Info, Lock, Plus, ShieldCheck, Trash2 } from 'lucide-react'
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { liveApi, USE_MOCK, useEvent } from '@/api'
 import { useToast } from '@/components/ui/overlay'
 import { Button, buttonClass, Field, Input, Textarea } from '@/components/ui/primitives'
 import { Select } from '@/components/ui/select'
 import { useI18n } from '@/lib/i18n'
-import { BUSINESS_FORMS, completion, OPTIONS, SECTIONS, sectionDone, useProfile, type CompanyProfile, type Opt, type SectionKey, type VerifyStatus } from '@/lib/profile'
+import { BUSINESS_FORMS, completion, OPTIONS, PROFILE_TABS, sectionDone, tabDone, tabSection, useProfile, type CompanyProfile, type Opt, type ProfileTab, type SectionKey, type VerifyStatus } from '@/lib/profile'
 import { cn } from '@/lib/utils'
 import { tx, withKo } from '@/lib/tx'
 import { FileUpload, GalleryUpload, ImageUpload, UploadGuide } from '@/components/upload/Upload'
@@ -22,11 +22,14 @@ export default function MyProfile() {
   const [params, setParams] = useSearchParams()
   const navigate = useNavigate()
   const toast = useToast()
-  const active = (params.get('section') as SectionKey) || firstIncomplete(profile)
+  // chốt tab mặc định một lần (khi đã có hồ sơ): tính lại theo profile thì form nhảy tab ngay khi đang gõ
+  const defaultTab = useRef<ProfileTab | null>(null)
+  if (session && !defaultTab.current) defaultTab.current = firstIncomplete(profile)
+  const active = (params.get('section') as ProfileTab) || defaultTab.current || 'general'
   const returnTo = params.get('return')
   const returnEvent = useEvent(returnTo?.startsWith('/events/') ? (returnTo.split('/')[2] ?? '') : '').data ?? null
   const pct = completion(profile)
-  const idx = SECTIONS.findIndex((s) => s.key === active)
+  const idx = PROFILE_TABS.findIndex((s) => s.key === active)
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
@@ -35,22 +38,23 @@ export default function MyProfile() {
 
   if (!session) return <SignInGate />
 
-  const go = (key: SectionKey) => {
+  const go = (key: ProfileTab) => {
     const next = new URLSearchParams(params)
     next.set('section', key)
     setParams(next, { replace: true })
   }
   const proceed = () => {
-    toast({ kind: 'success', title: tx('Đã lưu', 'Saved'), description: L(SECTIONS[idx]!.title) })
-    if (idx < SECTIONS.length - 1) go(SECTIONS[idx + 1]!.key)
+    toast({ kind: 'success', title: tx('Đã lưu', 'Saved'), description: L(PROFILE_TABS[idx]!.title) })
+    if (idx < PROFILE_TABS.length - 1) go(PROFILE_TABS[idx + 1]!.key)
     else if (returnTo) navigate(returnTo)
   }
   // live: PUT /api/me/profile/{section}; the BE accepts incomplete data (BR-PRF-01) and computes completion
   const saveAndNext = () => {
     if (USE_MOCK) return proceed()
     setSaving(true)
-    uploadPending(profile[active])
-      .then((data) => { update(active, data); return liveApi.saveProfileSection(active, data) })
+    const section = tabSection(active)
+    uploadPending(profile[section])
+      .then((data) => { update(section, data); return liveApi.saveProfileSection(section, data) })
       .then(proceed, (err: Error) => toast({ kind: 'info', title: err.message }))
       .finally(() => setSaving(false))
   }
@@ -101,8 +105,8 @@ export default function MyProfile() {
         <nav className="min-w-0 lg:sticky lg:top-32 lg:self-start">
           {/* overflow-x cắt cả viền và shadow của mục đang chọn: mobile chừa p-1, desktop không cuộn nên tắt hẳn */}
           <ol className="no-scrollbar -m-1 flex gap-2 overflow-x-auto p-1 lg:m-0 lg:flex-col lg:gap-1 lg:overflow-visible lg:p-0">
-            {SECTIONS.map((s, i) => {
-              const done = sectionDone(profile, s.key)
+            {PROFILE_TABS.map((s, i) => {
+              const done = tabDone(profile, s.key)
               const on = s.key === active
               return (
                 <li key={s.key} className="shrink-0">
@@ -127,10 +131,10 @@ export default function MyProfile() {
         <div className="min-w-0 rounded-2xl border bg-card">
           <div className="flex items-start justify-between gap-4 border-b px-4 py-4 sm:px-6 sm:py-5 md:px-8">
             <div className="min-w-0">
-              <h2 className="text-xl font-bold">{L(SECTIONS[idx]!.title)}</h2>
-              <p className="mt-0.5 text-sm text-muted-foreground">{L(SECTIONS[idx]!.hint)}</p>
+              <h2 className="text-xl font-bold">{L(PROFILE_TABS[idx]!.title)}</h2>
+              <p className="mt-0.5 text-sm text-muted-foreground">{L(PROFILE_TABS[idx]!.hint)}</p>
             </div>
-            {sectionDone(profile, active) ? (
+            {tabDone(profile, active) ? (
               <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-success-soft px-2.5 py-1 text-xs font-semibold text-success"><Check className="size-3.5" /> {tx('Đã đủ', 'Complete')}</span>
             ) : (
               <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-muted px-2.5 py-1 text-xs font-semibold text-muted-foreground"><CircleDashed className="size-3.5" /> {tx('Còn thiếu', 'Incomplete')}</span>
@@ -140,6 +144,7 @@ export default function MyProfile() {
           <AnimatePresence mode="wait">
             <motion.div key={active} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.25 }} className="px-4 py-6 sm:px-6 sm:py-7 md:px-8">
               {active === 'general' && <GeneralForm p={profile} set={(v) => update('general', v)} />}
+              {active === 'members' && <MembersForm p={profile} set={(v) => update('general', v)} />}
               {active === 'capability' && <CapabilityForm p={profile} set={(v) => update('capability', v)} />}
               {active === 'media' && <MediaForm p={profile} set={(v) => update('media', v)} />}
               {active === 'exports' && <ExportsForm p={profile} set={(v) => update('exports', v)} />}
@@ -151,9 +156,9 @@ export default function MyProfile() {
           </AnimatePresence>
 
           <div className="flex flex-wrap items-center justify-between gap-3 border-t px-4 py-4 sm:px-6 md:px-8">
-            <Button variant="ghost" disabled={idx === 0} onClick={() => go(SECTIONS[idx - 1]!.key)}><ArrowLeft /> {tx('Phần trước', 'Previous')}</Button>
+            <Button variant="ghost" disabled={idx === 0} onClick={() => go(PROFILE_TABS[idx - 1]!.key)}><ArrowLeft /> {tx('Phần trước', 'Previous')}</Button>
             <Button onClick={saveAndNext} disabled={saving}>
-              {idx < SECTIONS.length - 1 ? (tx('Lưu & tiếp tục', 'Save & continue')) : returnTo ? (tx('Lưu & quay lại đăng ký', 'Save & back to registration')) : (tx('Lưu', 'Save'))} <ArrowRight />
+              {idx < PROFILE_TABS.length - 1 ? (tx('Lưu & tiếp tục', 'Save & continue')) : returnTo ? (tx('Lưu & quay lại đăng ký', 'Save & back to registration')) : (tx('Lưu', 'Save'))} <ArrowRight />
             </Button>
           </div>
         </div>
@@ -162,7 +167,7 @@ export default function MyProfile() {
   )
 }
 
-const firstIncomplete = (p: CompanyProfile): SectionKey => SECTIONS.find((s) => !sectionDone(p, s.key))?.key ?? 'general'
+const firstIncomplete = (p: CompanyProfile): ProfileTab => PROFILE_TABS.find((s) => !tabDone(p, s.key))?.key ?? 'general'
 
 /* ================================================================ building blocks */
 function ProgressRing({ value, label }: { value: number; label: string }) {
@@ -245,13 +250,23 @@ function Q({ label, required, children, hint }: { label: string; required?: bool
 /* ================================================================ sections */
 type FP<K extends keyof CompanyProfile> = { p: CompanyProfile; set: (v: CompanyProfile[K]) => void }
 
-function GeneralForm({ p, set }: FP<'general'>) {
+/** Nhãn các trường lấy từ hồ sơ đăng ký, chỉ đọc ở trang hồ sơ. */
+function useRegistrationLabels(p: CompanyProfile) {
   const { t, L } = useI18n()
-  const g = p.general
   const reg = p.registration
   const form = BUSINESS_FORMS.find((x) => x.value === reg.businessForm)
-  const fromReg = tx('Lấy từ hồ sơ đăng ký, không sửa tại đây', 'From registration, read-only', '등록 정보, 수정 불가')
-  const businessType = t.supplier.types[p.registration.businessType as keyof typeof t.supplier.types] ?? '—'
+  return {
+    fromReg: tx('Lấy từ hồ sơ đăng ký, không sửa tại đây', 'From registration, read-only', '등록 정보, 수정 불가'),
+    businessType: t.supplier.types[reg.businessType as keyof typeof t.supplier.types] ?? '—',
+    businessForm: (reg.businessForm === 'OTHER' && reg.otherBusinessForm) || (form ? L(form) : '—'),
+    industries: reg.industries.map((v) => { const o = OPTIONS.industries.find((x) => x.value === v); return o ? L(o) : v }).join(', ') || '—',
+  }
+}
+
+function GeneralForm({ p, set }: FP<'general'>) {
+  const g = p.general
+  const reg = p.registration
+  const { fromReg, businessType, businessForm } = useRegistrationLabels(p)
   const f = (k: keyof typeof g) => (e: { target: { value: string } }) => set({ ...g, [k]: e.target.value })
   return (
     <div className="space-y-7">
@@ -274,7 +289,7 @@ function GeneralForm({ p, set }: FP<'general'>) {
               <Field label={tx('Nơi cấp', 'Issued by', '발급 기관')} htmlFor="g-regplace" hint={fromReg}><Input id="g-regplace" value={reg.businessRegPlace} readOnly className="bg-muted" /></Field>
             </>
           )}
-          <Field label={tx('Loại hình doanh nghiệp', 'Legal form', '기업 형태')} htmlFor="g-form" hint={fromReg}><Input id="g-form" value={(reg.businessForm === 'OTHER' && reg.otherBusinessForm) || (form ? L(form) : '—')} readOnly className="bg-muted" /></Field>
+          <Field label={tx('Loại hình doanh nghiệp', 'Legal form', '기업 형태')} htmlFor="g-form" hint={fromReg}><Input id="g-form" value={businessForm} readOnly className="bg-muted" /></Field>
         </div>
       </div>
       <Q label={tx('Loại hình sở hữu', 'Ownership')} required><Choice cols={3} options={OPTIONS.ownership} value={g.ownership} onChange={(v) => set({ ...g, ownership: v })} /></Q>
@@ -283,6 +298,19 @@ function GeneralForm({ p, set }: FP<'general'>) {
       <Q label={tx('Doanh nghiệp do nữ làm chủ?', 'Women-owned business?')} hint={tx('≥51% vốn điều lệ thuộc nữ, hoặc nữ trực tiếp điều hành, hoặc >50% lao động là nữ', '≥51% female-owned, female-led, or >50% female workforce')}>
         <Choice cols={3} options={[withKo({ value: 'YES', vi: 'Có', en: 'Yes' }), withKo({ value: 'NO', vi: 'Không', en: 'No' })]} value={g.womenOwned} onChange={(v) => set({ ...g, womenOwned: v as 'YES' | 'NO' })} />
       </Q>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <BranchesFields value={g.branches} onChange={(v) => set({ ...g, branches: v })} />
+      </div>
+    </div>
+  )
+}
+
+/* Dữ liệu vẫn thuộc mục general (không có section riêng ở BE), chỉ tách tab hiển thị. */
+function MembersForm({ p, set }: FP<'general'>) {
+  const g = p.general
+  const f = (k: keyof typeof g) => (e: { target: { value: string } }) => set({ ...g, [k]: e.target.value })
+  return (
+    <div className="space-y-7">
       <div>
         <p className="mb-3 text-[14px] font-semibold">{tx('Người liên hệ #1 (giao thương)', 'Contact person #1 (trade)', '담당자 #1 (거래)')}</p>
         <div className="grid gap-4 sm:grid-cols-2">
@@ -295,7 +323,6 @@ function GeneralForm({ p, set }: FP<'general'>) {
       <div className="grid gap-4 sm:grid-cols-2">
         <p className="text-[14px] font-semibold sm:col-span-2">{tx('Lãnh đạo chủ chốt', 'Key leaders', '주요 경영진')}</p>
         <LeadersFields omit="contact1" value={g.keyLeaders} onChange={(role, field, v) => set({ ...g, keyLeaders: { ...g.keyLeaders, [role]: { ...g.keyLeaders[role], [field]: v } } })} />
-        <BranchesFields value={g.branches} onChange={(v) => set({ ...g, branches: v })} />
       </div>
     </div>
   )
@@ -304,9 +331,14 @@ function GeneralForm({ p, set }: FP<'general'>) {
 function CapabilityForm({ p, set }: FP<'capability'>) {
   useI18n()
   const c = p.capability
+  const { fromReg, businessType, businessForm, industries } = useRegistrationLabels(p)
   return (
     <div className="space-y-7">
-      <Q label={tx('Lĩnh vực hoạt động chính', 'Main sectors')} required><Chips options={OPTIONS.sectors} value={c.sectors} onChange={(v) => set({ ...c, sectors: v })} /></Q>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Field label={tx('Loại hình doanh nghiệp', 'Legal form', '기업 형태')} htmlFor="c-form" hint={fromReg}><Input id="c-form" value={businessForm} readOnly className="bg-muted" /></Field>
+        <Field label={tx('Hình thức doanh nghiệp', 'Business type', '사업 유형')} htmlFor="c-type" hint={fromReg}><Input id="c-type" value={businessType} readOnly className="bg-muted" /></Field>
+        <Field label={tx('Ngành hàng', 'Industries', '업종')} htmlFor="c-ind" hint={fromReg} className="sm:col-span-2"><Input id="c-ind" value={industries} readOnly className="bg-muted" /></Field>
+      </div>
       <Q label={tx('Tối đa 5 sản phẩm chủ lực', 'Up to 5 key products')} required>
         <div className="grid gap-2 sm:grid-cols-2">
           {Array.from({ length: 5 }).map((_, i) => (
@@ -314,10 +346,6 @@ function CapabilityForm({ p, set }: FP<'capability'>) {
           ))}
         </div>
       </Q>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Field label={tx('Sản phẩm phục vụ ngành nào?', 'Industries served')} htmlFor="c-ind"><Textarea id="c-ind" placeholder={tx('VD: Nội thất, xây dựng, bao bì', 'e.g. Furniture, construction, packaging', '예: 가구, 건설, 포장')} className="min-h-20" value={c.servedIndustries} onChange={(e) => set({ ...c, servedIndustries: e.target.value })} /></Field>
-        <Field label={tx('Khách hàng tiêu biểu', 'Key customers')} htmlFor="c-cus"><Textarea id="c-cus" placeholder={tx('VD: Công ty ABC (Đức), Công ty XYZ (Nhật Bản)', 'e.g. ABC GmbH (Germany), XYZ Co. (Japan)', '예: ABC GmbH (독일), XYZ Co. (일본)')} className="min-h-20" value={c.keyCustomers} onChange={(e) => set({ ...c, keyCustomers: e.target.value })} /></Field>
-      </div>
       <Q label={tx('Năng lực cung ứng hiện tại', 'Current supply capacity')} required><Choice options={OPTIONS.supplyCapacity} value={c.supplyCapacity} onChange={(v) => set({ ...c, supplyCapacity: v })} /></Q>
       <Q label={tx('Sản xuất theo thiết kế / thông số của khách hàng (OEM/ODM)?', 'Produce to customer design (OEM/ODM)?')} required><Choice options={OPTIONS.oem} value={c.oem} onChange={(v) => set({ ...c, oem: v })} /></Q>
       <div className="grid gap-4 sm:grid-cols-3">

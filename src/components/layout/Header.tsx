@@ -56,14 +56,10 @@ export function Header() {
   ]
 
   return (
-    <header className="sticky top-0 z-50">
+    // top âm = chiều cao utility bar: nó cuộn đi tự nhiên, không đổi layout nên không bị scroll anchoring kéo giật
+    <header className="sticky -top-[34px] z-50">
       {/* utility bar */}
-      <motion.div
-        initial={false}
-        animate={{ height: scrolled ? 0 : 34, opacity: scrolled ? 0 : 1 }}
-        transition={{ duration: 0.25 }}
-        className="overflow-hidden bg-navy text-white/75"
-      >
+      <div className="bg-navy text-white/75">
         <div className="container-page flex h-[34px] items-center justify-between gap-6 text-[12px]">
           <p className="min-w-0 truncate">
             <span className="mr-2 inline-block size-1.5 rounded-full bg-gold-bright align-middle" />
@@ -76,7 +72,7 @@ export function Header() {
             <span className="inline-flex items-center gap-1.5"><Phone className="size-3" /> {t.top.hotline}: 1900 6 1111</span>
           </div>
         </div>
-      </motion.div>
+      </div>
 
       {/* main bar */}
       <div className={cn('border-b transition-[background,box-shadow] duration-300', scrolled ? 'glass shadow-[0_8px_30px_-12px_rgb(8_8_46/0.18)]' : 'bg-background')}>

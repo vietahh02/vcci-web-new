@@ -11,7 +11,7 @@ import { Link } from 'react-router-dom'
 import type { EventItem } from '@/data/mock'
 import { Button, buttonClass, Textarea } from '@/components/ui/primitives'
 import { useI18n } from '@/lib/i18n'
-import { completion, SECTIONS, sectionDone, useProfile, type SectionKey } from '@/lib/profile'
+import { completion, missingTab, SECTIONS, sectionDone, useProfile, type SectionKey } from '@/lib/profile'
 import { cn, formatDate } from '@/lib/utils'
 import { tx } from '@/lib/tx'
 
@@ -80,7 +80,7 @@ export function ProfileRegistration({ ev, onDone }: { ev: EventItem; onDone: (in
                 {ok ? (
                   <span className="text-xs text-muted-foreground">{tx('Lấy từ hồ sơ', 'From profile')}</span>
                 ) : (
-                  <Link to={`/account/profile?section=${k}&return=${encodeURIComponent(back)}`} className="text-xs font-semibold text-primary">{tx('Bổ sung', 'Complete')} →</Link>
+                  <Link to={`/account/profile?section=${missingTab(profile, k)}&return=${encodeURIComponent(back)}`} className="text-xs font-semibold text-primary">{tx('Bổ sung', 'Complete')} →</Link>
                 )}
               </li>
             )
