@@ -7,8 +7,8 @@ import { CompanyMark, CountryChip } from '@/components/brand'
 import { Countdown, LiveDot, Reveal } from '@/components/effects'
 import { EventParticipants } from '@/components/event/EventParticipants'
 import { EventRecap } from '@/components/event/EventRecap'
-import { eventTimeRange } from '@/lib/eventStatus'
-import { showStartsAt, showToEvent } from '@/lib/showEvent'
+import { eventTimeRange, isOnlineFormat } from '@/lib/eventStatus'
+import { showOrganisations, showStartsAt, showToEvent } from '@/lib/showEvent'
 import { tx } from '@/lib/tx'
 import { ShowFeedbackDialog } from '@/components/show/ShowFeedback'
 import { BusinessChatButton } from '@/components/chat/BusinessChatButton'
@@ -47,6 +47,8 @@ export function ShowEventDetail({ show }: { show: Show }) {
   const { t, L, locale } = useI18n()
   const x = useShowT()
   const visitor = useShowVisitor(show.id)
+  // ONLINE: products go straight into the show, so nothing about booths exists on this page (EV8-16). OFFLINE/HYBRID keep all of it.
+  const online = isOnlineFormat(show.format)
   const [tab, setTab] = useState<Tab>('overview')
   const [regOpen, setRegOpen] = useState(false)
   const [booth, setBooth] = useState<ShowBooth | null>(null)
@@ -61,7 +63,7 @@ export function ShowEventDetail({ show }: { show: Show }) {
 
   const tabs: { value: Tab; label: string }[] = [
     { value: 'overview', label: x.tabs.overview },
-    { value: 'booths', label: `${x.tabs.booths} (${show.booths.length})` },
+    ...(online ? [] : [{ value: 'booths' as const, label: `${x.tabs.booths} (${show.booths.length})` }]),
     { value: 'products', label: `${x.tabs.products} (${productCount})` },
     ...(show.launches.length ? [{ value: 'launches' as const, label: x.tabs.launches }] : []),
     { value: 'agenda', label: `${x.tabs.agenda} (${show.sessions.length})` },
@@ -94,8 +96,8 @@ export function ShowEventDetail({ show }: { show: Show }) {
               {show.physicalVenue && <span className="inline-flex items-center gap-2 text-white/60"><MapPin className="size-4" /> {x.physicalVenue}: {L(show.physicalVenue)}</span>}
               <span className="inline-flex items-center gap-2"><Building2 className="size-4 text-gold-bright" /> {L(show.organizer)}</span>
             </div>
-            <dl className="mt-5 grid max-w-xl grid-cols-4 gap-4">
-              {[[show.booths.length, x.stats.booths], [productCount, x.stats.products], [show.sessions.length, x.stats.sessions], [show.issuedBadges, x.stats.badges]].map(([n, l]) => (
+            <dl className={cn('mt-5 grid max-w-xl gap-4', online ? 'grid-cols-3' : 'grid-cols-4')}>
+              {[...(online ? [] : [[show.booths.length, x.stats.booths]]), [productCount, x.stats.products], [show.sessions.length, x.stats.sessions], [show.issuedBadges, x.stats.badges]].map(([n, l]) => (
                 <div key={l}><dd className="text-xl font-extrabold tabular-nums md:text-2xl">{formatNumber(Number(n), locale)}</dd><dt className="text-[11px] font-semibold uppercase tracking-wider text-white/60">{l}</dt></div>
               ))}
             </dl>
@@ -143,8 +145,8 @@ export function ShowEventDetail({ show }: { show: Show }) {
         <div className="py-8">
           {tab === 'overview' && show.status === 'ENDED' && <div className="mb-12"><EventRecap ev={showToEvent(show)} /></div>}
           {tab === 'overview' && <Overview show={show} />}
-          {tab === 'overview' && <div className="-mx-4 sm:mx-0"><EventParticipants ev={showToEvent(show)} /></div>}
-          {tab === 'booths' && <Booths show={show} onOpen={setBooth} />}
+          {tab === 'overview' && <div className="-mx-4 sm:mx-0"><EventParticipants ev={showToEvent(show)} listed={online ? showOrganisations(show) : undefined} /></div>}
+          {tab === 'booths' && !online && <Booths show={show} onOpen={setBooth} />}
           {tab === 'products' && <ProductsTab show={show} onAsk={openInquiry} onOpenBooth={setBooth} />}
           {tab === 'launches' && <Launches show={show} visitor={visitor} onRegister={() => setRegOpen(true)} onOpenBooth={setBooth} />}
           {tab === 'agenda' && <Agenda show={show} visitor={visitor} onRegister={() => setRegOpen(true)} onOpen={setSession} />}
@@ -154,8 +156,8 @@ export function ShowEventDetail({ show }: { show: Show }) {
 
       <VisitorRegistration show={show} open={regOpen} onOpenChange={setRegOpen} visitor={visitor} />
       <ShowFeedbackDialog show={show} visitor={visitor} />
-      <BoothDialog show={show} booth={booth} onClose={() => setBooth(null)} onAsk={openInquiry} />
-      <InquiryDialog show={show} ctx={inquiry} badge={visitor.badge} onClose={() => setInquiry(null)} onSent={(id) => visitor.addInquiry(id)} />
+      {!online && <BoothDialog show={show} booth={booth} onClose={() => setBooth(null)} onAsk={openInquiry} />}
+      {!online && <InquiryDialog show={show} ctx={inquiry} badge={visitor.badge} onClose={() => setInquiry(null)} onSent={(id) => visitor.addInquiry(id)} />}
       <SessionDialog show={show} session={session} badgeOk={hasValidBadge} onClose={() => setSession(null)} onRegister={() => { setSession(null); setRegOpen(true) }} />
     </>
   )
@@ -167,6 +169,7 @@ function Overview({ show }: { show: Show }) {
   const x = useShowT()
   const now = new Date().toISOString().slice(0, 10)
   const contact = [show.contact.name, show.contact.email, show.contact.phone].filter(Boolean)
+  const online = isOnlineFormat(show.format)
   return (
     <div className="grid gap-10 lg:grid-cols-[1fr_380px]">
       <div className="space-y-10">
@@ -175,7 +178,7 @@ function Overview({ show }: { show: Show }) {
           <p className="mt-4 inline-flex items-center gap-2 rounded-lg bg-primary-soft px-3 py-2 text-sm font-medium text-primary"><Globe2 className="size-4" /> {x.direction[show.direction]}</p>
         </section>
         <HomeBlocks show={show} />
-        {show.phases.length > 0 && <section>
+        {!online && show.phases.length > 0 && <section>
           <h2 className="text-xl font-extrabold">{x.phasesTitle}</h2>
           <ol className="relative mt-5 space-y-4 border-l-2 border-dashed border-border pl-6">
             {show.phases.map((p) => {
@@ -193,7 +196,7 @@ function Overview({ show }: { show: Show }) {
             })}
           </ol>
         </section>}
-        {show.pavilions.length > 0 && <section>
+        {!online && show.pavilions.length > 0 && <section>
           <h2 className="text-xl font-extrabold">{x.pavTitle}</h2>
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
             {show.pavilions.map((pv) => (
@@ -214,13 +217,13 @@ function Overview({ show }: { show: Show }) {
             {show.rules.map((r, i) => <li key={i} className="flex gap-2"><CheckCircle2 className="mt-0.5 size-4 shrink-0 text-success" /> {L(r)}</li>)}
           </ul>
         </div>}
-        {(show.targetMarkets.length > 0 || show.industries.length > 0 || contact.length > 0 || show.boothCapacity > 0) && <div className="rounded-2xl border bg-card p-5 text-sm">
+        {(show.targetMarkets.length > 0 || show.industries.length > 0 || contact.length > 0 || (!online && show.boothCapacity > 0)) && <div className="rounded-2xl border bg-card p-5 text-sm">
           <dl className="space-y-3">
             {show.targetMarkets.length > 0 && <div><dt className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{x.markets}</dt><dd className="mt-1 flex flex-wrap gap-1.5">{show.targetMarkets.map((c) => <CountryChip key={c} code={c} />)}</dd></div>}
             {show.industries.length > 0 && <div><dt className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{x.industries}</dt><dd className="mt-1 flex flex-wrap gap-1.5">{show.industries.map((i) => <Badge key={i} variant="muted">{i}</Badge>)}</dd></div>}
             {contact.length > 0 && <div><dt className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{x.contact}</dt><dd className="mt-1">{contact.map((v) => <span key={v} className="block">{v}</span>)}</dd></div>}
           </dl>
-          {show.boothCapacity > 0 && <div className="mt-4">
+          {!online && show.boothCapacity > 0 && <div className="mt-4">
             <div className="mb-1.5 flex justify-between text-xs text-muted-foreground"><span>{x.stats.booths}</span><span>{show.booths.length}/{show.boothCapacity}</span></div>
             <Progress value={(show.booths.length / show.boothCapacity) * 100} />
           </div>}
@@ -429,25 +432,41 @@ function InquiryDialog({ show, ctx, badge, onClose, onSent }: { show: Show; ctx:
 function ProductsTab({ show, onAsk, onOpenBooth }: { show: Show; onAsk: (b: ShowBooth, p?: ShowProduct) => void; onOpenBooth: (b: ShowBooth) => void }) {
   const { L } = useI18n()
   const x = useShowT()
+  const online = isOnlineFormat(show.format)
   const all = show.booths.flatMap((b) => b.products.map((p) => ({ b, p }))).sort((a, c) => Number(!!c.p.featured) - Number(!!a.p.featured))
+  if (!all.length) return <p className="text-muted-foreground">{tx('Chưa có sản phẩm nào.', 'No products yet.', '아직 제품이 없습니다.')}</p>
   return (
     <div className="grid gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-4">
-      {all.map(({ b, p }) => (
-        <div key={`${b.id}-${p.id}`} className="group">
+      {all.map(({ b, p }) => {
+        const toProduct = online && p.linkId ? `/products/${p.linkId}` : null
+        const picture = (
           <div className="relative aspect-square overflow-hidden rounded-xl bg-muted">
             <img src={img(p.image, 500, 500)} alt="" loading="lazy" className="size-full object-cover transition-transform duration-700 group-hover:scale-105" />
             {p.featured && <Badge variant="gold" className="absolute left-3 top-3">{x.featured}</Badge>}
           </div>
-          <p className="mt-3 line-clamp-2 font-semibold leading-snug">{L(p.name)}</p>
-          <button type="button" onClick={() => onOpenBooth(b)} className="mt-0.5 text-xs text-muted-foreground hover:text-primary">{L(b.org)}</button>
+        )
+        return (
+        <div key={`${b.id}-${p.id}`} className="group">
+          {toProduct ? <Link to={toProduct} className="block" aria-label={L(p.name)}>{picture}</Link> : picture}
+          <p className="mt-3 line-clamp-2 font-semibold leading-snug">{toProduct ? <Link to={toProduct} className="hover:text-primary">{L(p.name)}</Link> : L(p.name)}</p>
+          {online ? <OrgName booth={b} /> : <button type="button" onClick={() => onOpenBooth(b)} className="mt-0.5 text-xs text-muted-foreground hover:text-primary">{L(b.org)}</button>}
           <div><BusinessChatButton organizationId={b.businessId} showName={L(show.title)} className="text-xs" /></div>
           <p className="mt-1 text-xs text-muted-foreground">{x.priceOnRequest}{p.moq ? ` · ${x.moq} ${p.moq}` : ''}</p>
           {/* DEC-EV8-08: a catalogue product is quoted on its own page (RfqDialog); the booth dialog stays for unlinked products */}
-          {p.linkId ? <Link to={`/products/${p.linkId}`} className={buttonClass('outline', 'sm', 'mt-2')}>{x.askPrice}</Link> : <Button size="sm" variant="outline" className="mt-2" onClick={() => onAsk(b, p)}>{x.askPrice}</Button>}
+          {p.linkId ? <Link to={`/products/${p.linkId}`} className={buttonClass('outline', 'sm', 'mt-2')}>{x.askPrice}</Link> : !online && <Button size="sm" variant="outline" className="mt-2" onClick={() => onAsk(b, p)}>{x.askPrice}</Button>}
         </div>
-      ))}
+        )
+      })}
     </div>
   )
+}
+
+/** The business behind a product of an ONLINE show: its public profile when known. */
+function OrgName({ booth }: { booth: ShowBooth }) {
+  const { L } = useI18n()
+  return booth.businessId
+    ? <Link to={`/suppliers/${booth.businessId}`} className="mt-0.5 block text-xs text-muted-foreground hover:text-primary">{L(booth.org)}</Link>
+    : <p className="mt-0.5 text-xs text-muted-foreground">{L(booth.org)}</p>
 }
 
 /* ------------------------------------------------------------ launches */
@@ -489,7 +508,7 @@ function Launches({ show, visitor, onRegister, onOpenBooth }: { show: Show; visi
                     <div className="min-w-0 flex-1">
                       <p className="text-xs font-semibold text-primary">{fmtDay(l.start, locale)} · {fmtTime(l.start, locale)}–{fmtTime(l.end, locale)}</p>
                       <p className="line-clamp-1 font-bold">{L(p.name)}</p>
-                      <button type="button" onClick={() => onOpenBooth(b)} className="text-xs text-muted-foreground hover:text-primary">{L(b.org)}</button>
+                      {isOnlineFormat(show.format) ? <OrgName booth={b} /> : <button type="button" onClick={() => onOpenBooth(b)} className="text-xs text-muted-foreground hover:text-primary">{L(b.org)}</button>}
                       <div className="mt-2 flex items-center justify-between gap-2">
                         <span className="text-xs text-muted-foreground">{formatNumber(l.followers + (on ? 1 : 0), locale)} {x.followers}</span>
                         <Button size="sm" variant={on ? 'secondary' : 'outline'} onClick={() => toggleFollow(l.id, on)}>{on ? <BellRing /> : <Bell />} {on ? x.following : x.follow}</Button>

@@ -90,7 +90,7 @@ export function MyProducts() {
                   onClick={() => act(catalogApi.setMyProductVisible(p.id, !p.visible), p.visible ? tx('Đã ẩn sản phẩm', 'Product hidden', '제품을 숨겼습니다') : tx('Đã hiển thị sản phẩm', 'Product visible', '제품을 공개했습니다'))}>
                   {p.visible ? <EyeOff /> : <Eye />}
                 </Button>
-                <Button size="icon" variant="ghost" aria-label="delete" onClick={() => { if (window.confirm(tx('Xoá sản phẩm này? Sản phẩm cũng bị gỡ khỏi các gian hàng.', 'Delete this product? It is also removed from your booths.', '이 제품을 삭제할까요? 부스에서도 제거됩니다.'))) act(catalogApi.deleteMyProduct(p.id), tx('Đã xoá', 'Deleted', '삭제됨')) }}><Trash2 /></Button>
+                <Button size="icon" variant="ghost" aria-label="delete" onClick={() => { if (window.confirm(tx('Xoá sản phẩm này? Sản phẩm cũng bị gỡ khỏi các hội chợ đang tham gia.', 'Delete this product? It is also removed from the trade shows it is in.', '이 제품을 삭제할까요? 참가 중인 박람회에서도 제거됩니다.'))) act(catalogApi.deleteMyProduct(p.id), tx('Đã xoá', 'Deleted', '삭제됨')) }}><Trash2 /></Button>
               </div>
             </li>
           ))}

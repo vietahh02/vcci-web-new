@@ -13,6 +13,7 @@ import { businesses, type EventItem } from '@/data/mock'
 import { useI18n } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
 import { tx } from '@/lib/tx'
+import { isOnlineShowEvent } from '@/lib/eventStatus'
 
 /** Seller → domestic business, Buyer → foreign business, Support service → sponsor. */
 const COLUMNS: { side: Side; icon: typeof MapPin; tone: string; title: () => string; hint: () => string }[] = [
@@ -26,10 +27,13 @@ const FEATURED = 3
 
 const verifiedIds = new Set(businesses.filter((x) => x.verified).map((x) => x.id))
 
-export function EventParticipants({ ev, onRegister }: { ev: EventItem; onRegister?: string }) {
+export function EventParticipants({ ev, onRegister, listed }: { ev: EventItem; onRegister?: string; listed?: Participant[] }) {
   const { L, lang } = useI18n()
   const toast = useToast()
-  const all = useEventParticipants(ev).data ?? []
+  const remote = useEventParticipants(ev).data ?? []
+  // `listed`: the businesses from the show's own payload, used until the API has a participant list for this show
+  const all = remote.length ? remote : listed ?? []
+  const onlineShow = isOnlineShowEvent(ev)
   const [onlineOnly, setOnlineOnly] = useState(false)
   const [showAll, setShowAll] = useState<Partial<Record<Side, boolean>>>({})
   const live = ev.eventStatus === 'ONGOING'
@@ -90,6 +94,7 @@ export function EventParticipants({ ev, onRegister }: { ev: EventItem; onRegiste
     </li>
   )
 
+  const columns = onlineShow ? COLUMNS.filter((c) => all.some((p) => p.side === c.side)) : COLUMNS
   // Show overview: no block without data. Webinar tab (onRegister set) keeps its "no organisations yet" columns and register prompt.
   if (!all.length && !onRegister) return null
 
@@ -107,8 +112,8 @@ export function EventParticipants({ ev, onRegister }: { ev: EventItem; onRegiste
         {live && <label className="flex w-fit items-center gap-2 text-sm font-medium"><input type="checkbox" checked={onlineOnly} onChange={(e) => setOnlineOnly(e.target.checked)} /> {tx('Chỉ hiện đơn vị đang trực tuyến', 'Show only organisations online now', '접속 중인 기관만 보기')}</label>}
       </div>
 
-      <div className="mt-6 grid items-start gap-5 lg:grid-cols-3">
-        {COLUMNS.map(({ side, icon: Icon, tone, title, hint }) => {
+      <div className={cn('mt-6 grid items-start gap-5', columns.length === 3 ? 'lg:grid-cols-3' : columns.length === 2 && 'lg:grid-cols-2')}>
+        {columns.map(({ side, icon: Icon, tone, title, hint }) => {
           const total = all.filter((p) => p.side === side)
           const matched = total.filter((p) => !onlineOnly || p.online)
           const expanded = !!showAll[side]

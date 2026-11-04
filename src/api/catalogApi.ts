@@ -3,6 +3,7 @@
  * Own-product endpoints take the organisation from the signed-in session on the BE, so no organisation id is ever sent.
  */
 import { apiFetch, toPage, type Page } from './http'
+import { isOnlineFormat } from '@/lib/eventStatus'
 import type { Raw } from './adapters/common'
 
 export interface Specs { label: string; value: string }
@@ -154,12 +155,12 @@ export interface OpenShow {
   pavilions: { id: string; name: string; phaseId?: string }[]
   boothFee: boolean
 }
-/** Shows that currently accept booth applications (UPCOMING and not past the application deadline). */
+/** OFFLINE/HYBRID shows that currently accept booth applications (UPCOMING and not past the application deadline). ONLINE shows have no booths. */
 export async function openShows(): Promise<OpenShow[]> {
   const list = toPage<Raw>(await apiFetch('/api/public/shows', { query: { status: 'UPCOMING', page: 0, size: 50 }, anon: true }), 50).items
   const details = await Promise.all(list.map((s) => apiFetch<Raw>(`/api/public/shows/${encodeURIComponent(String(s.id))}`, { anon: true }).catch(() => null)))
   const now = Date.now()
-  return details.filter((d): d is Raw => !!d && (!d.boothApplicationCloseAt || new Date(d.boothApplicationCloseAt).getTime() > now)).map((d) => ({
+  return details.filter((d): d is Raw => !!d && !isOnlineFormat(d.format) && (!d.boothApplicationCloseAt || new Date(d.boothApplicationCloseAt).getTime() > now)).map((d) => ({
     id: String(d.id), name: d.name ?? '', startDate: d.startDate ?? '', endDate: d.endDate ?? '', closeAt: d.boothApplicationCloseAt ?? undefined,
     phases: (d.phases ?? []).map((p: Raw) => ({ id: String(p.id), name: p.name ?? '' })),
     pavilions: (d.pavilions ?? []).map((p: Raw) => ({ id: String(p.id), name: p.name ?? '', phaseId: p.phaseId == null ? undefined : String(p.phaseId) })),
@@ -167,6 +168,16 @@ export async function openShows(): Promise<OpenShow[]> {
   }))
 }
 export const myBooths = async () => (await apiFetch<Raw[]>('/api/shows/my/booths')).map(toBooth)
+/**
+ * My booths at OFFLINE/HYBRID shows. An ONLINE show keeps one internal booth per organisation to hold its products (CR-2026-008 §4.6);
+ * that record is not a booth to the user. A show whose format cannot be read stays listed.
+ */
+export async function myOnSiteBooths(): Promise<MyBooth[]> {
+  const all = await myBooths()
+  const ids = [...new Set(all.map((b) => b.showId))]
+  const online = new Set((await Promise.all(ids.map((id) => apiFetch<Raw>(`/api/public/shows/${encodeURIComponent(id)}`, { anon: true }).then((d) => (isOnlineFormat(d?.format) ? id : ''), () => '')))).filter(Boolean))
+  return all.filter((b) => !online.has(b.showId))
+}
 export const createBooth = async (showId: string, b: BoothInput) => toBooth(await apiFetch<Raw>(`/api/shows/${encodeURIComponent(showId)}/booths`, { method: 'POST', json: b }))
 export const updateBooth = async (id: string, b: BoothInput) => toBooth(await apiFetch<Raw>(`/api/shows/booths/${encodeURIComponent(id)}`, { method: 'PUT', json: b }))
 export const submitBooth = async (id: string) => toBooth(await apiFetch<Raw>(`/api/shows/booths/${encodeURIComponent(id)}/submit`, { method: 'POST' }))
@@ -177,7 +188,28 @@ export const payBooth = async (id: string, bill: File, transactionCode?: string)
   if (transactionCode) fd.append('transactionCode', transactionCode)
   return toBooth(await apiFetch<Raw>(`/api/shows/booths/${encodeURIComponent(id)}/payment`, { method: 'POST', form: fd }))
 }
-/** Active products of my organisation that can still be put on a booth. */
+/* ------------------------------------------------- products in an ONLINE show (CR-2026-008 §4.6) */
+export interface OnlineShow { id: string; name: string; status: string; startDate: string; endDate: string }
+export interface ShowProductRow { productId: string; name: string; image?: string }
+const toShowProduct = (r: Raw): ShowProductRow => ({ productId: String(r.productId ?? r.id), name: r.name ?? r.productName ?? '', image: r.image ?? undefined })
+/** ONLINE shows a business can still put products into: under way first, then the soonest upcoming. */
+export async function onlineShows(): Promise<OnlineShow[]> {
+  const byStatus = (status: string) => apiFetch('/api/public/shows', { query: { status, page: 0, size: 50 }, anon: true }).then((r) => toPage<Raw>(r, 50).items)
+  const [ongoing, upcoming] = await Promise.all([byStatus('ONGOING'), byStatus('UPCOMING')])
+  return [...ongoing, ...upcoming].filter((s) => isOnlineFormat(s.format)).map((s) => ({ id: String(s.id), name: s.name ?? '', status: s.status ?? '', startDate: s.startDate ?? '', endDate: s.endDate ?? '' }))
+}
+/** GET /api/shows/{id}/my-products */
+export const myShowProducts = async (showId: string) => {
+  const r = await apiFetch<unknown>(`/api/shows/${encodeURIComponent(showId)}/my-products`)
+  return toPage<Raw>(r, 100).items.map(toShowProduct)
+}
+/** POST /api/shows/{id}/my-products: the products must be mine and public; consent is required. */
+export const addShowProducts = (showId: string, productIds: string[], consentPublic: boolean) =>
+  apiFetch(`/api/shows/${encodeURIComponent(showId)}/my-products`, { method: 'POST', json: { productIds: productIds.map(Number), consentPublic } })
+/** DELETE /api/shows/{id}/my-products/{productId} */
+export const removeShowProduct = (showId: string, productId: string) => apiFetch(`/api/shows/${encodeURIComponent(showId)}/my-products/${encodeURIComponent(productId)}`, { method: 'DELETE' })
+
+/** Active products of my organisation that can still be put on a booth or into an ONLINE show. */
 export const boothPickableProducts = async (keyword = '') =>
   (await apiFetch<Raw[]>('/api/shows/my/products', { query: { keyword } })).map((p) => ({ id: String(p.id), name: String(p.name ?? ''), image: p.image as string | undefined }))
 export const addBoothProduct = (boothId: string, productId: string, purpose = 'SELL') =>

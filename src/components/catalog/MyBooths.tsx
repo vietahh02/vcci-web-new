@@ -1,14 +1,19 @@
-/** "Gian hàng của tôi": a signed-in business applies for a booth in an open Show, fills the booth profile, adds its products, submits for review and pays the fee. */
+/**
+ * "Hội chợ của tôi", decided per show by its format.
+ * ONLINE: tick products and consent; they go straight into the show, nothing else to fill in (CR-2026-008 §4.6, DEC-EV8-12).
+ * OFFLINE/HYBRID: apply for a booth, fill the booth profile, add products, submit for review and pay the fee. This part only exists while such a show is open or the business already has a booth in one.
+ */
 import { Plus, Send, Trash2, Undo2 } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { catalogApi } from '@/api'
-import type { BoothInput, MyBooth, OpenShow } from '@/api/catalogApi'
+import type { BoothInput, MyBooth, OnlineShow, OpenShow, ShowProductRow } from '@/api/catalogApi'
 import { fileSrc, uploadFile } from '@/api/uploads'
 import { Dialog, DialogContent, useToast } from '@/components/ui/overlay'
 import { Badge, Button, Field, Input, Skeleton, Textarea } from '@/components/ui/primitives'
 import { Select } from '@/components/ui/select'
 import { useI18n } from '@/lib/i18n'
 import { tx } from '@/lib/tx'
+import { formatDate } from '@/lib/utils'
 
 const GOALS = ['SELL', 'EXPORT', 'SEEK_DISTRIBUTOR', 'SEEK_INVESTOR', 'SEEK_PARTNER'] as const
 // Nhãn tính lúc render (không phải lúc nạp module) để đổi ngôn ngữ không bị kẹt ở ngôn ngữ lúc tải trang.
@@ -36,16 +41,20 @@ export function MyBooths() {
   const [picker, setPicker] = useState<MyBooth | null>(null)
 
   const load = useCallback(() => {
-    catalogApi.myBooths().then(setBooths, (e: Error) => { setBooths([]); setError(e.message) })
+    catalogApi.myOnSiteBooths().then(setBooths, (e: Error) => { setBooths([]); setError(e.message) })
   }, [])
   useEffect(load, [load])
   useEffect(() => { catalogApi.openShows().then(setShows, () => setShows([])) }, [])
 
   const act = (p: Promise<unknown>, ok: string) => p.then(() => { toast({ kind: 'success', title: ok }); load() }, (e: Error) => toast({ kind: 'info', title: e.message }))
   const free = shows.filter((s) => !(booths ?? []).some((b) => b.showId === s.id && b.status !== 'WITHDRAWN'))
+  const onSite = shows.length > 0 || (booths?.length ?? 0) > 0 || !!error
 
   return (
-    <div>
+    <div className="space-y-10">
+      <OnlineShowProducts />
+      {onSite && <section>
+      <h2 className="mb-4 text-lg font-extrabold">{tx('Gian hàng ở Show trực tiếp', 'Booths at on-site shows', '오프라인 쇼 부스')}</h2>
       {error && <p className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>}
       <div className="mb-5 flex flex-wrap items-center gap-3">
         <p className="text-sm text-muted-foreground">{tx('Show đang nhận đăng ký gian:', 'Shows open for booth applications:', '부스 신청 가능한 쇼:')} {shows.length}</p>
@@ -91,9 +100,83 @@ export function MyBooths() {
           })}
         </ul>
       )}
+      </section>}
       {form && <BoothDialog show={form.show} booth={form.booth} onClose={(saved) => { setForm(null); if (saved) load() }} />}
-      {picker && <ProductPicker booth={picker} onClose={(saved) => { setPicker(null); if (saved) load() }} />}
+      {picker && <ProductPicker taken={new Set(picker.products.map((p) => p.productId))} pickOne={(id) => catalogApi.addBoothProduct(picker.id, id)} onClose={(saved) => { setPicker(null); if (saved) load() }} />}
     </div>
+  )
+}
+
+/** ONLINE shows a business can join: pick a show, tick products, consent. Withdrawing a product is just as direct. */
+function OnlineShowProducts() {
+  const toast = useToast()
+  const { locale } = useI18n()
+  const [shows, setShows] = useState<OnlineShow[] | null>(null)
+  const [placed, setPlaced] = useState<Record<string, ShowProductRow[]>>({})
+  const [picker, setPicker] = useState<OnlineShow | null>(null)
+
+  const loadPlaced = useCallback(async (list: OnlineShow[]) => {
+    const rows = await Promise.all(list.map((s) => catalogApi.myShowProducts(s.id).then((r) => [s.id, r] as const, (e: Error) => { console.warn(`[show] my-products ${s.id}: ${e.message}`); return [s.id, [] as ShowProductRow[]] as const })))
+    setPlaced(Object.fromEntries(rows))
+  }, [])
+  useEffect(() => {
+    catalogApi.onlineShows().then((list) => { setShows(list); return loadPlaced(list) }, () => setShows([]))
+  }, [loadPlaced])
+
+  const remove = (s: OnlineShow, p: ShowProductRow) => catalogApi.removeShowProduct(s.id, p.productId).then(
+    () => { toast({ kind: 'success', title: tx('Đã gỡ sản phẩm khỏi Show', 'Product removed from the show', '쇼에서 제품을 제거했습니다') }); if (shows) void loadPlaced(shows) },
+    (e: Error) => toast({ kind: 'info', title: e.message }),
+  )
+  const status = (s: OnlineShow) => (s.status === 'ONGOING' ? tx('Đang diễn ra', 'Happening now', '진행 중') : tx('Sắp diễn ra', 'Upcoming', '예정'))
+  const inShow = (shows ?? []).filter((s) => (placed[s.id] ?? []).length > 0)
+  const free = (shows ?? []).filter((s) => !(placed[s.id] ?? []).length)
+
+  return (
+    <section>
+      {!shows ? <Skeleton className="h-24" /> : shows.length === 0 ? (
+        <p className="rounded-xl border border-dashed p-10 text-center text-sm text-muted-foreground">{tx('Hiện chưa có Show trực tuyến nào đang nhận sản phẩm.', 'No online show is taking products right now.', '현재 제품을 받는 온라인 쇼가 없습니다.')}</p>
+      ) : (
+        <>
+          <div className="mb-5 flex flex-wrap items-center gap-3">
+            <p className="text-sm text-muted-foreground">{tx('Show đang nhận sản phẩm:', 'Shows taking products:', '제품을 받는 쇼:')} {shows.length}</p>
+            {free.map((s) => <Button key={s.id} size="sm" variant="outline" onClick={() => setPicker(s)}><Plus /> {s.name}</Button>)}
+          </div>
+          {inShow.length === 0 ? (
+            <p className="rounded-xl border border-dashed p-10 text-center text-sm text-muted-foreground">{tx('Bạn chưa đưa sản phẩm vào Show nào. Chọn một Show ở trên.', 'You have not put products into a show yet. Pick a show above.', '아직 쇼에 제품을 넣지 않았습니다. 위에서 쇼를 선택하세요.')}</p>
+          ) : (
+            <ul className="space-y-4">
+              {inShow.map((s) => (
+                <li key={s.id} className="rounded-xl border p-5" data-testid="my-show">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <p className="font-bold">{s.name}</p>
+                    <Badge variant="secondary">{status(s)}</Badge>
+                    {s.startDate && <span className="text-xs text-muted-foreground">{formatDate(s.startDate, locale)} – {formatDate(s.endDate || s.startDate, locale)}</span>}
+                  </div>
+                  <div className="mt-4">
+                    <p className="mb-2 text-sm font-semibold">{tx('Sản phẩm trong Show', 'Products in the show', '쇼의 제품')} ({placed[s.id]!.length})</p>
+                    <ul className="flex flex-wrap gap-2">
+                      {placed[s.id]!.map((p) => (
+                        <li key={p.productId} className="flex items-center gap-2 rounded-full border py-1 pl-3 pr-1 text-xs">
+                          {p.name}
+                          <button aria-label={tx('Gỡ sản phẩm', 'Remove product', '제품 제거')} className="rounded-full p-1 hover:bg-muted" onClick={() => void remove(s, p)}><Trash2 className="size-3" /></button>
+                        </li>
+                      ))}
+                      <Button size="sm" variant="outline" onClick={() => setPicker(s)}><Plus /> {tx('Thêm sản phẩm', 'Add products', '제품 추가')}</Button>
+                    </ul>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </>
+      )}
+      {picker && <ProductPicker
+        title={`${tx('Đưa sản phẩm vào Show', 'Put products into the show', '쇼에 제품 넣기')} - ${picker.name}`}
+        taken={new Set((placed[picker.id] ?? []).map((p) => p.productId))}
+        pickMany={(ids, consent) => catalogApi.addShowProducts(picker.id, ids, consent)}
+        onClose={(saved) => { setPicker(null); if (saved && shows) void loadPlaced(shows) }}
+      />}
+    </section>
   )
 }
 
@@ -125,22 +208,53 @@ function PaymentBox({ booth, onDone }: { booth: MyBooth; onDone: () => void }) {
   )
 }
 
-function ProductPicker({ booth, onClose }: { booth: MyBooth; onClose: (saved: boolean) => void }) {
+/** Picks from the business's visible products. `pickOne` adds on click (booth of an OFFLINE/HYBRID show); `pickMany` ticks several and asks for public consent, never pre-ticked (ONLINE show). */
+function ProductPicker({ title, taken, pickOne, pickMany, onClose }: { title?: string; taken: Set<string>; pickOne?: (id: string) => Promise<unknown>; pickMany?: (ids: string[], consentPublic: boolean) => Promise<unknown>; onClose: (saved: boolean) => void }) {
   const toast = useToast()
   const [items, setItems] = useState<{ id: string; name: string }[] | null>(null)
+  const [ticked, setTicked] = useState<Set<string>>(new Set())
+  const [consent, setConsent] = useState(false)
+  const [busy, setBusy] = useState(false)
   useEffect(() => { catalogApi.boothPickableProducts().then(setItems, () => setItems([])) }, [])
-  const on = new Set(booth.products.map((p) => p.productId))
+  const rows = (items ?? []).filter((i) => !taken.has(i.id))
+  const toggle = (id: string) => setTicked((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n })
+  const submit = () => {
+    if (!pickMany) return
+    setBusy(true)
+    pickMany([...ticked], consent).then(
+      () => { toast({ kind: 'success', title: tx('Đã đưa sản phẩm vào Show', 'Products added to the show', '쇼에 제품을 넣었습니다') }); onClose(true) },
+      (e: Error) => { setBusy(false); toast({ kind: 'info', title: e.message }) },
+    )
+  }
   return (
     <Dialog open onOpenChange={(v) => { if (!v) onClose(false) }}>
-      <DialogContent title={tx('Gắn sản phẩm vào gian', 'Add product to booth', '부스에 제품 추가')} description={tx('Chỉ sản phẩm đang hiển thị của bạn. Sản phẩm gắn vào gian không cần duyệt lại.', 'Only your visible products. Products added to a booth need no second review.', '공개 중인 제품만 표시됩니다. 부스에 추가한 제품은 다시 검토할 필요가 없습니다.')}>
+      <DialogContent title={title ?? tx('Gắn sản phẩm vào gian', 'Add product to booth', '부스에 제품 추가')} description={pickMany
+        ? tx('Chỉ sản phẩm đang hiển thị của bạn. Sản phẩm lên Show ngay, không cần duyệt lại.', 'Only your visible products. They appear in the show at once, with no second review.', '공개 중인 제품만 표시됩니다. 다시 검토 없이 바로 쇼에 표시됩니다.')
+        : tx('Chỉ sản phẩm đang hiển thị của bạn. Sản phẩm gắn vào gian không cần duyệt lại.', 'Only your visible products. Products added to a booth need no second review.', '공개 중인 제품만 표시됩니다. 부스에 추가한 제품은 다시 검토할 필요가 없습니다.')}>
         <div className="max-h-[60dvh] space-y-2 overflow-y-auto p-6">
-          {!items ? <Skeleton className="h-20" /> : items.length === 0 ? <p className="text-sm text-muted-foreground">{tx('Bạn chưa có sản phẩm đang hiển thị.', 'You have no visible products yet.', '공개 중인 제품이 없습니다.')}</p> : items.filter((i) => !on.has(i.id)).map((i) => (
-            <div key={i.id} className="flex items-center justify-between rounded-lg border p-3 text-sm">
-              <span>{i.name}</span>
-              <Button size="sm" onClick={() => catalogApi.addBoothProduct(booth.id, i.id).then(() => { toast({ kind: 'success', title: tx('Đã gắn sản phẩm', 'Product added', '제품 추가됨') }); onClose(true) }, (e: Error) => toast({ kind: 'info', title: e.message }))}>{tx('Gắn', 'Add', '추가')}</Button>
-            </div>
-          ))}
+          {!items ? <Skeleton className="h-20" /> : items.length === 0 ? <p className="text-sm text-muted-foreground">{tx('Bạn chưa có sản phẩm đang hiển thị.', 'You have no visible products yet.', '공개 중인 제품이 없습니다.')}</p>
+            : rows.length === 0 ? <p className="text-sm text-muted-foreground">{tx('Mọi sản phẩm đang hiển thị của bạn đã được đưa vào.', 'All your visible products are already in.', '공개 중인 제품이 모두 포함되어 있습니다.')}</p>
+            : rows.map((i) => pickMany ? (
+              <label key={i.id} className="flex cursor-pointer items-center gap-3 rounded-lg border p-3 text-sm">
+                <input type="checkbox" checked={ticked.has(i.id)} onChange={() => toggle(i.id)} />
+                <span>{i.name}</span>
+              </label>
+            ) : (
+              <div key={i.id} className="flex items-center justify-between rounded-lg border p-3 text-sm">
+                <span>{i.name}</span>
+                <Button size="sm" onClick={() => pickOne?.(i.id).then(() => { toast({ kind: 'success', title: tx('Đã gắn sản phẩm', 'Product added', '제품 추가됨') }); onClose(true) }, (e: Error) => toast({ kind: 'info', title: e.message }))}>{tx('Gắn', 'Add', '추가')}</Button>
+              </div>
+            ))}
         </div>
+        {pickMany && rows.length > 0 && (
+          <div className="space-y-4 border-t p-6">
+            <label className="flex items-start gap-2 text-sm"><input type="checkbox" className="mt-1" checked={consent} onChange={(e) => setConsent(e.target.checked)} /> {tx('Tôi đồng ý công khai các sản phẩm này và tên doanh nghiệp trên trang Show.', 'I agree to show these products and my business name publicly on the show page.', '이 제품과 기업명을 쇼 페이지에 공개하는 데 동의합니다.')}</label>
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="ghost" onClick={() => onClose(false)}>{tx('Huỷ', 'Cancel', '취소')}</Button>
+              <Button disabled={!ticked.size || !consent || busy} onClick={submit}><Plus /> {busy ? '…' : tx(`Đưa ${ticked.size || ''} sản phẩm vào Show`, `Add ${ticked.size || ''} products`, `제품 ${ticked.size || ''}개 넣기`)}</Button>
+            </div>
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   )

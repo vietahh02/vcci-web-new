@@ -52,7 +52,7 @@ export function Header() {
     { to: '/events', label: t.nav.events, live: true },
     { to: '/legal-ai', label: t.nav.legal },
     { to: '/about', label: t.nav.about },
-    ...(session ? [{ to: '/account/catalog', label: tx('Sản phẩm & gian hàng', 'Products & booths', '제품 및 부스') }] : []),
+    ...(session ? [{ to: '/account/catalog', label: tx('Sản phẩm & hội chợ', 'Products & trade shows', '제품 및 박람회') }] : []),
   ]
 
   return (

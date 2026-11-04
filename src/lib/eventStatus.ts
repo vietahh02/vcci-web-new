@@ -4,6 +4,10 @@
  */
 import type { EventItem, EventStatus } from '@/data/mock'
 
+/** No format means ONLINE, as in the BE. Booths, venues and on-site wording are decided per show from this, so an OFFLINE show brings them back on its own. */
+export const isOnlineFormat = (format?: string | null) => !format || format === 'ONLINE'
+export const isOnlineShowEvent = (ev: Pick<EventItem, 'eventType' | 'format'>) => ev.eventType === 'SHOW' && isOnlineFormat(ev.format)
+
 export type RegState = 'OPEN' | 'CLOSING' | 'FULL' | 'CLOSED' | 'NOT_OPEN' | 'NONE'
 
 /** On air right now? A Show under way is not necessarily broadcasting: only its API label says so. */
