@@ -11,7 +11,10 @@ ARG VITE_USE_MOCK=false
 # Chat hỗ trợ (REST + Socket.IO của vcci-livestream-chat); để trống = widget báo chưa cấu hình
 ARG VITE_CHAT_URL=
 ARG VITE_CHAT_SOCKET_URL=
-ENV VITE_API_BASE_URL=$VITE_API_BASE_URL VITE_USE_MOCK=$VITE_USE_MOCK VITE_CHAT_URL=$VITE_CHAT_URL VITE_CHAT_SOCKET_URL=$VITE_CHAT_SOCKET_URL
+# Phòng xem trực tiếp: vcci-live-service (trống = cùng host portal) và domain Jitsi (trống = phòng hội thảo báo chưa cấu hình)
+ARG VITE_LIVE_URL=
+ARG VITE_JITSI_DOMAIN=
+ENV VITE_API_BASE_URL=$VITE_API_BASE_URL VITE_USE_MOCK=$VITE_USE_MOCK VITE_CHAT_URL=$VITE_CHAT_URL VITE_CHAT_SOCKET_URL=$VITE_CHAT_SOCKET_URL VITE_LIVE_URL=$VITE_LIVE_URL VITE_JITSI_DOMAIN=$VITE_JITSI_DOMAIN
 RUN npm run build
 
 FROM nginx:1.27-alpine

@@ -1,0 +1,66 @@
+import { tx } from '@/lib/tx'
+
+/** Chữ của phòng xem. Component gọi hàm này cũng đọc useI18n() để vẽ lại khi đổi ngôn ngữ. */
+export const liveText = () => ({
+  loading: tx('Đang tải phòng xem…', 'Loading the room…', '방을 불러오는 중…'),
+  notStarted: tx('Phiên chưa bắt đầu', 'This session has not started', '세션이 아직 시작되지 않았습니다'),
+  notStartedHint: tx('Trang tự cập nhật khi phiên bắt đầu.', 'This page updates by itself when the session starts.', '세션이 시작되면 페이지가 자동으로 갱신됩니다.'),
+  waitingHost: tx('Người phát đang chuẩn bị', 'The host is getting ready', '진행자가 준비 중입니다'),
+  waitingHostHint: tx('Hình ảnh sẽ tự hiện khi có tín hiệu.', 'The picture appears as soon as the signal arrives.', '신호가 들어오면 화면이 자동으로 표시됩니다.'),
+  reconnecting: tx('Đang kết nối lại luồng phát…', 'Reconnecting to the stream…', '스트림에 다시 연결하는 중…'),
+  ended: tx('Phiên đã kết thúc', 'This session has ended', '세션이 종료되었습니다'),
+  endedNoVod: tx('Bản ghi chưa có hoặc đang được xử lý.', 'The recording is not available yet or is still processing.', '녹화본이 아직 없거나 처리 중입니다.'),
+  connectError: tx('Không kết nối được phòng xem', 'Could not connect to the room', '방에 연결하지 못했습니다'),
+  connectErrorHint: tx('Kiểm tra mạng rồi thử lại.', 'Check your network and try again.', '네트워크를 확인한 후 다시 시도하세요.'),
+  streamError: tx('Không tải được luồng phát', 'Could not load the stream', '스트림을 불러오지 못했습니다'),
+  sessionMissing: tx('Không tìm thấy phiên phát', 'Session not found', '세션을 찾을 수 없습니다'),
+  retry: tx('Thử lại', 'Try again', '다시 시도'),
+  noStream: tx('Chưa có phát trực tiếp', 'No live broadcast yet', '아직 생중계가 없습니다'),
+  noStreamHint: tx('Sự kiện này chưa gắn phiên phát trực tiếp trên Portal.', 'This event has no live broadcast on the Portal yet.', '이 행사에는 아직 포털 생중계가 연결되지 않았습니다.'),
+  noRecording: tx('Phiên này chưa có bản ghi để xem lại.', 'This session has no recording to watch yet.', '이 세션에는 아직 다시 볼 녹화본이 없습니다.'),
+  noLiveLink: tx('Phiên này chưa có phát trực tiếp trên Portal.', 'This session has no live broadcast on the Portal yet.', '이 세션에는 아직 포털 생중계가 없습니다.'),
+  openRecording: tx('Mở bản ghi', 'Open recording', '녹화본 열기'),
+  backToEvent: tx('Về trang sự kiện', 'Back to the event', '행사 페이지로'),
+  needBadge: tx('Cần thẻ tham quan để xem phiên này', 'A visitor badge is required to watch', '이 세션을 보려면 방문 배지가 필요합니다'),
+  needBadgeHint: tx('Đăng ký tham quan ở trang sự kiện rồi quay lại.', 'Register as a visitor on the event page, then come back.', '행사 페이지에서 방문 등록 후 다시 오세요.'),
+  unmute: tx('Bật tiếng', 'Unmute', '소리 켜기'),
+  mute: tx('Tắt tiếng', 'Mute', '소리 끄기'),
+
+  // hội thảo
+  jitsiMissing: tx('Phòng hội thảo chưa được cấu hình', 'The webinar room is not configured', '웨비나 방이 구성되지 않았습니다'),
+  jitsiLoadError: tx('Không tải được phòng hội thảo', 'Could not load the webinar room', '웨비나 방을 불러오지 못했습니다'),
+  jitsiConnecting: tx('Đang vào phòng…', 'Joining the room…', '방에 입장하는 중…'),
+  observerTitle: tx('Vào dự thính', 'Join as an observer', '참관으로 입장'),
+  observerHint: tx('Bạn xem và nghe, không bật được micro hay camera.', 'You can watch and listen, without microphone or camera.', '시청만 가능하며 마이크와 카메라는 사용할 수 없습니다.'),
+  observerName: tx('Tên hiển thị', 'Display name', '표시 이름'),
+  observerJoin: tx('Vào phòng', 'Join', '입장'),
+  orLogin: tx('Đã đăng ký tham gia? Đăng nhập', 'Registered? Sign in', '등록하셨나요? 로그인'),
+  joinKeyTitle: tx('Nhập mã tham gia', 'Enter your join code', '참가 코드 입력'),
+  joinKeyHint: tx('Mã nằm trong email duyệt đăng ký của bạn.', 'The code is in your registration approval email.', '코드는 등록 승인 이메일에 있습니다.'),
+  joinKeyLabel: tx('Mã tham gia', 'Join code', '참가 코드'),
+  insecureMedia: tx(
+    'Trang đang chạy qua HTTP nên trình duyệt chặn micro và camera. Bạn vẫn xem và nghe được.',
+    'This page is served over HTTP, so the browser blocks the microphone and camera. You can still watch and listen.',
+    '이 페이지는 HTTP로 제공되어 브라우저가 마이크와 카메라를 차단합니다. 시청과 청취는 가능합니다.',
+  ),
+  dismiss: tx('Đóng', 'Dismiss', '닫기'),
+
+  // chat
+  chatMissing: tx('Chat phiên chưa được cấu hình.', 'Session chat is not configured.', '세션 채팅이 구성되지 않았습니다.'),
+  chatWaiting: tx('Chat mở khi có phiên phát.', 'Chat opens when a session is available.', '세션이 열리면 채팅이 시작됩니다.'),
+  chatEmpty: tx('Chưa có tin nhắn nào.', 'No messages yet.', '아직 메시지가 없습니다.'),
+  chatLoadError: tx('Không tải được tin nhắn.', 'Could not load messages.', '메시지를 불러오지 못했습니다.'),
+  chatReconnecting: tx('Đang kết nối lại chat…', 'Reconnecting chat…', '채팅에 다시 연결하는 중…'),
+  chatLogin: tx('Đăng nhập để trò chuyện', 'Sign in to chat', '로그인하고 채팅하기'),
+  chatNotLive: tx('Có thể gửi tin khi phiên đang phát.', 'You can send messages while the session is live.', '세션이 진행 중일 때 메시지를 보낼 수 있습니다.'),
+  chatEnded: tx('Phiên đã kết thúc, chat chỉ còn để đọc.', 'The session has ended; chat is read-only.', '세션이 종료되어 채팅은 읽기 전용입니다.'),
+  chatBanned: tx('Bạn đã bị ban tổ chức chặn gửi tin trong phiên này.', 'The organizer has blocked you from chatting in this session.', '주최 측이 이 세션에서 귀하의 채팅을 차단했습니다.'),
+  chatTooFast: tx('Bạn gửi quá nhanh hoặc nội dung chưa hợp lệ. Thử lại sau ít giây.', 'You are sending too fast or the message is invalid. Try again shortly.', '너무 빠르게 보내거나 내용이 올바르지 않습니다. 잠시 후 다시 시도하세요.'),
+  chatSendError: tx('Không gửi được tin nhắn. Thử lại.', 'Could not send the message. Try again.', '메시지를 보내지 못했습니다. 다시 시도하세요.'),
+  chatToBottom: tx('Xuống tin mới nhất', 'Jump to latest', '최신 메시지로'),
+  webinarChatParticipant: tx('Hội thảo trao đổi ngay trong phòng: mở nút Chat trên thanh công cụ của phòng.', 'Webinar chat runs inside the room: use the Chat button on the room toolbar.', '웨비나 채팅은 방 안에서 진행됩니다. 방 도구 모음의 채팅 버튼을 사용하세요.'),
+  webinarChatObserver: tx('Hội thảo trao đổi ngay trong phòng. Người dự thính chỉ xem và nghe.', 'Webinar chat runs inside the room. Observers can only watch and listen.', '웨비나 채팅은 방 안에서 진행됩니다. 참관자는 시청만 가능합니다.'),
+
+  // nhắn tin doanh nghiệp
+  messageBusiness: tx('Nhắn tin doanh nghiệp', 'Message this company', '기업에 메시지 보내기'),
+})
