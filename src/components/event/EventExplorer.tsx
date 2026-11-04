@@ -31,8 +31,8 @@ const typeTone: Record<EventType, string> = {
   TRAINING: 'bg-emerald-500', MATCHMAKING: 'bg-violet-500', SUPPORT_1TO1: 'bg-teal-500', SHOW: 'bg-fuchsia-500',
 }
 const SECTOR_KEYWORDS: Record<string, string[]> = {
-  FOOD: ['Food', 'Seafood', 'Coffee', 'Spices'], FURNITURE: ['Furniture'], CRAFT: ['Handicraft'], MECH: ['Machinery'], ELEC: ['Electronics'],
-  PACKAGING: ['Packaging'], COSMETICS: ['Cosmetics'], TEXTILE: ['Textiles', 'Fashion'],
+  FOOD_DRINK: ['Food', 'Seafood', 'Coffee', 'Spices'], AGRICULTURE: ['Food', 'Coffee', 'Spices'], HOME_LIVING: ['Furniture', 'Handicraft'],
+  INDUSTRIAL_MANUFACTURING: ['Machinery'], ELECTRONICS_TECH: ['Electronics'], PACKAGING_PRINTING: ['Packaging'], FASHION_BEAUTY: ['Textiles', 'Fashion', 'Cosmetics'],
 }
 
 export const formatLabel = (f: EventFormat | undefined) =>
@@ -164,7 +164,7 @@ export function EventExplorer({ list }: { list: EventItem[] }) {
 
   /* "Mine" lens — grouped by what the participant must do next */
   const mine = useMemo(() => {
-    const keywords = new Set([...profile.capability.sectors, ...profile.registration.industries].flatMap((c) => SECTOR_KEYWORDS[c] ?? []))
+    const keywords = new Set(profile.registration.industries.flatMap((c) => SECTOR_KEYWORDS[c] ?? []))
     const todo = (e: EventItem) => { if (!USE_MOCK) return myActive.find((r) => r.eventId === e.id)?.missingPrep ?? 0; const ts = prepTasks(e); const done = readPrepDone(e.id); return ts.filter((x) => !done.includes(x.id)).length }
     const reg = filtered.filter((e) => regIds.has(e.id))
     const needsAction = reg.filter((e) => e.eventStatus === 'UPCOMING' && todo(e) > 0)

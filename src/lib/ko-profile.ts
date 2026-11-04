@@ -29,11 +29,8 @@ export const KO: Record<string, string> = {
   'Title': '직책',
   'Phone / Zalo': '전화 / Zalo',
   // capability
-  'Main sectors': '주요 분야',
   'Up to 5 key products': '주력 제품 (최대 5개)',
   'Product': '제품',
-  'Industries served': '공급 대상 산업',
-  'Key customers': '주요 고객',
   'Current supply capacity': '현재 공급 능력',
   'Produce to customer design (OEM/ODM)?': '고객 설계·사양에 따른 생산 (OEM/ODM) 가능 여부',
   'Monthly capacity': '월 생산 능력',

@@ -274,7 +274,7 @@ function Capability({ pp, open }: { pp: PublicProfile; open: (slides: Slide[], i
     ['cap-certs', tx('Chứng nhận', 'Certificates', '인증')],
     ['cap-markets', tx('Thị trường & xuất khẩu', 'Markets & export', '시장 & 수출')],
     ['cap-qc', tx('Kiểm soát chất lượng', 'Quality control', '품질 관리')],
-    ['cap-customers', tx('Sản phẩm & khách hàng', 'Products & customers', '제품 & 고객')],
+    ['cap-customers', tx('Sản phẩm', 'Products', '제품')],
     ...(yt ? [['cap-video', tx('Video giới thiệu', 'Intro video', '소개 영상')]] : []),
     ['cap-docs', tx('Tài liệu', 'Documents', '자료')],
   ] as [string, string][]
@@ -381,10 +381,6 @@ function Capability({ pp, open }: { pp: PublicProfile; open: (slides: Slide[], i
             <div>
               <p className="mb-2 text-sm font-semibold">{tx('Sản phẩm chủ lực', 'Key products', '주력 제품')}</p>
               <ul className="space-y-1.5 text-sm">{c.mainProducts.map((m) => <li key={m} className="flex gap-2"><Award className="mt-0.5 size-4 shrink-0 text-gold" /> {m}</li>)}</ul>
-            </div>
-            <div>
-              <p className="mb-2 text-sm font-semibold">{tx('Khách hàng tiêu biểu', 'Key customers', '주요 고객')}</p>
-              <p className="text-sm text-muted-foreground">{c.keyCustomers || tx('Doanh nghiệp chưa công khai', 'Not disclosed by the company', '기업이 공개하지 않음')}</p>
             </div>
           </div>
         </Block>

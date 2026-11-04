@@ -37,7 +37,7 @@ export function toBusiness(r: Raw): Business {
 const empty: PublicProfile = {
   own: false, nameEn: '',
   facts: { legalForm: '', businessType: '', founded: '', charterCapital: '', employees: '', website: '', fax: '', representative: { name: '', title: '' }, contact: { name: '', title: '', phone: '', email: '' }, legalVerified: [] },
-  capability: { factoryArea: '', productionLines: '', monthlyCapacity: '', exportPct: '', moq: '', oem: '', supply: '', mainProducts: [], keyCustomers: '', qcProcess: '', highlights: [] },
+  capability: { factoryArea: '', productionLines: '', monthlyCapacity: '', exportPct: '', moq: '', oem: '', supply: '', mainProducts: [], qcProcess: '', highlights: [] },
   exports: { share: '', markets: [], modes: [], traceability: '' },
   certificates: [], gallery: [], documents: [], video: '', needs: { partnerTypes: [], opportunities: [] },
 }
