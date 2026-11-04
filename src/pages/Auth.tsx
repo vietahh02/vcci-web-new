@@ -304,12 +304,9 @@ export function Register() {
             go(step + 1)
           } else if (USE_MOCK) setDone(true)
           else {
-            const fd = new FormData(e.currentTarget)
-            const password = String(fd.get('password') ?? '')
-            if (password !== String(fd.get('confirmPassword') ?? '')) return toast({ kind: 'info', title: tx('Mật khẩu nhập lại không khớp', 'Passwords do not match', '비밀번호가 일치하지 않습니다') })
             setBusy(true)
             // files go up only now (token + fileIds); the BE links them to the new organization
-            uploadPending(r).then((sent) => liveApi.registerBusiness({ ...sent, loginEmail: sent.loginEmail || sent.email, password })).then(
+            uploadPending(r).then((sent) => liveApi.registerBusiness({ ...sent, loginEmail: sent.loginEmail || sent.email })).then(
               () => { clearRegisterUploadToken(); setDone(true) },
               (err: Error) => toast({ kind: 'info', title: err.message }),
             ).finally(() => setBusy(false))
@@ -436,8 +433,6 @@ export function Register() {
                   <ImageUpload rule="logo" value={r.logo} onChange={(v) => set('logo', v)} />
                 </div>
                 <Field label={tx('Email đăng nhập', 'Login email', '로그인 이메일') + ' *'} htmlFor="ae" className="sm:col-span-2" hint={tx('Mặc định là email doanh nghiệp, có thể đổi', 'Defaults to the company email; you can change it', '기본값은 기업 이메일이며 변경할 수 있습니다')}><Input id="ae" placeholder={'login@company.vn'} type="email" required value={r.loginEmail || r.email} onChange={(e) => set('loginEmail', e.target.value)} /></Field>
-                <Field label={t.auth.password} htmlFor="ap"><PasswordInput id="ap" name="password" placeholder={tx('Tối thiểu 8 ký tự', 'At least 8 characters', '8자 이상')} /></Field>
-                <Field label={t.auth.confirmPassword} htmlFor="ap2"><PasswordInput id="ap2" name="confirmPassword" placeholder={tx('Nhập lại mật khẩu', 'Re-enter password', '비밀번호 재입력')} /></Field>
                 <label className="flex items-start gap-2.5 text-sm text-muted-foreground sm:col-span-2">
                   <input type="checkbox" required className="mt-0.5 size-4 accent-[var(--primary)]" /> {t.auth.agree}
                 </label>

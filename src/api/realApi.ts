@@ -247,8 +247,8 @@ export interface RegisterInput {
   nameVi: string; nameEn: string; taxCode: string; businessForm: string; businessType: string; industries: string[]
   charterCapital: string; charterCurrency: string; totalRevenue: string; reportYear: string; employees: string; website: string; fax: string
   country: string; province: string; address: string; email: string; phone: string; repName: string; repTitle: string; repEmail: string; repPhone: string
-  /** Phase 2: login email, logo path (`/api/files/{id}/content`), legal files (uploaded through `uploadFile`), password (BE ignores it unless Q4b picks self-set) */
-  loginEmail?: string; logo?: string; legalDocs?: { license?: { fileId?: string } | null; tax?: { fileId?: string } | null }; password?: string
+  /** Phase 2: login email, logo path (`/api/files/{id}/content`), legal files (uploaded through `uploadFile`) */
+  loginEmail?: string; logo?: string; legalDocs?: { license?: { fileId?: string } | null; tax?: { fileId?: string } | null }
   /** V70: tên viết tắt, đăng ký kinh doanh, tổng tài sản, "Lãnh đạo chủ chốt", chi nhánh, hồ sơ yêu cầu (≤ 5 file/nhóm) */
   shortName?: string; otherBusinessForm?: string; businessRegNo?: string; businessRegDate?: string; businessRegPlace?: string; totalAssets?: string
   leaders?: KeyLeaders; branches?: Branch[]; docs?: Partial<Record<RegDocGroup, { fileId?: string }[]>>
@@ -258,7 +258,7 @@ export type KeyLeaders = Record<'chairman' | 'ceo' | 'chiefOfOffice' | 'contact1
 export interface Branch { name: string; address: string }
 export type RegDocGroup = 'application' | 'license' | 'finance' | 'payment' | 'other'
 const fileIds = (xs?: { fileId?: string }[]) => (xs ?? []).map((x) => x.fileId).filter((x): x is string => !!x)
-/** POST /api/business/register. Files must be uploaded first (`uploadFile`, anonymous token is sent back as `uploadToken`). `password` is sent for Q4b but the BE ignores it by default (account created after approval + activation link). */
+/** POST /api/business/register. Files must be uploaded first (`uploadFile`, anonymous token is sent back as `uploadToken`). The account is created after approval (activation link). */
 export const registerBusiness = (r: RegisterInput) => apiFetch('/api/business/register', {
   method: 'POST', anon: true,
   json: {
@@ -266,7 +266,6 @@ export const registerBusiness = (r: RegisterInput) => apiFetch('/api/business/re
     industry: Array.from(new Set(r.industries.map((c) => categoryIndustry.get(c)).filter(Boolean))),
     industryIds: r.industries.map(Number).filter((n) => Number.isFinite(n)),
     loginEmail: r.loginEmail || undefined,
-    ...(r.password ? { password: r.password, confirmPassword: r.password } : {}),
     uploadToken: registerUploadToken() ?? undefined,
     logoFileId: fileIdOf(r.logo),
     ...(r.docs
