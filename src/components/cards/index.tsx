@@ -17,20 +17,26 @@ import { cn, daysLeft, formatDate, formatMoney, formatNumber, img } from '@/lib/
 export function ProductCard({ product, className }: { product: Product; className?: string }) {
   const { t, L, locale } = useI18n()
   return (
-    <Link to={`/products/${product.id}`} className={cn('group block', className)}>
+    <Link
+      to={`/products/${product.id}`}
+      className={cn('group flex h-full flex-col overflow-hidden rounded-2xl border bg-card shadow-sm outline-none transition-[box-shadow,border-color,translate] duration-300 hover:-translate-y-1 hover:border-primary/30 hover:shadow-xl hover:shadow-navy/10 focus-visible:ring-2 focus-visible:ring-primary', className)}
+    >
       <SmartImage
         src={img(product.productImages[0]!, 520, 520)}
         alt={L(product.productName)}
-        className="aspect-square rounded-xl"
+        className="aspect-square"
         imgClassName="group-hover:scale-105"
       />
-      <p className="mt-3 line-clamp-2 text-[14px] font-medium leading-snug text-foreground/90 group-hover:text-primary">{L(product.productName)}</p>
-      <p className="mt-1.5 text-[16px] font-semibold tracking-tight">
-        {formatMoney(product.priceFob)} <span className="text-xs font-normal text-muted-foreground">/ {product.unit} FOB</span>
-      </p>
-      <p className="mt-0.5 text-xs text-muted-foreground">
-        {t.common.moq} {formatNumber(product.moq, locale)} {product.unit} · {product.origin.split(',')[0]}
-      </p>
+      <div className="flex flex-1 flex-col p-3.5">
+        <p className="line-clamp-2 text-[14px] font-semibold leading-snug transition-colors group-hover:text-primary">{L(product.productName)}</p>
+        <p className="mt-auto pt-2.5 text-[17px] font-bold tracking-tight">
+          {formatMoney(product.priceFob)} <span className="text-xs font-normal text-muted-foreground">/ {product.unit} FOB</span>
+        </p>
+        <p className="mt-2.5 flex flex-col gap-0.5 border-t pt-2.5 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between sm:gap-2">
+          <span className="shrink-0">{t.common.moq} {formatNumber(product.moq, locale)} {product.unit}</span>
+          <span className="flex min-w-0 items-center gap-1"><MapPin className="size-3 shrink-0" /><span className="truncate">{product.origin.split(',')[0]}</span></span>
+        </p>
+      </div>
     </Link>
   )
 }
