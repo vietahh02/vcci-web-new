@@ -11,7 +11,7 @@ import { eventTimeRange } from '@/lib/eventStatus'
 import { showStartsAt, showToEvent } from '@/lib/showEvent'
 import { tx } from '@/lib/tx'
 import { ShowFeedbackDialog } from '@/components/show/ShowFeedback'
-import { BusinessChatButton } from '@/components/live/BusinessChatButton'
+import { BusinessChatButton } from '@/components/chat/BusinessChatButton'
 import { showLivePath } from '@/components/live/liveRef'
 import { SessionWatch } from '@/components/live/SessionWatch'
 import { BadgeCard, VisitorRegistration } from '@/components/show/VisitorRegistration'
@@ -368,7 +368,7 @@ function BoothDialog({ show, booth, onClose, onAsk }: { show: Show; booth: ShowB
             <Badge variant={booth.side === 'SELLER' ? 'default' : 'gold'}>{booth.side === 'SELLER' ? x.sellerSide : x.supportSide}</Badge>
             <CountryChip code={booth.country} />
             {booth.businessId && <Link to={`/suppliers/${booth.businessId}`} className="text-sm font-semibold text-primary hover:underline">{x.viewCompany}</Link>}
-            <BusinessChatButton businessId={booth.businessId} onOpen={onClose} />
+            <BusinessChatButton organizationId={booth.businessId} showName={L(show.title)} onOpen={onClose} />
           </div>
           <p className="text-sm leading-relaxed text-muted-foreground">{L(booth.about)}</p>
           <h3 className="font-bold">{x.products}</h3>
@@ -440,7 +440,7 @@ function ProductsTab({ show, onAsk, onOpenBooth }: { show: Show; onAsk: (b: Show
           </div>
           <p className="mt-3 line-clamp-2 font-semibold leading-snug">{L(p.name)}</p>
           <button type="button" onClick={() => onOpenBooth(b)} className="mt-0.5 text-xs text-muted-foreground hover:text-primary">{L(b.org)}</button>
-          <div><BusinessChatButton businessId={b.businessId} className="text-xs" /></div>
+          <div><BusinessChatButton organizationId={b.businessId} showName={L(show.title)} className="text-xs" /></div>
           <p className="mt-1 text-xs text-muted-foreground">{x.priceOnRequest}{p.moq ? ` · ${x.moq} ${p.moq}` : ''}</p>
           {/* DEC-EV8-08: a catalogue product is quoted on its own page (RfqDialog); the booth dialog stays for unlinked products */}
           {p.linkId ? <Link to={`/products/${p.linkId}`} className={buttonClass('outline', 'sm', 'mt-2')}>{x.askPrice}</Link> : <Button size="sm" variant="outline" className="mt-2" onClick={() => onAsk(b, p)}>{x.askPrice}</Button>}

@@ -28,8 +28,12 @@ const OPEN_B2B = 'vcci:chat-b2b'
 /** Mở widget chat ở kênh B2B với doanh nghiệp `businessId` (nút "Chat ngay" / "Nhắn tin" ở trang sản phẩm, nhà cung cấp). */
 export const openB2bChat = (businessId: string) => window.dispatchEvent(new CustomEvent(OPEN_B2B, { detail: businessId }))
 
-export function onOpenB2bChat(fn: (businessId: string) => void) {
-  const h = (e: Event) => fn(String((e as CustomEvent<string>).detail))
+export function onOpenB2bChat(fn: (businessId: string, draft?: string) => void) {
+  const h = (e: Event) => {
+    const d = (e as CustomEvent<string | { businessId: string; draft?: string }>).detail
+    if (typeof d === 'string') fn(d)
+    else fn(d.businessId, d.draft)
+  }
   window.addEventListener(OPEN_B2B, h)
   return () => window.removeEventListener(OPEN_B2B, h)
 }

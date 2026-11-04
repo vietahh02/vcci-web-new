@@ -34,7 +34,9 @@ export function ChatWidget() {
   const [supportStatus, setSupportStatus] = useState<SupportStatus | null>(null)
   const [showTop, setShowTop] = useState(false)
   // DN cần mở chat B2B (từ openB2bChat) khi chưa sẵn sàng: chờ đăng nhập + nạp danh tính xong mới tạo hội thoại
-  const pendingB2b = useRef<string | null>(null)
+  const pendingB2b = useRef<{ id: string; draft?: string } | null>(null)
+  // câu mở đầu điền sẵn cho hội thoại vừa mở từ openBusinessChat; rời hội thoại đó thì bỏ
+  const [opener, setOpener] = useState('')
   const listRef = useRef<HTMLDivElement>(null)
 
   const configured = chatConfigured()
@@ -46,6 +48,7 @@ export function ChatWidget() {
   const myOrgId = chat.me?.organizationId
 
   const openSupport = useCallback(() => {
+    setOpener('')
     setChannel('support')
     setInConv(true)
     setReply(null)
@@ -53,6 +56,7 @@ export function ChatWidget() {
   }, [activate, support])
 
   const openConv = (id: string, ch: 'support' | 'b2b' = 'b2b') => {
+    setOpener('')
     setReply(null)
     setChannel(ch)
     setInConv(true)
@@ -60,18 +64,20 @@ export function ChatWidget() {
   }
 
   const backToHub = () => {
+    setOpener('')
     setInConv(false)
     void activate(null)
   }
 
   const openB2b = useCallback(
-    (businessId: string) => {
+    (businessId: string, draft?: string) => {
       setOpen(true)
       if (businessId === myOrgId) {
         setInConv(false)
         setError(tx2.b2bSelf)
         return
       }
+      setOpener(draft ?? '')
       setChannel('b2b')
       setInConv(true)
       void startB2b(businessId)
@@ -81,9 +87,9 @@ export function ChatWidget() {
 
   useEffect(
     () =>
-      onOpenB2bChat((businessId) => {
-        if (ready) return openB2b(businessId)
-        pendingB2b.current = businessId
+      onOpenB2bChat((businessId, draft) => {
+        if (ready) return openB2b(businessId, draft)
+        pendingB2b.current = { id: businessId, draft }
         setOpen(true)
       }),
     [ready, openB2b],
@@ -91,10 +97,10 @@ export function ChatWidget() {
 
   // vừa đăng nhập / nạp xong danh tính -> mở yêu cầu chat B2B còn chờ
   useEffect(() => {
-    const businessId = pendingB2b.current
-    if (!ready || !businessId) return
+    const pending = pendingB2b.current
+    if (!ready || !pending) return
     pendingB2b.current = null
-    openB2b(businessId)
+    openB2b(pending.id, pending.draft)
   }, [ready, openB2b])
 
   // vừa mở widget / đổi hội thoại: nhảy ngay xuống cuối (đợi khung render xong); tin mới: cuộn mượt
@@ -256,6 +262,7 @@ export function ChatWidget() {
                   key={activeId ?? 'new'}
                   chat={chat}
                   compact
+                  initialDraft={opener}
                   disabled={!ready || (!isSupport && !activeId) || status === 'BLOCKED'}
                   reply={reply}
                   onClearReply={() => setReply(null)}

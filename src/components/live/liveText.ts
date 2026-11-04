@@ -61,6 +61,4 @@ export const liveText = () => ({
   webinarChatParticipant: tx('Hội thảo trao đổi ngay trong phòng: mở nút Chat trên thanh công cụ của phòng.', 'Webinar chat runs inside the room: use the Chat button on the room toolbar.', '웨비나 채팅은 방 안에서 진행됩니다. 방 도구 모음의 채팅 버튼을 사용하세요.'),
   webinarChatObserver: tx('Hội thảo trao đổi ngay trong phòng. Người dự thính chỉ xem và nghe.', 'Webinar chat runs inside the room. Observers can only watch and listen.', '웨비나 채팅은 방 안에서 진행됩니다. 참관자는 시청만 가능합니다.'),
 
-  // nhắn tin doanh nghiệp
-  messageBusiness: tx('Nhắn tin doanh nghiệp', 'Message this company', '기업에 메시지 보내기'),
 })

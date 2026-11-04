@@ -14,8 +14,8 @@ export const CHAT_SOCKET_URL = clean(env.VITE_CHAT_SOCKET_URL)
 export const chatConfigured = () => CHAT_URL !== '' && CHAT_SOCKET_URL !== ''
 
 export const OPEN_B2B = 'vcci:chat-b2b'
-/** Mở ChatWidget ở hội thoại B2B với doanh nghiệp này (khách: widget yêu cầu đăng nhập). */
-export const openBusinessChat = (businessId: string) => window.dispatchEvent(new CustomEvent(OPEN_B2B, { detail: businessId }))
+/** Mở ChatWidget ở hội thoại B2B với doanh nghiệp này (khách: widget yêu cầu đăng nhập). `draft`: điền sẵn vào ô soạn, không tự gửi. */
+export const openBusinessChat = (businessId: string, draft?: string) => window.dispatchEvent(new CustomEvent(OPEN_B2B, { detail: draft ? { businessId, draft } : businessId }))
 
 export const SUPPORT = 'PORTAL_BUSINESS_SUPPORT'
 export const B2B = 'PORTAL_BUSINESS_B2B'

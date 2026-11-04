@@ -15,7 +15,7 @@ const toReplyRef = (m: WidgetMsg): ReplyRef => ({ messageId: m.serverId!, sender
  * `full` thêm chia sẻ sản phẩm / RFQ / lịch hẹn (chỉ trang Tin nhắn B2B).
  */
 export function ChatComposer({
-  chat, disabled, reply, onClearReply, placeholder, full = false, chips, chipSends = false, accent = 'bg-primary hover:bg-primary-hover', compact = false,
+  chat, disabled, reply, onClearReply, placeholder, full = false, chips, chipSends = false, accent = 'bg-primary hover:bg-primary-hover', compact = false, initialDraft = '',
 }: {
   chat: BizChat
   disabled: boolean
@@ -27,8 +27,10 @@ export function ChatComposer({
   chipSends?: boolean
   accent?: string
   compact?: boolean
+  /** Câu mở đầu điền sẵn khi mở hội thoại (khung soạn gắn key theo hội thoại nên đổi hội thoại là nhận giá trị mới). */
+  initialDraft?: string
 }) {
-  const [draft, setDraft] = useState('')
+  const [draft, setDraft] = useState(initialDraft)
   const [emoji, setEmoji] = useState(false)
   const [rec, setRec] = useState<{ stop: () => void } | null>(null)
   const [dlg, setDlg] = useState<'rfq' | 'appt' | 'product' | null>(null)
