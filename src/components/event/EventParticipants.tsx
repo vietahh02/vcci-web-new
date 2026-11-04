@@ -1,12 +1,13 @@
 /** Participants of an event in three columns — domestic businesses, foreign businesses, sponsors — for every state: not open yet → live → ended. */
-import { ArrowRightLeft, CalendarClock, Globe2, Handshake, Landmark, MapPin, Radio } from 'lucide-react'
+import { ArrowRightLeft, CalendarClock, Globe2, Handshake, Landmark, MapPin, MessageSquare, Radio } from 'lucide-react'
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
+import { BusinessChatButton } from '@/components/chat/BusinessChatButton'
 import { CompanyMark, CountryChip, VerifiedBadge } from '@/components/brand'
 import { LiveDot } from '@/components/effects'
 import { useToast } from '@/components/ui/overlay'
 import { Badge, Button, buttonClass } from '@/components/ui/primitives'
-import { USE_MOCK } from '@/api'
+import { tokens, USE_MOCK } from '@/api'
 import { connectParticipant, useEventParticipants, type ConnectionType } from '@/api/eventApi'
 import type { Participant, Side } from '@/data/eventParticipants'
 import { businesses, type EventItem } from '@/data/mock'
@@ -34,12 +35,16 @@ export function EventParticipants({ ev, onRegister, listed }: { ev: EventItem; o
   // `listed`: the businesses from the show's own payload, used until the API has a participant list for this show
   const all = remote.length ? remote : listed ?? []
   const onlineShow = isOnlineShowEvent(ev)
+  const { pathname } = useLocation()
   const [onlineOnly, setOnlineOnly] = useState(false)
   const [showAll, setShowAll] = useState<Partial<Record<Side, boolean>>>({})
   const live = ev.eventStatus === 'ONGOING'
   const ended = ev.eventStatus === 'ENDED'
   const onlineNow = all.filter((p) => p.online).length
   const attended = all.filter((p) => p.attended).length
+  // presence is only claimed when the API reports it: with no data nobody is "not in the room" or a "no-show"
+  const hasPresence = live && onlineNow > 0
+  const hasAttendance = ended && attended > 0
 
   const demo = (title: string) => toast({ kind: 'info', title, description: tx('Bản mẫu — chưa nối hệ thống họp trực tuyến.', 'Prototype — not yet connected to the online meeting system.', '프로토타입 — 온라인 미팅 시스템 미연결.') })
   /** Live: POST /api/event/{id}/connections (needs sign-in + a registration); mock: toast only. */
@@ -53,9 +58,16 @@ export function EventParticipants({ ev, onRegister, listed }: { ev: EventItem; o
   }
 
   const status = (p: Participant) => {
-    if (live) return p.online ? <Badge variant="live" className="gap-1.5"><LiveDot /> {tx('Đang trực tuyến', 'Online now', '접속 중')}</Badge> : <Badge variant="muted">{tx('Chưa vào phòng', 'Not in room', '미접속')}</Badge>
-    if (ended) return p.attended ? <Badge variant="success">{tx('Đã tham dự', 'Attended', '참석')}</Badge> : <Badge variant="muted">{tx('Không tham dự', 'No-show', '불참')}</Badge>
+    if (hasPresence) return p.online ? <Badge variant="live" className="gap-1.5"><LiveDot /> {tx('Đang trực tuyến', 'Online now', '접속 중')}</Badge> : <Badge variant="muted">{tx('Chưa vào phòng', 'Not in room', '미접속')}</Badge>
+    if (ended) return hasAttendance ? (p.attended ? <Badge variant="success">{tx('Đã tham dự', 'Attended', '참석')}</Badge> : <Badge variant="muted">{tx('Không tham dự', 'No-show', '불참')}</Badge>) : null
     return <Badge variant="success">{p.side === 'BUYER' ? tx('Đã đăng ký', 'Registered', '등록됨') : tx('Đã xác nhận tham gia', 'Confirmed', '참가 확정')}</Badge>
+  }
+
+  /** Show, live mode: contact records the connection (mail to the business, no contact details shown) and opens the B2B chat; a guest signs in first. */
+  const contactShow = (p: Participant) => {
+    if (!p.businessId) return null
+    if (!tokens.access()) return <Link to={`/login?return=${encodeURIComponent(pathname)}`} className={buttonClass('outline', 'sm')}><MessageSquare /> {tx('Liên hệ', 'Contact', '연락')}</Link>
+    return <BusinessChatButton organizationId={p.businessId} showName={L(ev.title)} label={tx('Liên hệ', 'Contact', '연락')} onOpen={() => { connectParticipant(ev.id, p.id, 'CONNECT').catch((e: Error) => console.warn(`[show] connection not recorded: ${e.message}`)) }} />
   }
 
   const action = (p: Participant) => {
@@ -85,11 +97,11 @@ export function EventParticipants({ ev, onRegister, listed }: { ev: EventItem; o
       )}
       <div className="flex flex-wrap items-center gap-2">
         {status(p)}
-        {(live || ended) && p.side === 'SELLER' && <Badge variant="secondary">{p.quotes} {tx('báo giá', 'quotes', '견적')}</Badge>}
+        {(live || ended) && p.side === 'SELLER' && p.quotes > 0 && <Badge variant="secondary">{p.quotes} {tx('báo giá', 'quotes', '견적')}</Badge>}
       </div>
       <div className="flex flex-wrap items-center gap-2">
         {p.businessId && <Link to={`/suppliers/${p.businessId}`} className={buttonClass('ghost', 'sm', 'text-primary')}>{tx('Hồ sơ', 'Profile', '프로필')}</Link>}
-        {p.side !== 'SUPPORT' && action(p)}
+        {ev.eventType === 'SHOW' && !USE_MOCK ? contactShow(p) : p.side !== 'SUPPORT' && action(p)}
       </div>
     </li>
   )
@@ -104,12 +116,13 @@ export function EventParticipants({ ev, onRegister, listed }: { ev: EventItem; o
         <div>
           <h2 className="text-2xl font-extrabold tracking-tight">{tx('Đơn vị nổi bật', 'Featured organisations', '주요 참가 기관')}</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            {live ? tx(`${onlineNow} đơn vị đang trực tuyến lúc này.`, `${onlineNow} organisations are online right now.`, `현재 ${onlineNow}개 기관이 접속 중입니다.`)
-              : ended ? tx(`${attended} đơn vị đã tham dự.`, `${attended} organisations attended.`, `${attended}개 기관이 참석했습니다.`)
+            {hasPresence ? tx(`${onlineNow} đơn vị đang trực tuyến lúc này.`, `${onlineNow} organisations are online right now.`, `현재 ${onlineNow}개 기관이 접속 중입니다.`)
+              : hasAttendance ? tx(`${attended} đơn vị đã tham dự.`, `${attended} organisations attended.`, `${attended}개 기관이 참석했습니다.`)
+              : onlineShow ? tx('Doanh nghiệp tham gia Show này.', 'Businesses taking part in this show.', '이 쇼에 참가하는 기업입니다.')
               : tx('Một số đơn vị tiêu biểu tham gia sự kiện. Danh sách cập nhật khi đơn vị được duyệt.', 'A selection of organisations taking part. The list updates as organisations are approved.', '참가 기관 일부입니다. 승인되는 대로 업데이트됩니다.')}
           </p>
         </div>
-        {live && <label className="flex w-fit items-center gap-2 text-sm font-medium"><input type="checkbox" checked={onlineOnly} onChange={(e) => setOnlineOnly(e.target.checked)} /> {tx('Chỉ hiện đơn vị đang trực tuyến', 'Show only organisations online now', '접속 중인 기관만 보기')}</label>}
+        {hasPresence && <label className="flex w-fit items-center gap-2 text-sm font-medium"><input type="checkbox" checked={onlineOnly} onChange={(e) => setOnlineOnly(e.target.checked)} /> {tx('Chỉ hiện đơn vị đang trực tuyến', 'Show only organisations online now', '접속 중인 기관만 보기')}</label>}
       </div>
 
       <div className={cn('mt-6 grid items-start gap-5', columns.length === 3 ? 'lg:grid-cols-3' : columns.length === 2 && 'lg:grid-cols-2')}>
@@ -124,7 +137,7 @@ export function EventParticipants({ ev, onRegister, listed }: { ev: EventItem; o
               <div className="flex items-start justify-between gap-3 border-b bg-muted/40 p-4">
                 <div className="min-w-0">
                   <h3 className="flex items-center gap-2 text-lg font-extrabold"><Icon className="size-5 shrink-0" /> {title()}</h3>
-                  <p className="mt-0.5 text-xs text-muted-foreground">{hint()}</p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">{onlineShow && side === 'BUYER' ? tx('Doanh nghiệp nước ngoài tham gia Show', 'Foreign businesses taking part', '참가 해외 기업') : onlineShow && side === 'SELLER' ? tx('Doanh nghiệp Việt Nam tham gia Show', 'Vietnamese businesses taking part', '참가 베트남 기업') : hint()}</p>
                 </div>
                 <span className="shrink-0 rounded-full bg-background px-3 py-1 text-sm font-bold tabular-nums ring-1 ring-border">{total.length}</span>
               </div>
