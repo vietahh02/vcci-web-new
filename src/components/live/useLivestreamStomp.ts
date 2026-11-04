@@ -52,7 +52,6 @@ export function useLivestreamStomp(sessionId: string | null, loggedIn: boolean, 
     void import('@stomp/stompjs').then(({ Client: StompClient, ReconnectionTimeMode }) => {
       if (stopped) return
       const json = (m: IMessage) => JSON.parse(m.body) as Record<string, unknown>
-      let everConnected = false
       const c = new StompClient({
         brokerURL: stompUrl(),
         reconnectDelay: 3000,
@@ -66,7 +65,6 @@ export function useLivestreamStomp(sessionId: string | null, loggedIn: boolean, 
           cl.connectHeaders = at ? { Authorization: `Bearer ${at}` } : {}
         },
         onConnect: () => {
-          everConnected = true
           setState('connected')
           c.subscribe(`/topic/livestream-chat/${sessionId}`, (m) => onMessage(toChatMessage(json(m))))
           c.subscribe(`/topic/livestream-chat-moderation/${sessionId}`, (m) => {
@@ -86,7 +84,7 @@ export function useLivestreamStomp(sessionId: string | null, loggedIn: boolean, 
           onConnected()
         },
         onWebSocketClose: () => {
-          if (!stopped) setState(everConnected ? 'reconnecting' : 'connecting')
+          if (!stopped) setState('reconnecting')
         },
       })
       client = c
