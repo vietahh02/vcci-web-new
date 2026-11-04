@@ -4,7 +4,7 @@ import { useI18n } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
 
 /** Client-side paging for an already-loaded list; `page` is clamped so a shrinking list never shows an empty page. */
-export function usePaged<T>(all: T[], size = 10) {
+export function usePaged<T>(all: T[], size = 6) {
   const [requested, onChange] = useState(0)
   const pageCount = Math.ceil(all.length / size)
   const page = Math.min(requested, Math.max(pageCount - 1, 0))

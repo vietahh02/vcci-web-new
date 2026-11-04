@@ -8,11 +8,12 @@ import { useToast } from '@/components/ui/overlay'
 import { Button, buttonClass, Field, Input, Textarea } from '@/components/ui/primitives'
 import { Select } from '@/components/ui/select'
 import { useI18n } from '@/lib/i18n'
-import { completion, OPTIONS, SECTIONS, sectionDone, useProfile, type CompanyProfile, type Opt, type SectionKey, type VerifyStatus } from '@/lib/profile'
+import { BUSINESS_FORMS, completion, OPTIONS, SECTIONS, sectionDone, useProfile, type CompanyProfile, type Opt, type SectionKey, type VerifyStatus } from '@/lib/profile'
 import { cn } from '@/lib/utils'
 import { tx, withKo } from '@/lib/tx'
 import { FileUpload, GalleryUpload, ImageUpload, UploadGuide } from '@/components/upload/Upload'
 import { uploadPending } from '@/api/uploads'
+import { BranchesFields, LeadersFields } from '@/components/profile/KeyLeadersFields'
 import type { RuleKey } from '@/lib/upload'
 
 export default function MyProfile() {
@@ -98,7 +99,8 @@ export default function MyProfile() {
       <div className="container-page mt-8 grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[280px_minmax(0,1fr)] lg:gap-8">
         {/* section nav */}
         <nav className="min-w-0 lg:sticky lg:top-32 lg:self-start">
-          <ol className="no-scrollbar flex gap-2 overflow-x-auto lg:flex-col lg:gap-1">
+          {/* overflow-x cắt cả viền và shadow của mục đang chọn: mobile chừa p-1, desktop không cuộn nên tắt hẳn */}
+          <ol className="no-scrollbar -m-1 flex gap-2 overflow-x-auto p-1 lg:m-0 lg:flex-col lg:gap-1 lg:overflow-visible lg:p-0">
             {SECTIONS.map((s, i) => {
               const done = sectionDone(profile, s.key)
               const on = s.key === active
@@ -244,33 +246,56 @@ function Q({ label, required, children, hint }: { label: string; required?: bool
 type FP<K extends keyof CompanyProfile> = { p: CompanyProfile; set: (v: CompanyProfile[K]) => void }
 
 function GeneralForm({ p, set }: FP<'general'>) {
-  const { t } = useI18n()
+  const { t, L } = useI18n()
   const g = p.general
+  const reg = p.registration
+  const form = BUSINESS_FORMS.find((x) => x.value === reg.businessForm)
+  const fromReg = tx('Lấy từ hồ sơ đăng ký, không sửa tại đây', 'From registration, read-only', '등록 정보, 수정 불가')
   const businessType = t.supplier.types[p.registration.businessType as keyof typeof t.supplier.types] ?? '—'
   const f = (k: keyof typeof g) => (e: { target: { value: string } }) => set({ ...g, [k]: e.target.value })
   return (
     <div className="space-y-7">
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field label={(tx('Tên tiếng Việt', 'Vietnamese name')) + ' *'} htmlFor="g-vi"><Input id="g-vi" value={g.nameVi} onChange={f('nameVi')} /></Field>
-        <Field label={(tx('Tên tiếng Anh', 'English name')) + ' *'} htmlFor="g-en"><Input id="g-en" value={g.nameEn} onChange={f('nameEn')} /></Field>
+        <Field label={(tx('Tên tiếng Việt', 'Vietnamese name')) + ' *'} htmlFor="g-vi"><Input id="g-vi" placeholder={tx('VD: Công ty TNHH ABC', 'e.g. Công ty TNHH ABC', '예: Công ty TNHH ABC')} value={g.nameVi} onChange={f('nameVi')} /></Field>
+        <Field label={(tx('Tên tiếng Anh', 'English name')) + ' *'} htmlFor="g-en"><Input id="g-en" placeholder={tx('VD: ABC Import Export Co., Ltd.', 'e.g. ABC Import Export Co., Ltd.', '예: ABC Import Export Co., Ltd.')} value={g.nameEn} onChange={f('nameEn')} /></Field>
+        <Field label={tx('Tên viết tắt', 'Short name', '약칭')} htmlFor="g-short"><Input id="g-short" maxLength={255} placeholder={tx('VD: SOUTHWOOD', 'e.g. SOUTHWOOD', '예: SOUTHWOOD')} value={g.shortName} onChange={f('shortName')} /></Field>
         <Field label={tx('Mã số thuế', 'Tax code')} htmlFor="g-tax" hint={tx('Lấy từ hồ sơ đăng ký, không sửa tại đây', 'From registration, read-only')}><Input id="g-tax" value={g.taxCode} readOnly className="bg-muted" /></Field>
-        <Field label={tx('Năm thành lập', 'Year founded')} htmlFor="g-year"><Input id="g-year" inputMode="numeric" value={g.foundedYear} onChange={f('foundedYear')} /></Field>
+        <Field label={tx('Năm thành lập', 'Year founded')} htmlFor="g-year"><Input id="g-year" placeholder={tx('VD: 2010', 'e.g. 2010', '예: 2010')} inputMode="numeric" value={g.foundedYear} onChange={f('foundedYear')} /></Field>
+        <Field label={tx('Tổng tài sản', 'Total assets', '총자산') + ` (${reg.totalAssetsCurrency || reg.charterCurrency || 'VND'})`} htmlFor="g-assets" hint={tx('Chỉ nhập số', 'Digits only', '숫자만 입력')}><Input id="g-assets" placeholder={tx('VD: 50000000000', 'e.g. 50000000000', '예: 50000000000')} inputMode="numeric" maxLength={30} value={g.totalAssets} onChange={(e) => set({ ...g, totalAssets: e.target.value.replace(/\D/g, '') })} /></Field>
         <Field label={tx('Loại hình hoạt động', 'Business type', '사업 유형')} htmlFor="g-type" hint={tx('Lấy từ hồ sơ đăng ký, không sửa tại đây', 'From registration, read-only')} className="sm:col-span-2"><Input id="g-type" value={businessType} readOnly className="bg-muted" /></Field>
       </div>
+      <div>
+        <p className="mb-3 text-[14px] font-semibold">{tx('Đăng ký kinh doanh', 'Business registration', '사업자 등록')}</p>
+        <div className="grid gap-4 sm:grid-cols-2">
+          {reg.businessRegNo && (
+            <>
+              <Field label={tx('Số đăng ký kinh doanh', 'Registration number', '등록 번호')} htmlFor="g-regno" hint={fromReg}><Input id="g-regno" value={reg.businessRegNo} readOnly className="bg-muted" /></Field>
+              <Field label={tx('Ngày cấp', 'Issue date', '발급일')} htmlFor="g-regdate" hint={fromReg}><Input id="g-regdate" type="date" value={reg.businessRegDate} readOnly className="bg-muted" /></Field>
+              <Field label={tx('Nơi cấp', 'Issued by', '발급 기관')} htmlFor="g-regplace" hint={fromReg}><Input id="g-regplace" value={reg.businessRegPlace} readOnly className="bg-muted" /></Field>
+            </>
+          )}
+          <Field label={tx('Loại hình doanh nghiệp', 'Legal form', '기업 형태')} htmlFor="g-form" hint={fromReg}><Input id="g-form" value={(reg.businessForm === 'OTHER' && reg.otherBusinessForm) || (form ? L(form) : '—')} readOnly className="bg-muted" /></Field>
+        </div>
+      </div>
       <Q label={tx('Loại hình sở hữu', 'Ownership')} required><Choice cols={3} options={OPTIONS.ownership} value={g.ownership} onChange={(v) => set({ ...g, ownership: v })} /></Q>
-      <Field label={tx('Các kênh online (website, fanpage, LinkedIn…)', 'Online channels (website, fanpage, LinkedIn…)')} htmlFor="g-ch"><Input id="g-ch" value={g.channels} onChange={f('channels')} /></Field>
-      <Field label={tx('Địa chỉ nhà máy (nếu khác trụ sở)', 'Factory address (if different)')} htmlFor="g-fac"><Input id="g-fac" value={g.factoryAddress} onChange={f('factoryAddress')} /></Field>
+      <Field label={tx('Các kênh online (website, fanpage, LinkedIn…)', 'Online channels (website, fanpage, LinkedIn…)')} htmlFor="g-ch"><Input id="g-ch" placeholder={tx('VD: https://company.vn, facebook.com/company', 'e.g. https://company.vn, facebook.com/company', '예: https://company.vn, facebook.com/company')} value={g.channels} onChange={f('channels')} /></Field>
+      <Field label={tx('Địa chỉ nhà máy (nếu khác trụ sở)', 'Factory address (if different)')} htmlFor="g-fac"><Input id="g-fac" placeholder={tx('VD: Lô A1, KCN ABC, tỉnh Bắc Ninh', 'e.g. Lot A1, ABC Industrial Park, Bac Ninh', '예: Lot A1, ABC Industrial Park, Bac Ninh')} value={g.factoryAddress} onChange={f('factoryAddress')} /></Field>
       <Q label={tx('Doanh nghiệp do nữ làm chủ?', 'Women-owned business?')} hint={tx('≥51% vốn điều lệ thuộc nữ, hoặc nữ trực tiếp điều hành, hoặc >50% lao động là nữ', '≥51% female-owned, female-led, or >50% female workforce')}>
         <Choice cols={3} options={[withKo({ value: 'YES', vi: 'Có', en: 'Yes' }), withKo({ value: 'NO', vi: 'Không', en: 'No' })]} value={g.womenOwned} onChange={(v) => set({ ...g, womenOwned: v as 'YES' | 'NO' })} />
       </Q>
       <div>
-        <p className="mb-3 text-[14px] font-semibold">{tx('Người liên hệ giao thương', 'Trade contact')}</p>
+        <p className="mb-3 text-[14px] font-semibold">{tx('Người liên hệ #1 (giao thương)', 'Contact person #1 (trade)', '담당자 #1 (거래)')}</p>
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label={(tx('Họ tên', 'Full name')) + ' *'} htmlFor="g-cn"><Input id="g-cn" value={g.contactName} onChange={f('contactName')} /></Field>
-          <Field label={tx('Chức vụ', 'Title')} htmlFor="g-ct"><Input id="g-ct" value={g.contactTitle} onChange={f('contactTitle')} /></Field>
-          <Field label={tx('Điện thoại / Zalo', 'Phone / Zalo')} htmlFor="g-cp"><Input id="g-cp" value={g.contactPhone} onChange={f('contactPhone')} /></Field>
-          <Field label="Email *" htmlFor="g-ce"><Input id="g-ce" type="email" value={g.contactEmail} onChange={f('contactEmail')} /></Field>
+          <Field label={(tx('Họ tên', 'Full name')) + ' *'} htmlFor="g-cn"><Input id="g-cn" placeholder={tx('VD: Nguyễn Văn A', 'e.g. Nguyen Van A', '예: Nguyen Van A')} value={g.contactName} onChange={f('contactName')} /></Field>
+          <Field label={tx('Chức vụ', 'Title')} htmlFor="g-ct"><Input id="g-ct" placeholder={tx('VD: Trưởng phòng Kinh doanh', 'e.g. Sales Manager', '예: 영업 팀장')} value={g.contactTitle} onChange={f('contactTitle')} /></Field>
+          <Field label={tx('Điện thoại / Zalo', 'Phone / Zalo')} htmlFor="g-cp"><Input id="g-cp" placeholder={tx('VD: 0912 345 678', 'e.g. 0912 345 678', '예: 0912 345 678')} value={g.contactPhone} onChange={f('contactPhone')} /></Field>
+          <Field label="Email *" htmlFor="g-ce"><Input id="g-ce" placeholder={tx('VD: ten@company.vn', 'e.g. name@company.vn', '예: name@company.vn')} type="email" value={g.contactEmail} onChange={f('contactEmail')} /></Field>
         </div>
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <p className="text-[14px] font-semibold sm:col-span-2">{tx('Lãnh đạo chủ chốt', 'Key leaders', '주요 경영진')}</p>
+        <LeadersFields omit="contact1" value={g.keyLeaders} onChange={(role, field, v) => set({ ...g, keyLeaders: { ...g.keyLeaders, [role]: { ...g.keyLeaders[role], [field]: v } } })} />
+        <BranchesFields value={g.branches} onChange={(v) => set({ ...g, branches: v })} />
       </div>
     </div>
   )
@@ -290,22 +315,22 @@ function CapabilityForm({ p, set }: FP<'capability'>) {
         </div>
       </Q>
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field label={tx('Sản phẩm phục vụ ngành nào?', 'Industries served')} htmlFor="c-ind"><Textarea id="c-ind" className="min-h-20" value={c.servedIndustries} onChange={(e) => set({ ...c, servedIndustries: e.target.value })} /></Field>
-        <Field label={tx('Khách hàng tiêu biểu', 'Key customers')} htmlFor="c-cus"><Textarea id="c-cus" className="min-h-20" value={c.keyCustomers} onChange={(e) => set({ ...c, keyCustomers: e.target.value })} /></Field>
+        <Field label={tx('Sản phẩm phục vụ ngành nào?', 'Industries served')} htmlFor="c-ind"><Textarea id="c-ind" placeholder={tx('VD: Nội thất, xây dựng, bao bì', 'e.g. Furniture, construction, packaging', '예: 가구, 건설, 포장')} className="min-h-20" value={c.servedIndustries} onChange={(e) => set({ ...c, servedIndustries: e.target.value })} /></Field>
+        <Field label={tx('Khách hàng tiêu biểu', 'Key customers')} htmlFor="c-cus"><Textarea id="c-cus" placeholder={tx('VD: Công ty ABC (Đức), Công ty XYZ (Nhật Bản)', 'e.g. ABC GmbH (Germany), XYZ Co. (Japan)', '예: ABC GmbH (독일), XYZ Co. (일본)')} className="min-h-20" value={c.keyCustomers} onChange={(e) => set({ ...c, keyCustomers: e.target.value })} /></Field>
       </div>
       <Q label={tx('Năng lực cung ứng hiện tại', 'Current supply capacity')} required><Choice options={OPTIONS.supplyCapacity} value={c.supplyCapacity} onChange={(v) => set({ ...c, supplyCapacity: v })} /></Q>
       <Q label={tx('Sản xuất theo thiết kế / thông số của khách hàng (OEM/ODM)?', 'Produce to customer design (OEM/ODM)?')} required><Choice options={OPTIONS.oem} value={c.oem} onChange={(v) => set({ ...c, oem: v })} /></Q>
       <div className="grid gap-4 sm:grid-cols-3">
-        <Field label={tx('Công suất / tháng', 'Monthly capacity')} htmlFor="c-cap" hint={tx('Số lượng + đơn vị', 'Quantity + unit')}><Input id="c-cap" value={c.monthlyCapacity} onChange={(e) => set({ ...c, monthlyCapacity: e.target.value })} /></Field>
-        <Field label={tx('% dành cho xuất khẩu', '% for export')} htmlFor="c-pct"><Input id="c-pct" inputMode="numeric" value={c.exportCapacityPct} onChange={(e) => set({ ...c, exportCapacityPct: e.target.value })} /></Field>
-        <Field label={(tx('Đơn hàng tối thiểu (MOQ)', 'Minimum order (MOQ)')) + ' *'} htmlFor="c-moq"><Input id="c-moq" value={c.moq} onChange={(e) => set({ ...c, moq: e.target.value })} /></Field>
+        <Field label={tx('Công suất / tháng', 'Monthly capacity')} htmlFor="c-cap" hint={tx('Số lượng + đơn vị', 'Quantity + unit')}><Input id="c-cap" placeholder={tx('VD: 20.000 sản phẩm', 'e.g. 20,000 units', '예: 20,000개')} value={c.monthlyCapacity} onChange={(e) => set({ ...c, monthlyCapacity: e.target.value })} /></Field>
+        <Field label={tx('% dành cho xuất khẩu', '% for export')} htmlFor="c-pct"><Input id="c-pct" placeholder={tx('VD: 60', 'e.g. 60', '예: 60')} inputMode="numeric" value={c.exportCapacityPct} onChange={(e) => set({ ...c, exportCapacityPct: e.target.value })} /></Field>
+        <Field label={(tx('Đơn hàng tối thiểu (MOQ)', 'Minimum order (MOQ)')) + ' *'} htmlFor="c-moq"><Input id="c-moq" placeholder={tx('VD: 500 sản phẩm', 'e.g. 500 units', '예: 500개')} value={c.moq} onChange={(e) => set({ ...c, moq: e.target.value })} /></Field>
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field label={tx('Diện tích nhà xưởng (m²)', 'Factory area (m²)', '공장 면적 (m²)')} htmlFor="c-area"><Input id="c-area" inputMode="numeric" value={c.factoryArea} onChange={(e) => set({ ...c, factoryArea: e.target.value })} /></Field>
-        <Field label={tx('Số dây chuyền sản xuất', 'Production lines', '생산 라인 수')} htmlFor="c-lines"><Input id="c-lines" inputMode="numeric" value={c.productionLines} onChange={(e) => set({ ...c, productionLines: e.target.value })} /></Field>
+        <Field label={tx('Diện tích nhà xưởng (m²)', 'Factory area (m²)', '공장 면적 (m²)')} htmlFor="c-area"><Input id="c-area" placeholder={tx('VD: 5000', 'e.g. 5000', '예: 5000')} inputMode="numeric" value={c.factoryArea} onChange={(e) => set({ ...c, factoryArea: e.target.value })} /></Field>
+        <Field label={tx('Số dây chuyền sản xuất', 'Production lines', '생산 라인 수')} htmlFor="c-lines"><Input id="c-lines" placeholder={tx('VD: 3', 'e.g. 3', '예: 3')} inputMode="numeric" value={c.productionLines} onChange={(e) => set({ ...c, productionLines: e.target.value })} /></Field>
       </div>
       <Field label={tx('Quy trình kiểm soát chất lượng', 'Quality control process', '품질 관리 절차')} htmlFor="c-qc" hint={tx('Mô tả ngắn: kiểm tra đầu vào, trong chuyền, thành phẩm, tiêu chuẩn AQL…', 'Short description: incoming, in-line and final inspection, AQL standard…', '간단히: 입고·공정·출하 검사, AQL 기준 등')}>
-        <Textarea id="c-qc" className="min-h-20" value={c.qcProcess} onChange={(e) => set({ ...c, qcProcess: e.target.value })} />
+        <Textarea id="c-qc" placeholder={tx('VD: Kiểm tra nguyên liệu đầu vào, kiểm tra trong chuyền, kiểm tra thành phẩm theo AQL 2.5', 'e.g. Incoming material checks, in-line inspection, final inspection to AQL 2.5', '예: 입고 자재 검사, 공정 검사, AQL 2.5 기준 출하 검사')} className="min-h-20" value={c.qcProcess} onChange={(e) => set({ ...c, qcProcess: e.target.value })} />
       </Field>
       <Q label={tx('Chứng nhận chất lượng, kỹ thuật, môi trường', 'Quality, technical & environmental certificates')} hint={tx('Ưu tiên chứng nhận thị trường châu Âu. Chứng nhận hết hạn sẽ tự ẩn khỏi hồ sơ công khai.', 'EU-market certificates first. Expired certificates are hidden from the public profile.')}>
         <div className="space-y-2">
@@ -429,7 +454,7 @@ function NeedsForm({ p, set }: FP<'needs'>) {
       <Q label={tx('Tài liệu doanh nghiệp đã có', 'Documents you already have')} hint={tx('Dùng để đánh giá mức sẵn sàng khi VCCI chắp mối đối tác', 'Used to assess readiness for matchmaking')}>
         <Chips options={OPTIONS.documents} value={n.documents} onChange={(v) => set({ ...n, documents: v })} />
       </Q>
-      <Field label={tx('Nhu cầu cụ thể khác', 'Other specific needs')} htmlFor="n-note"><Textarea id="n-note" value={n.note} onChange={(e) => set({ ...n, note: e.target.value })} /></Field>
+      <Field label={tx('Nhu cầu cụ thể khác', 'Other specific needs')} htmlFor="n-note"><Textarea id="n-note" placeholder={tx('VD: Cần tìm nhà phân phối tại Đức cho dòng nội thất gỗ', 'e.g. Looking for a distributor in Germany for our wooden furniture line', '예: 독일 내 원목 가구 유통사를 찾고 있습니다')} value={n.note} onChange={(e) => set({ ...n, note: e.target.value })} /></Field>
     </div>
   )
 }

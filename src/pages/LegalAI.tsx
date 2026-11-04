@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from 'motion/react'
-import { ArrowUp, Bot, BookOpen, Scale, Sparkles, UserRound } from 'lucide-react'
+import { ArrowUp, BookOpen, Sparkles, UserRound } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useI18n } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
@@ -63,9 +63,7 @@ export default function LegalAI() {
         <AnimatePresence>
           {empty && (
             <motion.div exit={{ opacity: 0, y: -20, height: 0 }} transition={{ duration: 0.4 }} className="text-center">
-              <motion.div initial={{ scale: 0.6, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: 'spring', bounce: 0.4 }} className="mx-auto grid size-16 place-items-center rounded-2xl bg-gradient-to-br from-primary to-navy text-white shadow-xl shadow-primary/30">
-                <Scale className="size-8" />
-              </motion.div>
+              <motion.img src="/imgs/vcci-seal.png" alt="" initial={{ scale: 0.6, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: 'spring', bounce: 0.4 }} className="mx-auto size-[72px]" />
               <h1 className="mt-6 text-3xl font-extrabold tracking-tight md:text-4xl">{t.legal.title}</h1>
               <p className="mx-auto mt-3 max-w-xl text-muted-foreground">{t.legal.sub}</p>
               <div className="mt-8 grid gap-3 text-left sm:grid-cols-2">
@@ -91,9 +89,9 @@ export default function LegalAI() {
         <div className="flex-1 space-y-5 pb-6">
           {msgs.map((m) => (
             <motion.div key={m.id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className={cn('flex gap-3', m.role === 'user' && 'flex-row-reverse')}>
-              <div className={cn('grid size-9 shrink-0 place-items-center rounded-xl', m.role === 'ai' ? 'bg-gradient-to-br from-primary to-navy text-white' : 'bg-muted')}>
-                {m.role === 'ai' ? <Bot className="size-4" /> : <UserRound className="size-4" />}
-              </div>
+              {m.role === 'ai'
+                ? <img src="/imgs/vcci-seal.png" alt="" className="size-9 shrink-0" />
+                : <div className="grid size-9 shrink-0 place-items-center rounded-xl bg-muted"><UserRound className="size-4" /></div>}
               <div className={cn('max-w-[85%] rounded-2xl px-4 py-3 text-[15px] leading-relaxed', m.role === 'user' ? 'bg-primary text-primary-foreground' : 'border bg-card')}>
                 {m.text}
                 {m.role === 'ai' && m.text.length < ANSWERS[lang].text.length && <span className="ml-0.5 inline-block h-4 w-1.5 animate-pulse bg-primary align-middle" />}
@@ -112,7 +110,7 @@ export default function LegalAI() {
           ))}
           {thinking && (
             <div className="flex items-center gap-3 text-sm text-muted-foreground">
-              <div className="grid size-9 place-items-center rounded-xl bg-gradient-to-br from-primary to-navy text-white"><Bot className="size-4" /></div>
+              <img src="/imgs/vcci-seal.png" alt="" className="size-9 shrink-0" />
               <span className="relative overflow-hidden">
                 {t.legal.thinking}
                 <span className="absolute inset-0 animate-shine bg-gradient-to-r from-transparent via-background/80 to-transparent" />

@@ -1,6 +1,7 @@
 /** Motion building blocks. All respect prefers-reduced-motion via <MotionConfig reducedMotion="user">. */
 import { animate, motion, useInView, useMotionTemplate, useMotionValue, useScroll, useSpring, useTransform, type Variants } from 'motion/react'
 import { useEffect, useRef, useState, type CSSProperties, type MouseEvent, type ReactNode } from 'react'
+import { ImageOff } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const ease = [0.16, 1, 0.3, 1] as const
@@ -236,14 +237,17 @@ export function ParallaxImage({ src, alt, className, strength = 60 }: { src: str
 /* ---------------------------------------------------------------- Image with fade-in + skeleton */
 export function SmartImage({ src, alt, className, imgClassName }: { src: string; alt: string; className?: string; imgClassName?: string }) {
   const [loaded, setLoaded] = useState(false)
+  const [failed, setFailed] = useState(false)
   return (
-    <div className={cn('relative overflow-hidden bg-muted', !loaded && 'skeleton', className)}>
+    <div className={cn('relative overflow-hidden bg-muted', !loaded && !failed && 'skeleton', className)}>
+      {failed && <ImageOff aria-hidden className="absolute inset-0 m-auto size-8 text-muted-foreground/50" />}
       <img
         src={src}
         alt={alt}
         loading="lazy"
         decoding="async"
         onLoad={() => setLoaded(true)}
+        onError={() => setFailed(true)}
         className={cn('size-full object-cover transition-[opacity,transform,filter] duration-700', loaded ? 'opacity-100 blur-0' : 'opacity-0 blur-md', imgClassName)}
       />
     </div>

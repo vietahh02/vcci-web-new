@@ -73,17 +73,21 @@ function CountdownHero({ ev }: { ev: EventItem }) {
           {L(ev.location) && <span className="inline-flex items-center gap-1.5 text-white/60"><MapPin className="size-4" /> {L(ev.location)}</span>}
         </p>
         <div className="mt-10 flex flex-wrap items-end justify-between gap-8">
-          <div className="flex gap-3 md:gap-6">
-            {parts.map(([v, label]) => (
-              <div key={label} className="text-center">
-                <div className="relative h-[56px] w-[64px] overflow-hidden md:h-[88px] md:w-[104px]">
-                  <motion.span key={v} initial={{ y: '-100%' }} animate={{ y: 0 }} transition={{ type: 'spring', bounce: 0.25, duration: 0.5 }} className="absolute inset-0 text-5xl font-extrabold tabular-nums tracking-tighter md:text-[84px] md:leading-[88px]">
-                    {String(v).padStart(2, '0')}
-                  </motion.span>
+          <div className="flex flex-wrap gap-3 md:gap-6">
+            {parts.map(([v, label]) => {
+              const digits = String(v).padStart(2, '0')
+              return (
+                <div key={label} className="text-center">
+                  {/* Be Vietnam Pro has no tabular figures, so each digit gets its own fixed slot */}
+                  <div className="relative h-[56px] overflow-hidden text-[44px] font-extrabold leading-[56px] md:h-[88px] md:text-[84px] md:leading-[88px]" style={{ width: `${digits.length * 0.68}em` }}>
+                    <motion.span key={v} initial={{ y: '-100%' }} animate={{ y: 0 }} transition={{ type: 'spring', bounce: 0.25, duration: 0.5 }} className="absolute inset-0 flex">
+                      {[...digits].map((d, i) => <span key={i} className="flex-1 text-center">{d}</span>)}
+                    </motion.span>
+                  </div>
+                  <p className="mt-1 text-[11px] font-semibold uppercase tracking-wider text-white/55">{label}</p>
                 </div>
-                <p className="mt-1 text-[11px] font-semibold uppercase tracking-wider text-white/55">{label}</p>
-              </div>
-            ))}
+              )
+            })}
           </div>
           <div className="flex flex-wrap gap-3">
             <Link to={`/events/${ev.id}`} className={buttonClass('gold', 'lg')}><Ticket /> {t.events.register}</Link>
