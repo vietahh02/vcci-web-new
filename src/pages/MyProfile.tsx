@@ -244,8 +244,9 @@ function Q({ label, required, children, hint }: { label: string; required?: bool
 type FP<K extends keyof CompanyProfile> = { p: CompanyProfile; set: (v: CompanyProfile[K]) => void }
 
 function GeneralForm({ p, set }: FP<'general'>) {
-  useI18n()
+  const { t } = useI18n()
   const g = p.general
+  const businessType = t.supplier.types[p.registration.businessType as keyof typeof t.supplier.types] ?? '—'
   const f = (k: keyof typeof g) => (e: { target: { value: string } }) => set({ ...g, [k]: e.target.value })
   return (
     <div className="space-y-7">
@@ -254,6 +255,7 @@ function GeneralForm({ p, set }: FP<'general'>) {
         <Field label={(tx('Tên tiếng Anh', 'English name')) + ' *'} htmlFor="g-en"><Input id="g-en" value={g.nameEn} onChange={f('nameEn')} /></Field>
         <Field label={tx('Mã số thuế', 'Tax code')} htmlFor="g-tax" hint={tx('Lấy từ hồ sơ đăng ký, không sửa tại đây', 'From registration, read-only')}><Input id="g-tax" value={g.taxCode} readOnly className="bg-muted" /></Field>
         <Field label={tx('Năm thành lập', 'Year founded')} htmlFor="g-year"><Input id="g-year" inputMode="numeric" value={g.foundedYear} onChange={f('foundedYear')} /></Field>
+        <Field label={tx('Loại hình hoạt động', 'Business type', '사업 유형')} htmlFor="g-type" hint={tx('Lấy từ hồ sơ đăng ký, không sửa tại đây', 'From registration, read-only')} className="sm:col-span-2"><Input id="g-type" value={businessType} readOnly className="bg-muted" /></Field>
       </div>
       <Q label={tx('Loại hình sở hữu', 'Ownership')} required><Choice cols={3} options={OPTIONS.ownership} value={g.ownership} onChange={(v) => set({ ...g, ownership: v })} /></Q>
       <Field label={tx('Các kênh online (website, fanpage, LinkedIn…)', 'Online channels (website, fanpage, LinkedIn…)')} htmlFor="g-ch"><Input id="g-ch" value={g.channels} onChange={f('channels')} /></Field>

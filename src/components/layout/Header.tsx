@@ -1,8 +1,8 @@
 import * as DialogPrimitive from '@radix-ui/react-dialog'
 import { AnimatePresence, motion, useMotionValueEvent, useScroll } from 'motion/react'
-import { ChevronDown, ChevronRight, FilePlus2, LayoutGrid, Menu, MessageSquare, Moon, Phone, Sun } from 'lucide-react'
+import { ChevronDown, ChevronRight, FilePlus2, LayoutGrid, LogOut, Menu, MessageSquare, Moon, Phone, Sun } from 'lucide-react'
 import { useState } from 'react'
-import { Link, NavLink, useLocation } from 'react-router-dom'
+import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { categories } from '@/data/mock'
 import { categoryIcons, Logo } from '@/components/brand'
 import { LiveDot } from '@/components/effects'
@@ -20,7 +20,8 @@ import { cn, formatNumber, img } from '@/lib/utils'
 export function Header() {
   const { t } = useI18n()
   const { theme, toggle } = useTheme()
-  const { session, profile } = useProfile()
+  const { session, profile, signOut } = useProfile()
+  const navigate = useNavigate()
   const { scrollY } = useScroll()
   const [scrolled, setScrolled] = useState(false)
   const [megaOpen, setMegaOpen] = useState(false)
@@ -105,6 +106,15 @@ export function Header() {
                 </span>
                 <span className="hidden max-w-40 truncate text-[13px] font-semibold 2xl:block">{profile.general.nameEn || session.companyName}</span>
               </Link>
+              <Tooltip content={tx('Đăng xuất', 'Sign out', '로그아웃')}>
+                <button
+                  onClick={() => { signOut(); navigate('/') }}
+                  className="rounded-lg p-2.5 text-muted-foreground transition hover:bg-muted hover:text-foreground"
+                  aria-label={tx('Đăng xuất', 'Sign out', '로그아웃')}
+                >
+                  <LogOut className="size-[18px]" />
+                </button>
+              </Tooltip>
               </>
             ) : (
               <div className="ml-2 hidden items-center gap-2 lg:flex">
@@ -244,7 +254,8 @@ function MegaMenu({ open, onClose }: { open: boolean; onClose: () => void }) {
 
 function MobileNav({ open, onOpenChange, items }: { open: boolean; onOpenChange: (v: boolean) => void; items: { to: string; label: string; live?: boolean }[] }) {
   const { t, L } = useI18n()
-  const { session } = useProfile()
+  const { session, signOut } = useProfile()
+  const navigate = useNavigate()
   return (
     <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
       <SheetContent side="left" title={t.brand.name} description={t.brand.tagline}>
@@ -279,6 +290,12 @@ function MobileNav({ open, onOpenChange, items }: { open: boolean; onOpenChange:
               <>
                 <Link to="/account/catalog" onClick={() => onOpenChange(false)} className={buttonClass('outline', 'md', 'h-auto min-h-10 whitespace-normal py-2 text-center leading-tight')}>{tx('Sản phẩm & gian hàng', 'Products & booths', '제품 및 부스')}</Link>
                 <Link to="/account/profile" onClick={() => onOpenChange(false)} className={buttonClass('default', 'md', 'h-auto min-h-10 whitespace-normal py-2 text-center leading-tight')}>{tx('Hồ sơ doanh nghiệp', 'Company profile', '기업 프로필')}</Link>
+                <button
+                  onClick={() => { onOpenChange(false); signOut(); navigate('/') }}
+                  className={buttonClass('ghost', 'md', 'col-span-2 gap-2 text-muted-foreground')}
+                >
+                  <LogOut className="size-4" /> {tx('Đăng xuất', 'Sign out', '로그아웃')}
+                </button>
               </>
             ) : (
               <>
