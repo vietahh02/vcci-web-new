@@ -53,6 +53,51 @@ export async function uploadFile(rule: string, file: File): Promise<UploadedFile
   }
 }
 
+/**
+ * Picked files stay in the browser until Save/Submit: form state holds a local `blob:` ref (as its id/url/fileId, which also previews),
+ * and `uploadPending` swaps every ref still in the form for the stored file. Files removed before that are never sent.
+ */
+const pending = new Map<string, { rule: string; file: File; upload?: Promise<UploadedFile> }>()
+
+export function holdFile(rule: string, file: File): string {
+  const ref = URL.createObjectURL(file)
+  pending.set(ref, { rule, file })
+  return ref
+}
+
+// memoized: a ref can appear twice (legalDocs mirrors docs) and a failed submit is retried; anonymous uploads are rate limited per IP
+const send = (ref: string) => {
+  const p = pending.get(ref)!
+  p.upload ??= uploadFile(p.rule, p.file).catch((e: Error) => {
+    p.upload = undefined
+    throw new Error(`${p.file.name}: ${e.message}`)
+  })
+  return p.upload
+}
+
+/** Returns `value` with refs replaced. One file at a time: the first anonymous upload mints the token the others must reuse. */
+export async function uploadPending<T>(value: T): Promise<T> {
+  const walk = async (v: unknown, key: string): Promise<unknown> => {
+    if (typeof v === 'string') {
+      if (!pending.has(v)) return v
+      const u = await send(v)
+      return /^id$|fileId$/i.test(key) ? u.fileId : u.url
+    }
+    if (Array.isArray(v)) {
+      const out: unknown[] = []
+      for (const x of v) out.push(await walk(x, key))
+      return out
+    }
+    if (v && typeof v === 'object') {
+      const out: Record<string, unknown> = {}
+      for (const [k, x] of Object.entries(v)) out[k] = await walk(x, k)
+      return out
+    }
+    return v
+  }
+  return (await walk(value, '')) as T
+}
+
 /** Absolute src for a stored file reference: `/api/files/..` paths belong to the API origin; everything else passes through. */
 export const fileSrc = (v: string): string => (v.startsWith('/api/files/') ? API_BASE + v : v)
 

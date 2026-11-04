@@ -1,7 +1,7 @@
 /** /account/profile — "Hồ sơ doanh nghiệp của tôi": fill once after sign-up, reused for every event. */
 import { AnimatePresence, motion } from 'motion/react'
 import { ArrowLeft, ArrowRight, BadgeCheck, Check, CircleDashed, Info, Lock, Plus, ShieldCheck, Trash2 } from 'lucide-react'
-import { useEffect, useMemo, type ReactNode } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { liveApi, USE_MOCK, useEvent } from '@/api'
 import { useToast } from '@/components/ui/overlay'
@@ -12,6 +12,7 @@ import { completion, OPTIONS, SECTIONS, sectionDone, useProfile, type CompanyPro
 import { cn } from '@/lib/utils'
 import { tx, withKo } from '@/lib/tx'
 import { FileUpload, GalleryUpload, ImageUpload, UploadGuide } from '@/components/upload/Upload'
+import { uploadPending } from '@/api/uploads'
 import type { RuleKey } from '@/lib/upload'
 
 export default function MyProfile() {
@@ -25,6 +26,7 @@ export default function MyProfile() {
   const returnEvent = useEvent(returnTo?.startsWith('/events/') ? (returnTo.split('/')[2] ?? '') : '').data ?? null
   const pct = completion(profile)
   const idx = SECTIONS.findIndex((s) => s.key === active)
+  const [saving, setSaving] = useState(false)
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -45,7 +47,11 @@ export default function MyProfile() {
   // live: PUT /api/me/profile/{section}; the BE accepts incomplete data (BR-PRF-01) and computes completion
   const saveAndNext = () => {
     if (USE_MOCK) return proceed()
-    liveApi.saveProfileSection(active, profile[active]).then(proceed, (err: Error) => toast({ kind: 'info', title: err.message }))
+    setSaving(true)
+    uploadPending(profile[active])
+      .then((data) => { update(active, data); return liveApi.saveProfileSection(active, data) })
+      .then(proceed, (err: Error) => toast({ kind: 'info', title: err.message }))
+      .finally(() => setSaving(false))
   }
 
   return (
@@ -144,7 +150,7 @@ export default function MyProfile() {
 
           <div className="flex flex-wrap items-center justify-between gap-3 border-t px-4 py-4 sm:px-6 md:px-8">
             <Button variant="ghost" disabled={idx === 0} onClick={() => go(SECTIONS[idx - 1]!.key)}><ArrowLeft /> {tx('Phần trước', 'Previous')}</Button>
-            <Button onClick={saveAndNext}>
+            <Button onClick={saveAndNext} disabled={saving}>
               {idx < SECTIONS.length - 1 ? (tx('Lưu & tiếp tục', 'Save & continue')) : returnTo ? (tx('Lưu & quay lại đăng ký', 'Save & back to registration')) : (tx('Lưu', 'Save'))} <ArrowRight />
             </Button>
           </div>
@@ -330,7 +336,7 @@ function ExportsForm({ p, set }: FP<'exports'>) {
       <Q label={tx('Khả năng truy xuất nguồn gốc dòng sản phẩm xuất khẩu', 'Traceability of export products')} required><Choice cols={1} options={OPTIONS.traceability} value={x.traceability} onChange={(v) => set({ ...x, traceability: v })} /></Q>
       <Q label={tx('Đã từng làm việc với doanh nghiệp Đức / châu Âu?', 'Worked with German / EU companies?')} required><Choice cols={3} options={OPTIONS.euExperience} value={x.euExperience} onChange={(v) => set({ ...x, euExperience: v })} /></Q>
       <Q label={tx('Bằng chứng xuất khẩu (không bắt buộc)', 'Export evidence (optional)')} hint={tx('Tờ khai hải quan, hợp đồng + invoice, B/L. VCCI có thể đối chiếu với dữ liệu C/O do VCCI cấp.', 'Customs declarations, contract + invoice, B/L. VCCI can cross-check against C/O it has issued.')}>
-        <FilePick rule="evidence" name={x.evidence} onPick={(n) => set({ ...x, evidence: n })} />
+        <FilePick rule="evidence" name={x.evidence} onPick={(n, _pv, fid) => set({ ...x, evidence: n, evidenceFileId: fid })} />
       </Q>
     </div>
   )

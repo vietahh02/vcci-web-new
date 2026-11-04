@@ -9,7 +9,7 @@ import { checkFile, formatSize, isImage, RULES, ruleSummary, toPreview, type Rul
 import { cn } from '@/lib/utils'
 import { USE_MOCK } from '@/api/config'
 import { Select } from '@/components/ui/select'
-import { fileSrc, uploadFile, type UploadedFile } from '@/api/uploads'
+import { fileSrc, holdFile } from '@/api/uploads'
 
 /* ---------------------------------------------------------------- hint line + expandable tips */
 export function UploadHint({ rule }: { rule: RuleKey }) {
@@ -60,8 +60,8 @@ export function UploadGuide({ keys }: { keys: RuleKey[] }) {
 function useValidated(rule: RuleKey) {
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
-  /** Local checks, then (live mode) the real upload; the backend re-validates and its message is shown on rejection. */
-  const accept = async (file: File, maxSide?: number): Promise<{ preview: string; remote: UploadedFile | null } | null> => {
+  /** Local checks only; in live mode the file is held until the form's Save/Submit (`uploadPending`), where the backend re-validates it. */
+  const accept = async (file: File, maxSide?: number): Promise<{ preview: string; ref: string | undefined } | null> => {
     setBusy(true)
     const err = await checkFile(file, RULES[rule])
     setError(err)
@@ -70,18 +70,8 @@ function useValidated(rule: RuleKey) {
       return null
     }
     const preview = await toPreview(file, maxSide)
-    let remote: UploadedFile | null = null
-    if (!USE_MOCK) {
-      try {
-        remote = await uploadFile(rule, file)
-      } catch (e) {
-        setError((e as Error).message)
-        setBusy(false)
-        return null
-      }
-    }
     setBusy(false)
-    return { preview, remote }
+    return { preview, ref: USE_MOCK ? undefined : holdFile(rule, file) }
   }
   return { error, busy, accept, setError }
 }
@@ -95,7 +85,7 @@ export function FileUpload({ rule, value, onChange, compact, noHint }: { rule: R
   const pick = async (file?: File) => {
     if (!file) return
     const ok = await accept(file, 800)
-    if (ok) onChange({ id: ok.remote?.fileId ?? `f${Date.now()}`, name: file.name, kind: rule, size: file.size, preview: ok.preview || undefined, fileId: ok.remote?.fileId, url: ok.remote?.url })
+    if (ok) onChange({ id: ok.ref ?? `f${Date.now()}`, name: file.name, kind: rule, size: file.size, preview: ok.preview || undefined, fileId: ok.ref, url: ok.ref })
   }
 
   return (
@@ -136,7 +126,7 @@ export function FileUpload({ rule, value, onChange, compact, noHint }: { rule: R
   )
 }
 
-/** Several documents in one group (max `max`), each checked and uploaded like FileUpload. */
+/** Several documents in one group (max `max`), each checked and held like FileUpload. */
 export function MultiFileUpload({ rule, value, onChange, max = 5 }: { rule: RuleKey; value: DocFile[]; onChange: (v: DocFile[]) => void; max?: number }) {
   return (
     <div className="space-y-2">
@@ -161,7 +151,7 @@ export function ImageUpload({ rule, value, onChange }: { rule: 'logo' | 'cover';
   const pick = async (file?: File) => {
     if (!file) return
     const ok = await accept(file, logo ? 400 : 1600)
-    if (ok) onChange(ok.remote?.url ?? ok.preview)
+    if (ok) onChange(ok.ref ?? ok.preview)
   }
   return (
     <div>
@@ -210,11 +200,8 @@ export function GalleryUpload({ value, onChange, max = 12 }: { value: MediaItem[
     for (const file of Array.from(files).slice(0, max - value.length)) {
       const err = await checkFile(file, RULES.gallery)
       if (err) { errs.push(`${file.name}: ${err}`); continue }
-      let remote: UploadedFile | null = null
-      if (!USE_MOCK) {
-        try { remote = await uploadFile('gallery', file) } catch (e) { errs.push(`${file.name}: ${(e as Error).message}`); continue }
-      }
-      next.push({ id: `g${Date.now()}${Math.random().toString(36).slice(2, 6)}`, url: remote?.url ?? await toPreview(file, 1200), fileId: remote?.fileId, caption: '', kind: 'FACTORY' })
+      const ref = USE_MOCK ? undefined : holdFile('gallery', file)
+      next.push({ id: `g${Date.now()}${Math.random().toString(36).slice(2, 6)}`, url: ref ?? await toPreview(file, 1200), fileId: ref, caption: '', kind: 'FACTORY' })
     }
     setErrors(errs)
     onChange(next)

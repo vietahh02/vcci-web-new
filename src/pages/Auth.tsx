@@ -7,7 +7,7 @@ import type { Captcha as CaptchaChallenge } from '@/api/auth'
 import { emptyProfile, useProfile, type DocFile, type Registration } from '@/lib/profile'
 import { ImageUpload, MultiFileUpload, UploadGuide } from '@/components/upload/Upload'
 import type { Branch, KeyLeaders, LeaderPerson, RegDocGroup } from '@/api/realApi'
-import { clearRegisterUploadToken } from '@/api/uploads'
+import { clearRegisterUploadToken, uploadPending } from '@/api/uploads'
 import { tx } from '@/lib/tx'
 import { categories } from '@/data/mock'
 import { Logo } from '@/components/brand'
@@ -307,8 +307,8 @@ export function Register() {
             const password = String(fd.get('password') ?? '')
             if (password !== String(fd.get('confirmPassword') ?? '')) return toast({ kind: 'info', title: tx('Mật khẩu nhập lại không khớp', 'Passwords do not match', '비밀번호가 일치하지 않습니다') })
             setBusy(true)
-            // files were already uploaded (token + fileIds); the BE links them to the new organization
-            liveApi.registerBusiness({ ...r, loginEmail: r.loginEmail || r.email, password }).then(
+            // files go up only now (token + fileIds); the BE links them to the new organization
+            uploadPending(r).then((sent) => liveApi.registerBusiness({ ...sent, loginEmail: sent.loginEmail || sent.email, password })).then(
               () => { clearRegisterUploadToken(); setDone(true) },
               (err: Error) => toast({ kind: 'info', title: err.message }),
             ).finally(() => setBusy(false))

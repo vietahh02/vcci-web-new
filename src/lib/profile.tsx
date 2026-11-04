@@ -113,7 +113,7 @@ export interface Attendee { id: string; name: string; title: string; email: stri
 export interface CompanyProfile {
   general: { nameVi: string; nameEn: string; taxCode: string; ownership: string; foundedYear: string; channels: string; womenOwned: '' | 'YES' | 'NO'; factoryAddress: string; contactName: string; contactTitle: string; contactPhone: string; contactEmail: string }
   capability: { sectors: string[]; mainProducts: string[]; servedIndustries: string; keyCustomers: string; supplyCapacity: string; oem: string; monthlyCapacity: string; exportCapacityPct: string; moq: string; factoryArea: string; productionLines: string; qcProcess: string; certificates: Certificate[] }
-  exports: { exportShare: string; markets: string[]; modes: string[]; traceability: string; euExperience: string; evidence: string }
+  exports: { exportShare: string; markets: string[]; modes: string[]; traceability: string; euExperience: string; evidence: string; evidenceFileId?: string }
   finance: { revenues: RevenueRow[]; visibility: 'BAND' | 'HIDDEN' }
   needs: { partnerTypes: string[]; opportunities: string[]; targetMarkets: string[]; readiness: string; barriers: string[]; documents: string[]; note: string }
   attendees: Attendee[]
