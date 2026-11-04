@@ -1,5 +1,6 @@
 /** Small helpers shared by all BE -> FE adapters. BE content arrives already localised, so it is wrapped to Bilingual. */
 import { IMG } from '@/data/mock'
+import { isSampleImageId } from '@/lib/utils'
 import type { Bilingual } from '@/lib/i18n'
 import { API_BASE } from '../config'
 
@@ -31,5 +32,5 @@ export const url = (v: unknown, fallback: string = IMG.warehouse): string => {
   if (!s) return fallback
   if (/^(https?:|data:|blob:)/.test(s)) return s
   if (s.startsWith('/')) return API_BASE + s
-  return s // legacy mock image id
+  return isSampleImageId(s) ? s : `${API_BASE}/${s}`
 }

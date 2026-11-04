@@ -6,7 +6,8 @@ import { CountryChip } from '@/components/brand'
 import { CountUp } from '@/components/effects'
 import { Dialog, DialogContent, useToast } from '@/components/ui/overlay'
 import { Badge, Button } from '@/components/ui/primitives'
-import { USE_MOCK } from '@/api'
+import { API_BASE, USE_MOCK } from '@/api'
+import { safeHttpUrl } from '@/components/live/liveRef'
 import { useEventRecap } from '@/api/eventApi'
 import type { EventItem } from '@/data/mock'
 import { useI18n } from '@/lib/i18n'
@@ -14,17 +15,37 @@ import { isOnlineShowEvent } from '@/lib/eventStatus'
 import { tx } from '@/lib/tx'
 import { formatDate, formatNumber, img } from '@/lib/utils'
 
+/** A file we can play on the page: our own storage or a video extension. Anything else (YouTube, Vimeo…) opens in a new tab. */
+const isVideoFile = (u: string) => u.startsWith(API_BASE) || u.includes('/api/files/') || /\.(mp4|webm|ogv|ogg|mov|m4v)(\?|#|$)/i.test(u)
+
+/** Photos shown before "+N"; the first is the large tile. */
+const GALLERY_PREVIEW = 5
+/** One photo fills the row, two split it, three or more lead with a large photo, on any count and on a phone. */
+function galleryTile(i: number, n: number) {
+  if (n === 1) return 'col-span-2 aspect-[2/1] md:col-span-4 md:aspect-[3/1]'
+  if (n === 2) return 'aspect-[4/3] md:col-span-2 md:aspect-[2/1]'
+  if (i === 0) return 'col-span-2 aspect-[4/3] md:row-span-2 md:aspect-auto'
+  if (n === 3) return 'aspect-[4/3] md:col-span-2 md:aspect-[2/1]'
+  if (n === 4 && i === 1) return 'col-span-2 aspect-[2/1]'
+  return 'aspect-[4/3]'
+}
+
 export function EventRecap({ ev }: { ev: EventItem }) {
   const { L, locale } = useI18n()
   const toast = useToast()
   const { data: r } = useEventRecap(ev)
   const [photo, setPhoto] = useState<string | null>(null)
   const [notify, setNotify] = useState(false)
+  const [allPhotos, setAllPhotos] = useState(false)
   const next = new Date(); next.setDate(next.getDate() + (r?.next?.inDays ?? 0))
   const demo = () => toast({ kind: 'info', title: tx('Bản mẫu', 'Prototype', '프로토타입'), description: tx('Trình phát bản ghi sẽ nối với hạ tầng livestream của hệ thống.', 'The player connects to the platform’s livestream infrastructure.', '플레이어는 플랫폼 라이브 인프라와 연동됩니다.') })
 
   if (!r) return null
-  const playVideo = () => { if (r.video.url) window.open(r.video.url, '_blank', 'noopener,noreferrer'); else demo() }
+  const playVideo = () => {
+    if (!r.video.url) return demo()
+    const link = safeHttpUrl(r.video.url)
+    if (link) window.open(link, '_blank', 'noopener,noreferrer')
+  }
   const sample = USE_MOCK
   const hasVideo = sample || !!r.video.url
   const hasSessions = ev.agendaOptions.length > 0
@@ -47,11 +68,14 @@ export function EventRecap({ ev }: { ev: EventItem }) {
       </div>}
 
       {(hasVideo || r.takeaways.length > 0) && <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
-        {hasVideo && <button type="button" onClick={playVideo} className="group relative aspect-video overflow-hidden rounded-2xl bg-navy text-left" aria-label={L(r.video.title)}>
+        {hasVideo && (r.video.url && isVideoFile(r.video.url) ? <figure>
+          <video src={r.video.url} poster={img(ev.coverImage, 1200, 680)} controls playsInline preload="metadata" className="aspect-video w-full rounded-2xl bg-navy" />
+          {L(r.video.title) && <figcaption className="mt-2 font-bold">{L(r.video.title)}</figcaption>}
+        </figure> : <button type="button" onClick={playVideo} className="group relative aspect-video overflow-hidden rounded-2xl bg-navy text-left" aria-label={L(r.video.title) || tx('Xem video', 'Watch video', '영상 보기')}>
           <img src={img(ev.coverImage, 1200, 680)} alt="" className="size-full object-cover opacity-60 transition duration-700 group-hover:scale-105 group-hover:opacity-75" />
           <span className="absolute inset-0 grid place-items-center"><span className="grid size-16 place-items-center rounded-full bg-white/95 text-navy shadow-xl transition group-hover:scale-110"><PlayCircle className="size-9" /></span></span>
-          <span className="absolute inset-x-0 bottom-0 flex items-center justify-between bg-gradient-to-t from-black/70 to-transparent p-4 text-white"><span className="font-bold">{L(r.video.title)}</span><span className="rounded bg-black/50 px-2 py-0.5 text-xs font-semibold">{r.video.duration}</span></span>
-        </button>}
+          <span className="absolute inset-x-0 bottom-0 flex items-center justify-between bg-gradient-to-t from-black/70 to-transparent p-4 text-white"><span className="font-bold">{L(r.video.title)}</span>{r.video.duration && <span className="rounded bg-black/50 px-2 py-0.5 text-xs font-semibold">{r.video.duration}</span>}</span>
+        </button>)}
         {r.takeaways.length > 0 && <div className="rounded-2xl border bg-card p-5">
           <h3 className="text-lg font-extrabold">{tx('Điểm nhấn nội dung', 'Key takeaways', '주요 내용')}</h3>
           <ul className="mt-3 space-y-3">
@@ -82,12 +106,16 @@ export function EventRecap({ ev }: { ev: EventItem }) {
 
       {r.gallery.length > 0 && <div>
         <h3 className="flex items-center gap-2 text-xl font-extrabold"><Camera className="size-5 text-primary" /> {tx('Hình ảnh sự kiện', 'Photo gallery', '행사 사진')}</h3>
-        <div className="mt-3 grid grid-cols-2 gap-3 md:grid-cols-4 md:grid-rows-2">
-          {r.gallery.map((g, i) => (
-            <motion.button key={`${g}-${i}`} type="button" onClick={() => setPhoto(g)} whileHover={{ scale: 1.02 }} className={`relative overflow-hidden rounded-xl bg-muted ${i === 0 ? 'col-span-2 row-span-2 aspect-square md:aspect-auto' : 'aspect-[4/3]'}`}>
-              <img src={img(g, i === 0 ? 900 : 480, i === 0 ? 700 : 360)} alt="" loading="lazy" className="size-full object-cover" />
-            </motion.button>
-          ))}
+        <div className="mt-3 grid grid-cols-2 gap-3 md:grid-cols-4">
+          {(allPhotos ? r.gallery : r.gallery.slice(0, GALLERY_PREVIEW)).map((g, i) => {
+            const more = !allPhotos && i === GALLERY_PREVIEW - 1 ? r.gallery.length - GALLERY_PREVIEW : 0
+            return (
+              <motion.button key={`${g}-${i}`} type="button" onClick={() => (more > 0 ? setAllPhotos(true) : setPhoto(g))} whileHover={{ scale: 1.02 }} aria-label={more > 0 ? tx(`Xem thêm ${more} ảnh`, `Show ${more} more photos`, `사진 ${more}장 더 보기`) : tx('Xem ảnh', 'View photo', '사진 보기')} className={`relative overflow-hidden rounded-xl bg-muted ${galleryTile(i, r.gallery.length)}`}>
+                <img src={img(g, i === 0 ? 900 : 480, i === 0 ? 700 : 360)} alt="" loading="lazy" className="absolute inset-0 size-full object-cover" />
+                {more > 0 && <span className="absolute inset-0 grid place-items-center bg-navy/60 text-2xl font-extrabold text-white">+{more}</span>}
+              </motion.button>
+            )
+          })}
         </div>
       </div>}
 

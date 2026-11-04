@@ -48,11 +48,12 @@ export function toRecap(r: Raw): Recap {
   return {
     stats: arr(r.stats).map((s) => ({ label: biAny(s.label), value: num(s.value), suffix: s.suffix ? str(s.suffix) : undefined })),
     takeaways: arr<string>(r.takeaways).map(biAny),
-    gallery: arr<string>(r.gallery).map((g) => url(g, '')).filter(Boolean),
+    gallery: arr<unknown>(r.gallery).map((g) => url(typeof g === 'string' ? g : (g as Raw)?.url, '')).filter(Boolean),
     video: { title: biAny(r.video?.title), duration: str(r.video?.duration), url: r.video?.url ? url(r.video.url, '') : undefined },
     participants: arr(r.participants).map((p) => ({ name: str(p.name), country: str(p.country) })),
     testimonials: arr(r.testimonials).map((q) => ({ quote: biAny(q.quote), name: str(q.name), org: str(q.org) })),
     next: r.next ? { title: biAny(r.next.title), inDays: num(r.next.inDays) } : undefined,
+    banner: r.banner ? url(r.banner, '') : undefined,
     rating: r.rating ? { average: num(r.rating.average), count: num(r.rating.count) } : undefined,
   }
 }

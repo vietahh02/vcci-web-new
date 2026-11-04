@@ -4,6 +4,7 @@ import { Bell, BellRing, Building2, CalendarDays, CheckCircle2, Clock, Globe2, M
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { CompanyMark, CountryChip } from '@/components/brand'
+import { useEventRecap } from '@/api/eventApi'
 import { Countdown, LiveDot, Reveal } from '@/components/effects'
 import { EventParticipants } from '@/components/event/EventParticipants'
 import { EventRecap } from '@/components/event/EventRecap'
@@ -73,6 +74,7 @@ export function ShowEventDetail({ show }: { show: Show }) {
   const openInquiry = (b: ShowBooth, p?: ShowProduct) => (hasValidBadge ? setInquiry({ booth: b, product: p }) : setRegOpen(true))
   // ONLINE main button follows the show's state: register before, enter the live session during, replay and highlights after
   const ended = show.status === 'ENDED'
+  const recapBanner = useEventRecap(showToEvent(show), ended).data?.banner
   const hasReplay = show.sessions.some((s) => s.status === 'ENDED' && (s.hasReplay || !!s.recordingUrl))
   const goTo = (next: Tab, anchor: string) => {
     setTab(next)
@@ -87,7 +89,7 @@ export function ShowEventDetail({ show }: { show: Show }) {
   return (
     <ShowFormatContext.Provider value={show.format}>
       <section className="relative isolate overflow-hidden bg-navy text-white">
-        <img src={img(show.banner ?? show.cover, 1800, 800)} alt="" className="absolute inset-0 -z-20 size-full animate-kenburns object-cover opacity-40" />
+        <img src={img((ended && recapBanner) || show.banner || show.cover, 1800, 800)} alt="" className="absolute inset-0 -z-20 size-full animate-kenburns object-cover opacity-40" />
         <div className="absolute inset-0 -z-10 bg-gradient-to-r from-navy via-navy/85 to-navy/40" />
         <div className="container-page grid gap-8 py-8 md:py-10 lg:grid-cols-[1fr_380px]">
           <Reveal>

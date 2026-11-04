@@ -92,7 +92,7 @@ function useBoth<T>(key: string | null, sync: () => T, fetcher: () => Promise<T>
 export const useEventProgramme = (ev: EventItem) => useBoth('evprog:' + ev.id, () => getProgramme(ev.id), () => fetchProgramme(ev))
 export const useEventProducts = (ev: EventItem) => useBoth('evprod:' + ev.id, () => eventProducts(ev), () => fetchEventProducts(ev))
 export const useEventParticipants = (ev: EventItem) => useBoth('evpart:' + ev.id, () => eventParticipants(ev), () => fetchParticipants(ev))
-export const useEventRecap = (ev: EventItem) => useBoth('evrecap:' + ev.id, () => getRecap(ev), () => fetchRecap(ev))
+export const useEventRecap = (ev: EventItem, enabled = true) => useBoth(enabled ? 'evrecap:' + ev.id : null, () => getRecap(ev), () => fetchRecap(ev))
 export const useEventMaterials = (ev: EventItem, enabled = true) => useBoth(enabled ? 'evmat:' + ev.id : null, () => sampleMaterials(ev), () => fetchMaterials(ev))
 /** Mock mode has no BE flag: online-first (the Leader's default). */
 export const useEventOptions = (): EventOptions => useBoth('evopts', () => ONLINE_FIRST, fetchEventOptions).data ?? ONLINE_FIRST

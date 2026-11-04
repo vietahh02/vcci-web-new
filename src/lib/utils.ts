@@ -6,8 +6,11 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /** Unsplash image helper — all ids verified to resolve. */
+/** Sample data refers to images by Unsplash photo id. Anything else is a real URL or storage path and must reach the browser untouched. */
+export const isSampleImageId = (v: string) => /^\d{6,}-[0-9a-f]+$/.test(v)
+
 export function img(id: string, w = 640, h?: number) {
-  if (/^(https?:|data:|blob:|\/)/.test(id)) return id // real backend returns absolute URLs
+  if (!isSampleImageId(id)) return id
   const size = h ? `&h=${h}&fit=crop` : ''
   return `https://images.unsplash.com/photo-${id}?w=${w}${size}&q=70&auto=format`
 }
