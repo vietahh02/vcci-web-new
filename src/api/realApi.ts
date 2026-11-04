@@ -246,11 +246,12 @@ export function showUploadReceipt(visitorId: string, file: File) {
 export const showLaunchFollow = (slotId: string, on: boolean, email: string, badgeCode: string) => apiFetch(`/api/public/shows/launch-slots/${slotId}/follow`, on ? { method: 'POST', json: { email, badgeCode } } : { method: 'DELETE', query: { email, badgeCode } })
 /* Post-show feedback (CR-2026-008 §4.2). */
 export interface ShowFeedbackInput { rating: number; comment?: string; consentPublic: boolean }
-/** GET /api/public/shows/{id}/feedback/mine: has this badge already sent feedback? */
-export async function showFeedbackSent(feId: string, email: string, badgeCode: string) {
-  const r = await apiFetch<Raw | boolean | null>(`/api/public/shows/${beShowId(feId)}/feedback/mine`, { query: { email, badgeCode } })
-  return r && typeof r === 'object' ? Boolean(r.submitted ?? r.sent ?? r.exists ?? r.id ?? r.rating) : Boolean(r)
-}
+export interface ShowFeedbackMine { submitted: boolean; canSubmit: boolean; closedReason?: string }
+const toFeedbackMine = (r: Raw): ShowFeedbackMine => ({ submitted: r?.submitted === true, canSubmit: r?.canSubmit === true, closedReason: r?.closedReason ? str(r.closedReason) : undefined })
+/** GET /api/public/shows/{id}/feedback/mine. Wrong email or badge is refused (E005); `canSubmit` is false once sent or past the window. */
+export const showFeedbackMine = async (feId: string, email: string, badgeCode: string) => toFeedbackMine(await apiFetch<Raw>(`/api/public/shows/${beShowId(feId)}/feedback/mine`, { query: { email, badgeCode } }))
+/** GET /api/shows/{id}/feedback/mine (signed in). A business without an approved booth at this show is refused (E005). */
+export const showOrgFeedbackMine = async (feId: string) => toFeedbackMine(await apiFetch<Raw>(`/api/shows/${beShowId(feId)}/feedback/mine`))
 /** POST /api/public/shows/{id}/feedback (badge holder: email + badgeCode) */
 export const showVisitorFeedback = (feId: string, b: ShowFeedbackInput & { email: string; badgeCode: string }) => apiFetch(`/api/public/shows/${beShowId(feId)}/feedback`, { method: 'POST', json: b })
 /** POST /api/shows/{id}/feedback (signed-in business with an approved booth) */

@@ -6,8 +6,7 @@
 import { Send, Star } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { ApiError, catalogApi, liveApi, USE_MOCK } from '@/api'
-import { beShowId } from '@/api/adapters/show'
+import { ApiError, liveApi, USE_MOCK } from '@/api'
 import { Dialog, DialogContent, useToast } from '@/components/ui/overlay'
 import { Button, Field, Textarea } from '@/components/ui/primitives'
 import type { Show } from '@/data/shows'
@@ -18,6 +17,8 @@ import { tx } from '@/lib/tx'
 import { cn } from '@/lib/utils'
 
 const COMMENT_MAX = 2000
+/** BaseErrorCode.E006_DUPLICATE: business errors are HTTP 400, the code says which one. */
+const DUPLICATE = 'E006'
 /** A badge writes through the public endpoint; a signed-in business through its own. */
 type Author = { email: string; badgeCode: string } | 'ORG'
 
@@ -54,11 +55,11 @@ export function ShowFeedbackDialog({ show, visitor }: { show: Show; visitor: Ret
     let stale = false
     const quiet = (e: unknown) => console.warn(`[show] feedback prompt skipped: ${e instanceof Error ? e.message : 'unavailable'}`)
     if (email && badgeCode) {
-      const sent = USE_MOCK ? Promise.resolve(false) : liveApi.showFeedbackSent(show.id, email, badgeCode)
-      sent.then((yes) => { if (!stale && !yes) setAuthor({ email, badgeCode }) }, quiet)
+      const mine = USE_MOCK ? Promise.resolve({ canSubmit: true }) : liveApi.showFeedbackMine(show.id, email, badgeCode)
+      mine.then((m) => { if (!stale && m.canSubmit) setAuthor({ email, badgeCode }) }, quiet)
     } else if (signedIn && !USE_MOCK) {
-      // the BE has no "my feedback" read for businesses: a repeat is refused on submit and remembered then
-      catalogApi.myBooths().then((booths) => { if (!stale && booths.some((b) => b.showId === beShowId(show.id) && b.status === 'APPROVED')) setAuthor('ORG') }, quiet)
+      // refused for a business without an approved booth at this show: nothing to invite then
+      liveApi.showOrgFeedbackMine(show.id).then((m) => { if (!stale && m.canSubmit) setAuthor('ORG') }, quiet)
     }
     return () => { stale = true }
   }, [show.id, show.status, settled, email, badgeCode, signedIn])
@@ -78,7 +79,7 @@ export function ShowFeedbackDialog({ show, visitor }: { show: Show; visitor: Ret
     const call = author === 'ORG' ? liveApi.showOrgFeedback(show.id, body) : liveApi.showVisitorFeedback(show.id, { ...author, ...body })
     call.then(done, (err: Error) => {
       setBusy(false)
-      if (err instanceof ApiError && err.status === 409) visitor.setFeedback('SENT')
+      if (err instanceof ApiError && err.code === DUPLICATE) visitor.setFeedback('SENT')
       toast({ kind: 'info', title: err.message })
     })
   }
