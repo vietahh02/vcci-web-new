@@ -8,6 +8,7 @@ import { Countdown, LiveDot, Reveal } from '@/components/effects'
 import { EventParticipants } from '@/components/event/EventParticipants'
 import { EventRecap } from '@/components/event/EventRecap'
 import { showToEvent } from '@/lib/showEvent'
+import { tx } from '@/lib/tx'
 import { BadgeCard, VisitorRegistration } from '@/components/show/VisitorRegistration'
 import { Dialog, DialogContent, UnderlineTabs, useToast } from '@/components/ui/overlay'
 import { Badge, Button, Field, Input, Progress, Textarea } from '@/components/ui/primitives'
@@ -65,18 +66,19 @@ export function ShowEventDetail({ show }: { show: Show }) {
   return (
     <>
       <section className="relative isolate overflow-hidden bg-navy text-white">
-        <img src={img(show.cover, 1800, 800)} alt="" className="absolute inset-0 -z-20 size-full animate-kenburns object-cover opacity-40" />
+        <img src={img(show.banner ?? show.cover, 1800, 800)} alt="" className="absolute inset-0 -z-20 size-full animate-kenburns object-cover opacity-40" />
         <div className="absolute inset-0 -z-10 bg-gradient-to-r from-navy via-navy/85 to-navy/40" />
         <div className="container-page grid gap-8 py-8 md:py-10 lg:grid-cols-[1fr_380px]">
           <Reveal>
             <nav className="mb-5 text-[13px] text-white/60"><Link to="/events" className="hover:text-white">{t.nav.events}</Link> / {t.events.type.SHOW}</nav>
             <div className="flex flex-wrap gap-2">
               <ShowLabelBadge show={show} />
+              {show.heroBadge && <Badge variant="outline" className="border-gold-bright/40 text-gold-bright">{L(show.heroBadge)}</Badge>}
               <Badge variant="outline" className="border-white/30 text-white"><Store /> {t.events.type.SHOW}</Badge>
               <Badge variant="outline" className="border-white/30 text-white"><Globe2 /> {show.physicalVenue ? x.onlineFirst : x.online}</Badge>
               {show.industries.slice(0, 4).map((i) => <Badge key={i} variant="outline" className="border-white/20 text-white/80">{i}</Badge>)}
             </div>
-            <h1 className="mt-3 max-w-3xl text-2xl font-extrabold leading-tight tracking-tight text-balance md:text-4xl">{L(show.title)}</h1>
+            <h1 className="mt-3 max-w-3xl text-2xl font-extrabold leading-tight tracking-tight text-balance md:text-4xl">{L(show.heroTitle ?? show.title)}</h1>
             <p className="mt-2 max-w-2xl text-white/75 md:text-base">{L(show.tagline)}</p>
             <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-sm text-white/80">
               <span className="inline-flex items-center gap-2"><CalendarDays className="size-4 text-gold-bright" /> {formatDate(show.startDate, locale, { day: '2-digit', month: 'long' })} – {formatDate(show.endDate, locale, { day: '2-digit', month: 'long', year: 'numeric' })}</span>
@@ -162,6 +164,7 @@ function Overview({ show }: { show: Show }) {
           <p className="max-w-3xl leading-relaxed text-muted-foreground">{L(show.introduction)}</p>
           <p className="mt-4 inline-flex items-center gap-2 rounded-lg bg-primary-soft px-3 py-2 text-sm font-medium text-primary"><Globe2 className="size-4" /> {x.direction[show.direction]}</p>
         </section>
+        <HomeBlocks show={show} />
         <section>
           <h2 className="text-xl font-extrabold">{x.phasesTitle}</h2>
           <ol className="relative mt-5 space-y-4 border-l-2 border-dashed border-border pl-6">
@@ -191,6 +194,7 @@ function Overview({ show }: { show: Show }) {
             ))}
           </div>
         </section>
+        <ShowFaqBlock show={show} />
       </div>
 
       <aside className="space-y-6">
@@ -213,6 +217,88 @@ function Overview({ show }: { show: Show }) {
         </div>
       </aside>
     </div>
+  )
+}
+
+/** Show home-page content from the CMS: each block only exists when it has rows, styled like the sections around it. */
+function HomeBlocks({ show }: { show: Show }) {
+  const { L } = useI18n()
+  const { stats = [], whyAttend = [], topics = [], highlights = [] } = show
+  const ordered = [...highlights].sort((a, b) => Number(b.hero) - Number(a.hero))
+  return (
+    <>
+      {stats.length > 0 && (
+        <section aria-label={tx('Số liệu nổi bật', 'Key figures', '주요 수치')}>
+          <dl className="grid grid-cols-2 gap-3 md:grid-cols-4">
+            {stats.map((s, i) => (
+              <div key={i} className="rounded-xl border bg-card p-4">
+                <dd className="text-xl font-extrabold tabular-nums text-primary md:text-2xl">{L(s.value)}</dd>
+                <dt className="mt-1 text-xs font-semibold text-muted-foreground">{L(s.label)}</dt>
+              </div>
+            ))}
+          </dl>
+        </section>
+      )}
+      {whyAttend.length > 0 && (
+        <section>
+          <h2 className="text-xl font-extrabold">{tx('Vì sao nên tham dự', 'Why attend', '참가해야 하는 이유')}</h2>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            {whyAttend.map((w, i) => (
+              <div key={i} className="rounded-xl border bg-card p-4">
+                <p className="flex gap-2 font-bold"><CheckCircle2 className="mt-1 size-4 shrink-0 text-success" /> {L(w.title)}</p>
+                {L(w.text) && <p className="mt-1 text-sm text-muted-foreground">{L(w.text)}</p>}
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+      {topics.length > 0 && (
+        <section>
+          <h2 className="text-xl font-extrabold">{tx('Chủ đề', 'Topics', '주제')}</h2>
+          <div className="mt-4 flex flex-wrap gap-1.5">{topics.map((t, i) => <Badge key={i} variant="muted">{L(t)}</Badge>)}</div>
+        </section>
+      )}
+      {ordered.length > 0 && (
+        <section>
+          <h2 className="text-xl font-extrabold">{tx('Điểm nhấn', 'Highlights', '하이라이트')}</h2>
+          <div className="mt-4 grid gap-6 sm:grid-cols-2">
+            {ordered.map((h, i) => (
+              <div key={i} className={cn('overflow-hidden rounded-2xl border bg-card', h.hero && 'sm:col-span-2')}>
+                {h.video ? (
+                  <video src={h.video} poster={h.image ? img(h.image, 1000, 560) : undefined} controls preload="metadata" className="aspect-video w-full bg-navy object-cover" />
+                ) : h.image && (
+                  <div className="aspect-video overflow-hidden bg-muted"><img src={img(h.image, 1000, 560)} alt="" loading="lazy" className="size-full object-cover" /></div>
+                )}
+                <div className="p-4">
+                  <p className="font-bold">{L(h.title)}</p>
+                  {L(h.text) && <p className="mt-1 text-sm text-muted-foreground">{L(h.text)}</p>}
+                  {h.link && <a href={h.link} target="_blank" rel="noopener noreferrer" className="mt-2 inline-block text-sm font-semibold text-primary hover:underline">{tx('Xem thêm', 'Learn more', '자세히 보기')}</a>}
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+    </>
+  )
+}
+
+function ShowFaqBlock({ show }: { show: Show }) {
+  const { L } = useI18n()
+  const faq = show.faq ?? []
+  if (!faq.length) return null
+  return (
+    <section>
+      <h2 className="text-xl font-extrabold">{tx('Câu hỏi thường gặp', 'Frequently asked questions', '자주 묻는 질문')}</h2>
+      <div className="mt-4 divide-y rounded-xl border bg-card px-4">
+        {faq.map((f, i) => (
+          <details key={i} className="group py-2.5">
+            <summary className="cursor-pointer list-none text-sm font-semibold marker:hidden group-open:text-primary">{L(f.q)}</summary>
+            <p className="mt-1.5 text-sm text-muted-foreground">{L(f.a)}</p>
+          </details>
+        ))}
+      </div>
+    </section>
   )
 }
 

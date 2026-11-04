@@ -56,6 +56,9 @@ export interface ShowLaunch {
   end: string
   live: boolean
   followers: number
+  /** Live mode: the broadcast behind this launch slot, when one is linked. */
+  streamEventId?: string
+  streamSessionId?: string
 }
 export interface ShowSpeaker { id: string; name: string; title: Bilingual; org: Bilingual; country: string; bio: Bilingual; accent: string }
 export interface ShowSession {
@@ -73,7 +76,15 @@ export interface ShowSession {
   hasReplay?: boolean
   phaseId: string
   tags: string[]
+  /** Live mode: the webinar/livestream session behind this agenda row, when one is linked. */
+  live?: { eventType: string; eventId: string; sessionId: string }
+  recordingUrl?: string
 }
+/** Show home-page content entered in the CMS; each block only renders when it has rows. */
+export interface ShowStat { label: Bilingual; value: Bilingual }
+export interface ShowWhyAttend { title: Bilingual; text: Bilingual }
+export interface ShowHighlight { title: Bilingual; text: Bilingual; image?: string; video?: string; link?: string; hero: boolean }
+export interface ShowFaq { q: Bilingual; a: Bilingual }
 export interface Show {
   id: string
   title: Bilingual
@@ -113,6 +124,15 @@ export interface Show {
   sessions: ShowSession[]
   contact: { name: string; email: string; phone: string }
   rules: Bilingual[]
+  /** Hero overrides from the CMS; without them the hero uses title and cover. */
+  heroTitle?: Bilingual
+  heroBadge?: Bilingual
+  banner?: string
+  stats?: ShowStat[]
+  whyAttend?: ShowWhyAttend[]
+  topics?: Bilingual[]
+  highlights?: ShowHighlight[]
+  faq?: ShowFaq[]
 }
 
 /* ------------------------------------------------------------ show 1: ongoing export expo */
