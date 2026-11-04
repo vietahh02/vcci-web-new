@@ -14,6 +14,7 @@ import { arr, type Raw } from './adapters/common'
 import { toMaterial, toParticipant, toPrep, toProgramme, toRecap, toRegistrationFull, toThreadMsg, toTradedProduct, type LivePrep, type LiveThreadMsg, type RegistrationFull } from './adapters/eventExtra'
 import { USE_MOCK, mockFallback } from './config'
 import { useRemote, type Remote } from './hooks'
+import type { BadgeStatus } from '@/lib/showReg'
 import { ApiError, apiFetch, apiUnavailable, toPage } from './http'
 
 const enc = encodeURIComponent
@@ -61,6 +62,20 @@ export const fetchMyRegistrations = async (): Promise<RegistrationFull[]> =>
 export const fetchRegistration = async (rid: string): Promise<RegistrationFull> => toRegistrationFull(await apiFetch<Raw>(`/api/event/registrations/${enc(rid)}`))
 export const cancelMyRegistration = (rid: string) => apiFetch(`/api/event/registrations/${enc(rid)}/cancel`, { method: 'POST' })
 
+/* ------------------------------------------------------- my show registrations */
+export interface MyShowVisit { visitorId: string; showId: string; status: string; badgeCode: string; email: string; fullName: string; visitorType: string }
+/** GET /api/shows/my/visits: registrations of the signed-in account (matched by user id or email). Show ids in FE form, `s-N`. */
+export const fetchMyShowVisits = async (): Promise<MyShowVisit[]> => arr<Raw>(await apiFetch('/api/shows/my/visits')).map((r) => ({
+  visitorId: String(r.id), showId: `s-${r.showId}`, status: String(r.status ?? ''), badgeCode: String(r.badgeCode ?? ''), email: String(r.email ?? ''), fullName: String(r.fullName ?? ''), visitorType: String(r.visitorType ?? ''),
+}))
+/** BE visitor status -> the state a registration holds on the Portal; null when it holds none (not verified, rejected, cancelled). */
+export function visitBadgeStatus(status: string): BadgeStatus | null {
+  if (status === 'ISSUED' || status === 'CHECKED_IN' || status === 'NO_SHOW') return 'ISSUED'
+  if (status === 'PENDING_PAYMENT') return 'PENDING_PAYMENT'
+  if (status === 'PENDING_REVIEW') return 'PENDING_APPROVAL'
+  return null
+}
+
 /* ------------------------------------------------------- journey (writes) */
 export const getPrep = async (rid: string): Promise<LivePrep> => toPrep(await apiFetch<Raw>(`/api/event/registrations/${enc(rid)}/prep`))
 export const savePrep = async (rid: string, doneTaskIds: string[]): Promise<LivePrep> => toPrep(await apiFetch<Raw>(`/api/event/registrations/${enc(rid)}/prep`, { method: 'PUT', json: { doneTaskIds } }))
@@ -103,5 +118,6 @@ export const useEventRecap = (ev: EventItem, enabled = true) => useBoth(enabled 
 export const useEventMaterials = (ev: EventItem, enabled = true) => useBoth(enabled ? 'evmat:' + ev.id : null, () => sampleMaterials(ev), () => fetchMaterials(ev))
 /** Mock mode has no BE flag: online-first (the Leader's default). */
 export const useEventOptions = (): EventOptions => useBoth('evopts', () => ONLINE_FIRST, fetchEventOptions).data ?? ONLINE_FIRST
+export const useMyShowVisits = (enabled: boolean) => useRemote<MyShowVisit[]>(!USE_MOCK && enabled ? 'myvisits' : null, fetchMyShowVisits)
 /** The signed-in organisation's registrations (live only; empty in mock mode, which tracks them locally). */
 export const useMyRegistrations = (enabled: boolean) => useRemote<RegistrationFull[]>(!USE_MOCK && enabled ? 'myreg' : null, fetchMyRegistrations)

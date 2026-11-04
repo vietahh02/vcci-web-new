@@ -20,6 +20,9 @@ function read(showId: string): Stored {
   }
 }
 
+/** The registration kept in this browser, for lists that do not mount useShowVisitor. */
+export const readShowBadge = (showId: string) => read(showId).badge
+
 export function useShowVisitor(showId: string) {
   const [state, setState] = useState<Stored>(() => read(showId))
   useEffect(() => setState(read(showId)), [showId])

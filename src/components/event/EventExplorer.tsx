@@ -8,7 +8,7 @@ import { AlertCircle, ArrowUpRight, CalendarDays, ChevronLeft, ChevronRight, Glo
 import { useMemo, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { USE_MOCK } from '@/api'
-import { useEventOptions, useMyRegistrations } from '@/api/eventApi'
+import { useEventOptions, useMyRegistrations, useMyShowVisits, visitBadgeStatus } from '@/api/eventApi'
 import { isActiveRegistration } from '@/api/adapters/eventExtra'
 import { AddToCalendar } from '@/components/event/AddToCalendar'
 import { LiveDot } from '@/components/effects'
@@ -22,6 +22,7 @@ import { eventTimeRange, registrationState } from '@/lib/eventStatus'
 import { isRegistered, readPrepDone } from '@/lib/eventUser'
 import { useI18n } from '@/lib/i18n'
 import { useProfile } from '@/lib/profile'
+import { readShowBadge, type BadgeStatus } from '@/lib/showReg'
 import { tx } from '@/lib/tx'
 import { cn, formatDate, formatMoney, formatNumber } from '@/lib/utils'
 
@@ -139,9 +140,17 @@ export function EventExplorer({ list }: { list: EventItem[] }) {
   // live: GET /api/event/registrations/my (status already mapped by the BE); mock: local markers
   const myReg = useMyRegistrations(!!session).data
   const myActive = useMemo(() => (myReg ?? []).filter((r) => isActiveRegistration(r.status)), [myReg])
-  const regIds = useMemo(() => USE_MOCK
-    ? new Set([...registrations.map((r) => r.eventId), ...list.filter((e) => isRegistered(e.id)).map((e) => e.id)])
-    : new Set([...myActive.map((r) => r.eventId), ...list.filter((e) => e.myRegistration).map((e) => e.id)]), [registrations, list, myActive])
+  // Shows: what this browser holds (guest with a confirmation), then what the account has on the BE, which is the fresher of the two
+  const myVisits = useMyShowVisits(!!session).data
+  const showStates = useMemo(() => {
+    const states = new Map<string, BadgeStatus>()
+    list.filter((e) => e.eventType === 'SHOW').forEach((e) => { const b = readShowBadge(e.id); if (b) states.set(e.id, b.status) })
+    myVisits?.forEach((v) => { const s = visitBadgeStatus(v.status); if (s) states.set(v.showId, s) })
+    return states
+  }, [list, myVisits])
+  const regIds = useMemo(() => new Set([...showStates.keys(), ...(USE_MOCK
+    ? [...registrations.map((r) => r.eventId), ...list.filter((e) => isRegistered(e.id)).map((e) => e.id)]
+    : [...myActive.map((r) => r.eventId), ...list.filter((e) => e.myRegistration).map((e) => e.id)])]), [registrations, list, myActive, showStates])
   const hasMine = !!session || regIds.size > 0
 
   /*
@@ -175,21 +184,23 @@ export function EventExplorer({ list }: { list: EventItem[] }) {
     const keywords = new Set(profile.registration.industries.flatMap((c) => SECTOR_KEYWORDS[c] ?? []))
     const todo = (e: EventItem) => { if (!USE_MOCK) return myActive.find((r) => r.eventId === e.id)?.missingPrep ?? 0; const ts = prepTasks(e); const done = readPrepDone(e.id); return ts.filter((x) => !done.includes(x.id)).length }
     const reg = filtered.filter((e) => regIds.has(e.id))
-    const needsAction = reg.filter((e) => e.eventStatus === 'UPCOMING' && todo(e) > 0)
+    const soonest = (a: EventItem, b: EventItem) => a.startDate.localeCompare(b.startDate)
+    const toPay = (e: EventItem) => showStates.get(e.id) === 'PENDING_PAYMENT' && e.eventStatus !== 'ENDED'
+    const needsAction = reg.filter((e) => (e.eventStatus === 'UPCOMING' && todo(e) > 0) || toPay(e)).sort(soonest)
     const na = new Set(needsAction.map((e) => e.id))
-    const pending = reg.filter((e) => e.eventType === 'MATCHMAKING' && e.eventStatus !== 'ENDED' && !na.has(e.id))
+    const pending = reg.filter((e) => (e.eventType === 'MATCHMAKING' || showStates.get(e.id) === 'PENDING_APPROVAL') && e.eventStatus !== 'ENDED' && !na.has(e.id)).sort(soonest)
     const pd = new Set(pending.map((e) => e.id))
     const rec = filtered.filter((e) => !regIds.has(e.id) && e.eventStatus !== 'ENDED').map((e) => ({ e, score: e.industry.filter((i) => keywords.has(i)).length * 2 + (e.industry.includes('Multi-industry') ? 1 : 0) }))
       .filter((x) => x.score > 0 && ['OPEN', 'CLOSING'].includes(registrationState(x.e).state) || (x.score > 0 && x.e.eventStatus === 'ONGOING')).sort((a, b) => b.score - a.score).slice(0, 4).map((x) => x.e)
     return {
       needsAction, todo,
-      attending: reg.filter((e) => e.eventStatus === 'ONGOING'),
-      soon: reg.filter((e) => e.eventStatus === 'UPCOMING' && !na.has(e.id) && !pd.has(e.id)),
+      attending: reg.filter((e) => e.eventStatus === 'ONGOING' && !na.has(e.id) && !pd.has(e.id)).sort((a, b) => a.endDate.localeCompare(b.endDate)),
+      soon: reg.filter((e) => e.eventStatus === 'UPCOMING' && !na.has(e.id) && !pd.has(e.id)).sort(soonest),
       pending,
-      attended: reg.filter((e) => e.eventStatus === 'ENDED'),
+      attended: reg.filter((e) => e.eventStatus === 'ENDED' && (!showStates.has(e.id) || showStates.get(e.id) === 'ISSUED')).sort((a, b) => b.startDate.localeCompare(a.startDate)),
       rec,
     }
-  }, [filtered, regIds, profile, myActive])
+  }, [filtered, regIds, profile, myActive, showStates])
 
   const empty = filtered.length === 0
 
@@ -225,14 +236,14 @@ export function EventExplorer({ list }: { list: EventItem[] }) {
           <div className="space-y-10">
             {mine.needsAction.length > 0 && (
               <Group title={tx('Cần làm ngay', 'Needs your action', '지금 해야 할 일')} count={mine.needsAction.length} tone="#dc2626" sub={tx('Hoàn tất việc chuẩn bị trước ngày diễn ra', 'Finish preparation before the event', '행사 전 준비를 완료하세요')}>
-                {mine.needsAction.map((e, i) => <EventRow key={e.id} ev={e} i={i} hint={<span className="inline-flex items-center gap-1.5 text-sm font-medium text-destructive"><AlertCircle className="size-4" /> {mine.todo(e)} {tx('việc chuẩn bị chưa xong', 'prep tasks open', '개 준비 항목 남음')}</span>} />)}
+                {mine.needsAction.map((e, i) => <EventRow key={e.id} ev={e} i={i} hint={<span className="inline-flex items-center gap-1.5 text-sm font-medium text-destructive"><AlertCircle className="size-4" /> {showStates.get(e.id) === 'PENDING_PAYMENT' ? tx('Cần nộp biên lai để hoàn tất đăng ký', 'Upload your receipt to complete registration', '등록을 완료하려면 영수증을 제출하세요') : <>{mine.todo(e)} {tx('việc chuẩn bị chưa xong', 'prep tasks open', '개 준비 항목 남음')}</>}</span>} />)}
               </Group>
             )}
             {mine.attending.length > 0 && <Group title={tx('Đang tham gia', 'Happening now', '진행 중')} count={mine.attending.length} tone="#e11d48">{mine.attending.map((e, i) => <EventRow key={e.id} ev={e} i={i} />)}</Group>}
             {mine.soon.length > 0 && <Group title={tx('Sắp tham dự', 'Coming up', '참석 예정')} count={mine.soon.length} tone="#006699">{mine.soon.map((e, i) => <EventRow key={e.id} ev={e} i={i} hint={<AddToCalendar ev={e} tone="light" />} />)}</Group>}
             {mine.pending.length > 0 && <Group title={tx('Chờ duyệt / xét chọn', 'Pending review', '심사 대기')} count={mine.pending.length} tone="#d4af37">{mine.pending.map((e, i) => <EventRow key={e.id} ev={e} i={i} />)}</Group>}
             {mine.rec.length > 0 && <Group title={tx('Gợi ý cho bạn', 'Recommended for you', '추천 행사')} count={mine.rec.length} sub={tx('Theo ngành hàng trong hồ sơ doanh nghiệp', 'Based on your company profile sectors', '회사 프로필 업종 기준')}>{mine.rec.map((e, i) => <EventRow key={e.id} ev={e} i={i} />)}</Group>}
-            {mine.attended.length > 0 && <Group title={tx('Đã tham dự', 'Attended', '참석 완료')} count={mine.attended.length} sub={tx('Tài liệu, bản ghi và đánh giá', 'Materials, recordings and feedback', '자료, 녹화, 평가')}>{mine.attended.map((e, i) => <EventRow key={e.id} ev={e} i={i} />)}</Group>}
+            {mine.attended.length > 0 && <Group title={onlyShows ? t.events.status.ENDED : tx('Đã tham dự', 'Attended', '참석 완료')} count={mine.attended.length} sub={tx('Tài liệu, bản ghi và đánh giá', 'Materials, recordings and feedback', '자료, 녹화, 평가')}>{mine.attended.map((e, i) => <EventRow key={e.id} ev={e} i={i} />)}</Group>}
             {mine.needsAction.length + mine.attending.length + mine.soon.length + mine.pending.length + mine.attended.length === 0 && (
               <p className="rounded-xl border border-dashed p-6 text-center text-muted-foreground"><Users className="mx-auto mb-2 size-6" />{tx('Bạn chưa đăng ký sự kiện nào. Xem các gợi ý ở trên hoặc chuyển sang "Tất cả".', 'You have not registered for any event yet. See the recommendations above or switch to "All".', '아직 등록한 행사가 없습니다.')}</p>
             )}
