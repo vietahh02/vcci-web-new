@@ -366,3 +366,14 @@ export class ChatSocket {
     this.state = 'closed'
   }
 }
+
+/**
+ * Chatbot tư vấn pháp luật: POST /api/chat?message= của vcci-livestream-chat (chuyển tiếp sang vcci-legal-ai).
+ * Cần đăng nhập (Bearer token portal). 429 = hỏi quá nhanh, 503 = admin đang tắt, 502 = dịch vụ không khả dụng.
+ */
+export interface LegalAiSource { title?: string | null; sectionTitle?: string | null; fileName?: string | null; similarity?: number | null }
+export interface LegalAiAnswer { answer: string; sources?: LegalAiSource[] | null }
+
+export const legalAiApi = {
+  ask: (message: string) => call<LegalAiAnswer>('/api/chat', { method: 'POST', query: { message } }),
+}

@@ -1,56 +1,62 @@
 import { AnimatePresence, motion } from 'motion/react'
 import { ArrowUp, Bot, BookOpen, Scale, Sparkles, UserRound } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { ChatError, chatConfigured, legalAiApi } from '@/api/chat'
+import { tokens } from '@/api/http'
 import { useI18n } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
 
-type Msg = { id: number; role: 'user' | 'ai'; text: string; sources?: string[] }
+type Msg = { id: number; role: 'user' | 'ai'; text: string; sources?: string[]; error?: boolean }
 
-const ANSWERS = {
-  vi: {
-    text: 'Theo Hiệp định EVFTA, cà phê rang (HS 0901.21) được xoá bỏ thuế nhập khẩu vào EU ngay khi Hiệp định có hiệu lực. Để hưởng thuế 0%, lô hàng cần: (1) đáp ứng quy tắc xuất xứ — cà phê nhân phải có xuất xứ thuần tuý Việt Nam; (2) có chứng từ tự chứng nhận xuất xứ (REX) hoặc C/O mẫu EUR.1; (3) vận chuyển trực tiếp hoặc chứng minh không bị gia công tại nước thứ ba. Doanh nghiệp nên kiểm tra thêm quy định EUDR về truy xuất nguồn gốc vùng trồng.',
-    sources: ['EVFTA – Phụ lục 2-A (Biểu thuế EU)', 'Nghị định 116/2020/NĐ-CP', 'Thông tư 11/2020/TT-BCT về quy tắc xuất xứ'],
-  },
-  en: {
-    text: 'Under EVFTA, roasted coffee (HS 0901.21) enters the EU duty-free from entry into force. To claim 0% duty a shipment must: (1) meet the rules of origin — the green beans must be wholly obtained in Vietnam; (2) carry a REX statement on origin or an EUR.1 certificate; (3) be shipped directly or prove no processing in a third country. Also check EUDR farm-level traceability requirements.',
-    sources: ['EVFTA – Annex 2-A (EU tariff schedule)', 'Decree 116/2020/ND-CP', 'Circular 11/2020/TT-BCT on rules of origin'],
-  },
-  ko: {
-    text: 'EVFTA에 따라 볶은 커피(HS 0901.21)는 협정 발효 즉시 EU 수입 관세가 철폐되었습니다. 0% 관세를 적용받으려면 화물이 다음을 충족해야 합니다: (1) 원산지 규정 — 생두가 베트남에서 완전 생산되어야 함; (2) REX 원산지 자율증명 또는 EUR.1 원산지증명서 구비; (3) 직접 운송 또는 제3국에서 가공되지 않았음을 증명. 또한 재배지 단위 추적성에 관한 EUDR 요건도 확인하시기 바랍니다.',
-    sources: ['EVFTA – 부속서 2-A (EU 관세 양허표)', '시행령 116/2020/ND-CP', '원산지 규정에 관한 시행규칙 11/2020/TT-BCT'],
-  },
+const MSG = {
+  vi: { login: 'Vui lòng đăng nhập để hỏi trợ lý pháp lý.', loginBtn: 'Đăng nhập', notConfigured: 'Chưa cấu hình dịch vụ chat.', tooFast: 'Bạn hỏi quá nhanh, vui lòng thử lại sau ít phút.', off: 'Trợ lý pháp lý đang tạm tắt. Vui lòng quay lại sau.', fail: 'Xin lỗi, hiện chưa thể trả lời. Vui lòng thử lại sau.' },
+  en: { login: 'Please sign in to ask the legal assistant.', loginBtn: 'Sign in', notConfigured: 'Chat service is not configured.', tooFast: 'You are asking too fast, please try again in a few minutes.', off: 'The legal assistant is temporarily off. Please come back later.', fail: 'Sorry, I cannot answer right now. Please try again later.' },
+  ko: { login: '법률 도우미에게 질문하려면 로그인하세요.', loginBtn: '로그인', notConfigured: '채팅 서비스가 구성되지 않았습니다.', tooFast: '질문이 너무 빠릅니다. 잠시 후 다시 시도하세요.', off: '법률 도우미가 일시 중지되었습니다. 나중에 다시 오세요.', fail: '죄송합니다. 지금은 답변할 수 없습니다. 나중에 다시 시도하세요.' },
 }
+
+const sourceLabel = (s: { title?: string | null; sectionTitle?: string | null; fileName?: string | null }) =>
+  [s.title ?? s.fileName, s.sectionTitle].filter(Boolean).join(' › ')
 
 export default function LegalAI() {
   const { t, lang } = useI18n()
   const [msgs, setMsgs] = useState<Msg[]>([])
   const [text, setText] = useState('')
   const [thinking, setThinking] = useState(false)
+  const [needLogin, setNeedLogin] = useState(false)
+  const navigate = useNavigate()
   const endRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
   }, [msgs, thinking])
 
-  function ask(q: string) {
+  async function ask(q: string) {
     if (!q.trim() || thinking) return
-    setMsgs((m) => [...m, { id: Date.now(), role: 'user', text: q }])
+    const m = MSG[lang]
+    setMsgs((x) => [...x, { id: Date.now(), role: 'user', text: q }])
     setText('')
+    if (!chatConfigured()) {
+      setMsgs((x) => [...x, { id: Date.now() + 1, role: 'ai', text: m.notConfigured, error: true }])
+      return
+    }
+    if (!tokens.access()) {
+      setNeedLogin(true)
+      return
+    }
     setThinking(true)
-    setTimeout(() => {
+    try {
+      const r = await legalAiApi.ask(q.trim())
+      const sources = (r.sources ?? []).map(sourceLabel).filter(Boolean)
+      setMsgs((x) => [...x, { id: Date.now() + 1, role: 'ai', text: r.answer, sources: sources.length ? Array.from(new Set(sources)) : undefined }])
+    } catch (e) {
+      const status = e instanceof ChatError ? e.status : 0
+      const text = status === 401 ? m.login : status === 429 ? m.tooFast : status === 503 ? m.off : m.fail
+      if (status === 401) setNeedLogin(true)
+      setMsgs((x) => [...x, { id: Date.now() + 1, role: 'ai', text, error: true }])
+    } finally {
       setThinking(false)
-      const a = ANSWERS[lang]
-      const id = Date.now()
-      setMsgs((m) => [...m, { id, role: 'ai', text: '', sources: a.sources }])
-      // stream the answer word by word
-      const words = a.text.split(' ')
-      let i = 0
-      const timer = setInterval(() => {
-        i += 2
-        setMsgs((m) => m.map((x) => (x.id === id ? { ...x, text: words.slice(0, i).join(' ') } : x)))
-        if (i >= words.length) clearInterval(timer)
-      }, 45)
-    }, 1300)
+    }
   }
 
   const empty = msgs.length === 0
@@ -95,9 +101,8 @@ export default function LegalAI() {
                 {m.role === 'ai' ? <Bot className="size-4" /> : <UserRound className="size-4" />}
               </div>
               <div className={cn('max-w-[85%] rounded-2xl px-4 py-3 text-[15px] leading-relaxed', m.role === 'user' ? 'bg-primary text-primary-foreground' : 'border bg-card')}>
-                {m.text}
-                {m.role === 'ai' && m.text.length < ANSWERS[lang].text.length && <span className="ml-0.5 inline-block h-4 w-1.5 animate-pulse bg-primary align-middle" />}
-                {m.sources && m.text.length >= ANSWERS[lang].text.length - 2 && (
+                <span className="whitespace-pre-wrap">{m.text}</span>
+                {m.sources && (
                   <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-4 border-t pt-3">
                     <p className="mb-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">{t.legal.sources}</p>
                     <div className="flex flex-wrap gap-2">
@@ -110,6 +115,12 @@ export default function LegalAI() {
               </div>
             </motion.div>
           ))}
+          {needLogin && (
+            <div className="flex items-center gap-3 rounded-xl border bg-card p-4 text-sm">
+              <span className="flex-1">{MSG[lang].login}</span>
+              <button type="button" className="rounded-lg bg-primary px-3 py-1.5 font-semibold text-primary-foreground" onClick={() => navigate(`/login?return=${encodeURIComponent('/legal-ai')}`)}>{MSG[lang].loginBtn}</button>
+            </div>
+          )}
           {thinking && (
             <div className="flex items-center gap-3 text-sm text-muted-foreground">
               <div className="grid size-9 place-items-center rounded-xl bg-gradient-to-br from-primary to-navy text-white"><Bot className="size-4" /></div>
