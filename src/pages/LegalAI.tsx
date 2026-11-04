@@ -46,7 +46,7 @@ export default function LegalAI() {
     }
     setThinking(true)
     try {
-      const r = await legalAiApi.ask(q.trim())
+      const r = await legalAiApi.ask(q.trim(), lang)
       const sources = (r.sources ?? []).map(sourceLabel).filter(Boolean)
       setMsgs((x) => [...x, { id: Date.now() + 1, role: 'ai', text: r.answer, sources: sources.length ? Array.from(new Set(sources)) : undefined }])
     } catch (e) {
