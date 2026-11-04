@@ -1,6 +1,6 @@
 /** "Event highlights" block for ended events — headline numbers, video, takeaways, sessions with replay, gallery, participants, testimonials. */
 import { motion } from 'motion/react'
-import { BellRing, Building2, Camera, PlayCircle, Quote } from 'lucide-react'
+import { BellRing, Building2, Camera, PlayCircle, Quote, Star } from 'lucide-react'
 import { useState } from 'react'
 import { CountryChip } from '@/components/brand'
 import { CountUp } from '@/components/effects'
@@ -27,8 +27,9 @@ export function EventRecap({ ev }: { ev: EventItem }) {
   const sample = USE_MOCK
   const hasVideo = sample || !!r.video.url
   const hasSessions = ev.agendaOptions.length > 0
+  const rating = r.rating && r.rating.count > 0 ? r.rating : null
   // API failed or nothing recorded yet: no empty headings on the page
-  if (!r.stats.length && !hasVideo && !r.takeaways.length && !hasSessions && !r.gallery.length && !r.participants.length && !r.testimonials.length && !r.next) return null
+  if (!r.stats.length && !hasVideo && !r.takeaways.length && !hasSessions && !r.gallery.length && !r.participants.length && !r.testimonials.length && !rating && !r.next) return null
   return (
     <section aria-label="recap" className="space-y-10">
       {r.stats.length > 0 && <div>
@@ -96,13 +97,14 @@ export function EventRecap({ ev }: { ev: EventItem }) {
             {r.participants.map((p) => <li key={p.name} className="flex items-center justify-between gap-2 rounded-xl border p-3 text-sm"><span className="truncate font-semibold">{p.name}</span><CountryChip code={p.country} /></li>)}
           </ul>
         </div>}
-        {r.testimonials.length > 0 && <div>
+        {(r.testimonials.length > 0 || rating) && <div>
           <h3 className="flex items-center gap-2 text-xl font-extrabold"><Quote className="size-5 text-primary" /> {tx('Cảm nhận người tham dự', 'What attendees said', '참가자 후기')}</h3>
+          {rating && <p className="mt-2 flex items-center gap-1.5 text-sm text-muted-foreground"><Star className="size-4 fill-gold-bright text-gold-bright" /> <b className="text-foreground">{rating.average.toLocaleString(locale, { maximumFractionDigits: 1 })}/5</b> · {formatNumber(rating.count, locale)} {tx('đánh giá', 'ratings', '개 평가')}</p>}
           <div className="mt-3 space-y-3">
-            {r.testimonials.map((q) => (
-              <figure key={q.name} className="rounded-2xl bg-muted/60 p-4">
+            {r.testimonials.map((q, i) => (
+              <figure key={`${q.name}-${i}`} className="rounded-2xl bg-muted/60 p-4">
                 <blockquote className="text-[15px] italic">“{L(q.quote)}”</blockquote>
-                <figcaption className="mt-2 text-xs text-muted-foreground"><b className="text-foreground">{q.name}</b> · {q.org}</figcaption>
+                <figcaption className="mt-2 text-xs text-muted-foreground"><b className="text-foreground">{q.name}</b>{q.org && ` · ${q.org}`}</figcaption>
               </figure>
             ))}
           </div>

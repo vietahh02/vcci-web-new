@@ -53,6 +53,7 @@ export function toRecap(r: Raw): Recap {
     participants: arr(r.participants).map((p) => ({ name: str(p.name), country: str(p.country) })),
     testimonials: arr(r.testimonials).map((q) => ({ quote: biAny(q.quote), name: str(q.name), org: str(q.org) })),
     next: r.next ? { title: biAny(r.next.title), inDays: num(r.next.inDays) } : undefined,
+    rating: r.rating ? { average: num(r.rating.average), count: num(r.rating.count) } : undefined,
   }
 }
 

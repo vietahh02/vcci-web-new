@@ -244,6 +244,17 @@ export function showUploadReceipt(visitorId: string, file: File) {
 }
 /** POST/DELETE /api/public/shows/launch-slots/{id}/follow (badge holder: email + badgeCode) */
 export const showLaunchFollow = (slotId: string, on: boolean, email: string, badgeCode: string) => apiFetch(`/api/public/shows/launch-slots/${slotId}/follow`, on ? { method: 'POST', json: { email, badgeCode } } : { method: 'DELETE', query: { email, badgeCode } })
+/* Post-show feedback (CR-2026-008 §4.2). */
+export interface ShowFeedbackInput { rating: number; comment?: string; consentPublic: boolean }
+/** GET /api/public/shows/{id}/feedback/mine: has this badge already sent feedback? */
+export async function showFeedbackSent(feId: string, email: string, badgeCode: string) {
+  const r = await apiFetch<Raw | boolean | null>(`/api/public/shows/${beShowId(feId)}/feedback/mine`, { query: { email, badgeCode } })
+  return r && typeof r === 'object' ? Boolean(r.submitted ?? r.sent ?? r.exists ?? r.id ?? r.rating) : Boolean(r)
+}
+/** POST /api/public/shows/{id}/feedback (badge holder: email + badgeCode) */
+export const showVisitorFeedback = (feId: string, b: ShowFeedbackInput & { email: string; badgeCode: string }) => apiFetch(`/api/public/shows/${beShowId(feId)}/feedback`, { method: 'POST', json: b })
+/** POST /api/shows/{id}/feedback (signed-in business with an approved booth) */
+export const showOrgFeedback = (feId: string, b: ShowFeedbackInput) => apiFetch(`/api/shows/${beShowId(feId)}/feedback`, { method: 'POST', json: b })
 export const showBook = (sessionId: string, email: string, badgeCode: string) => apiFetch<Raw>(`/api/public/shows/agenda/${sessionId}/book`, { method: 'POST', json: { email, badgeCode } })
 export const showUnbook = (sessionId: string, email: string, badgeCode: string) => apiFetch(`/api/public/shows/agenda/${sessionId}/book`, { method: 'DELETE', query: { email, badgeCode } })
 

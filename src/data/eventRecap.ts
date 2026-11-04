@@ -17,6 +17,8 @@ export interface Recap {
   participants: { name: string; country: string }[]
   testimonials: { quote: Bilingual; name: string; org: string }[]
   next?: { title: Bilingual; inDays: number }
+  /** Live mode: average of the approved, public ratings. */
+  rating?: { average: number; count: number }
 }
 
 const people = [

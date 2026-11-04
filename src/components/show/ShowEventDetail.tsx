@@ -10,6 +10,7 @@ import { EventRecap } from '@/components/event/EventRecap'
 import { eventTimeRange } from '@/lib/eventStatus'
 import { showStartsAt, showToEvent } from '@/lib/showEvent'
 import { tx } from '@/lib/tx'
+import { ShowFeedbackDialog } from '@/components/show/ShowFeedback'
 import { BadgeCard, VisitorRegistration } from '@/components/show/VisitorRegistration'
 import { Dialog, DialogContent, UnderlineTabs, useToast } from '@/components/ui/overlay'
 import { Badge, Button, buttonClass, Field, Input, Progress, Textarea } from '@/components/ui/primitives'
@@ -149,6 +150,7 @@ export function ShowEventDetail({ show }: { show: Show }) {
       </div>
 
       <VisitorRegistration show={show} open={regOpen} onOpenChange={setRegOpen} visitor={visitor} />
+      <ShowFeedbackDialog show={show} visitor={visitor} />
       <BoothDialog show={show} booth={booth} onClose={() => setBooth(null)} onAsk={openInquiry} />
       <InquiryDialog show={show} ctx={inquiry} badge={visitor.badge} onClose={() => setInquiry(null)} onSent={(id) => visitor.addInquiry(id)} />
       <SessionDialog show={show} session={session} badgeOk={hasValidBadge} onClose={() => setSession(null)} onRegister={() => { setSession(null); setRegOpen(true) }} />

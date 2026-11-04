@@ -4,7 +4,9 @@ import { useCallback, useEffect, useState } from 'react'
 export type BadgeStatus = 'ISSUED' | 'PENDING_PAYMENT' | 'PENDING_APPROVAL'
 export interface VisitorBadge { code: string; name: string; email: string; company: string; visitorType: string; status: BadgeStatus; issuedAt: string }
 export type BookingState = 'BOOKED' | 'WAITLIST'
-interface Stored { badge?: VisitorBadge; bookings: Record<string, BookingState>; inquiries: { boothId: string; at: string }[] }
+/** What happened to the post-show feedback invitation in this browser. */
+export type FeedbackState = 'SENT' | 'SKIPPED'
+interface Stored { badge?: VisitorBadge; bookings: Record<string, BookingState>; inquiries: { boothId: string; at: string }[]; feedback?: FeedbackState }
 
 const key = (showId: string) => `vcci.show.${showId}`
 const empty: Stored = { bookings: {}, inquiries: [] }
@@ -38,7 +40,9 @@ export function useShowVisitor(showId: string) {
     badge: state.badge,
     bookings: state.bookings,
     inquiries: state.inquiries,
+    feedback: state.feedback,
     saveBadge: (badge: VisitorBadge) => update((s) => ({ ...s, badge })),
+    setFeedback: (feedback: FeedbackState) => update((s) => ({ ...s, feedback })),
     cancelBadge: () => update(() => empty),
     setBooking: (sessionId: string, v: BookingState | null) =>
       update((s) => {
