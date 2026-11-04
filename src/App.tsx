@@ -18,6 +18,7 @@ import Events from '@/pages/Events'
 import Home from '@/pages/Home'
 import LegalAI from '@/pages/LegalAI'
 import LiveRoom from '@/pages/LiveRoom'
+import { LegacyRoomRedirect } from '@/components/live/LegacyRoomRedirect'
 import Messages from '@/pages/Messages'
 import MyCatalog from '@/pages/MyCatalog'
 import NotFound from '@/pages/NotFound'
@@ -71,6 +72,8 @@ export default function App() {
                     <Route path="/events/:id" element={<EventDetail />} />
                     <Route path="/events/:id/register" element={<EventRegister />} />
                     <Route path="/live/:id" element={<LiveRoom />} />
+                    <Route path="/webinar-room/:id" element={<LegacyRoomRedirect prefix="w" />} />
+                    <Route path="/livestream-room/:id" element={<LegacyRoomRedirect prefix="l" />} />
                     <Route path="/legal-ai" element={<LegalAI />} />
                     <Route path="/about" element={<About />} />
                     <Route path="/login" element={<Login />} />

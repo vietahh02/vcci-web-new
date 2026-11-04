@@ -1,81 +1,182 @@
+/** Phòng xem trực tiếp. Giữ bố cục Portal, dữ liệu thật: HLS hoặc Jitsi, chat phiên, số người xem. Chế độ mock dùng LiveRoomDemo. */
 import { AnimatePresence, motion } from 'motion/react'
-import { ArrowLeft, CalendarPlus, Heart, Maximize2, Send, ThumbsUp, Users, Volume2 } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
-import { useEvent } from '@/api'
-import { LoadingBlock } from '@/components/ui/StateViews'
-import { businesses } from '@/data/mock'
-import { mainSponsor, SponsorMark, SponsorVerticalBanner } from '@/components/sponsor'
+import { ArrowLeft, CircleOff, Heart, ThumbsUp, Ticket, Users } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
+import { Link, useParams, useSearchParams } from 'react-router-dom'
+import { USE_MOCK, useEvent, useShow } from '@/api'
+import { isShowId } from '@/api/adapters/show'
+import { CHAT_URL } from '@/api/chat'
+import type { JitsiRole, LiveStatus } from '@/api/liveApi'
 import { CompanyMark, VerifiedBadge } from '@/components/brand'
 import { LiveDot } from '@/components/effects'
-import { useToast } from '@/components/ui/overlay'
-import { Badge, Button } from '@/components/ui/primitives'
-import NotFound from '@/pages/NotFound'
-import { useI18n } from '@/lib/i18n'
+import { ChatNotice, LiveChatPanel } from '@/components/live/LiveChatPanel'
+import { LivestreamStage } from '@/components/live/LivestreamStage'
+import { parseLiveEventId, safeHttpUrl, toLiveKind, type LiveKind } from '@/components/live/liveRef'
+import { liveText } from '@/components/live/liveText'
+import { ReplayPlayer } from '@/components/live/HlsPlayer'
+import { StagePlaceholder } from '@/components/live/StagePlaceholder'
+import { WebinarStage } from '@/components/live/WebinarStage'
+import { SponsorVerticalBanner } from '@/components/sponsor'
+import { ErrorBlock, LoadingBlock } from '@/components/ui/StateViews'
+import { Badge, Button, buttonClass } from '@/components/ui/primitives'
+import type { EventItem } from '@/data/mock'
+import type { Show } from '@/data/shows'
+import { useI18n, type Bilingual } from '@/lib/i18n'
+import { useShowVisitor } from '@/lib/showReg'
 import { cn, formatNumber, img } from '@/lib/utils'
+import NotFound from '@/pages/NotFound'
+import LiveRoomDemo from '@/pages/LiveRoomDemo'
 
-type ChatMsg = { id: number; name: string; country: string; text: string; me?: boolean }
+interface LiveTarget {
+  title: Bilingual
+  org?: Bilingual
+  cover: string
+  /** Có phòng phát. Không có mà có recordingUrl thì chỉ xem lại. */
+  stream?: { kind: LiveKind; eventId: string; sessionId?: string }
+  recordingUrl?: string | null
+  /** Id gốc để giữ state phòng theo đúng phiên khi đổi đường dẫn. */
+  key: string
+}
 
-const SCRIPT: Omit<ChatMsg, 'id'>[] = [
-  { name: 'Kim J.', country: 'KR', text: 'What is the MOQ for the roasted Arabica?' },
-  { name: 'Trần Hưng', country: 'VN', text: 'MOQ 500 kg ạ, nhận nhãn riêng.' },
-  { name: 'Park S.', country: 'KR', text: 'Can you share HACCP certificate?' },
-  { name: 'Mekong Pearl', country: 'VN', text: 'Yes — attached in our company profile 👍' },
-  { name: 'Lee H.', country: 'KR', text: 'Interested in 26/30 shrimp, 2 containers/month.' },
-  { name: 'Nguyễn Lan', country: 'VN', text: 'Chúng tôi có thể giao CIF Busan trong 25 ngày.' },
-  { name: 'Choi M.', country: 'KR', text: 'Booking a B2B meeting at 16:00 🙌' },
-]
+/** Chọn phiên của Show theo tham số đường dẫn; không chỉ định thì lấy phiên đang phát, rồi đến khung ra mắt đang phát. */
+function showTarget(show: Show, sessionParam: string | null, launchParam: string | null): LiveTarget {
+  const base = { org: show.title, cover: show.cover }
+  const session = sessionParam ? show.sessions.find((s) => s.id === sessionParam) : launchParam ? undefined : show.sessions.find((s) => s.status === 'LIVE' && s.live)
+  const launch = launchParam ? show.launches.find((l) => l.id === launchParam) : session ? undefined : show.launches.find((l) => l.live && l.streamEventId)
+  if (session) {
+    const kind = session.live && toLiveKind(session.live.eventType)
+    return {
+      ...base, key: `s${session.id}`, title: session.title, recordingUrl: safeHttpUrl(session.recordingUrl),
+      stream: kind && session.live ? { kind, eventId: session.live.eventId, sessionId: session.live.sessionId } : undefined,
+    }
+  }
+  if (launch) {
+    const booth = show.booths.find((b) => b.id === launch.boothId)
+    const product = booth?.products.find((p) => p.id === launch.productId)
+    return {
+      ...base, key: `l${launch.id}`, title: product?.name ?? show.title, org: booth?.org ?? show.title,
+      stream: launch.streamEventId ? { kind: 'LIVESTREAM', eventId: launch.streamEventId, sessionId: launch.streamSessionId } : undefined,
+    }
+  }
+  return { ...base, key: 'show', title: show.title }
+}
+
+function eventTarget(ev: EventItem, sessionParam: string | null): LiveTarget {
+  const ref = parseLiveEventId(ev.id)
+  return {
+    key: ev.id, title: ev.title, org: ev.organizedBy, cover: ev.coverImage,
+    stream: ref ? { ...ref, sessionId: ref.kind === 'LIVESTREAM' ? sessionParam ?? undefined : undefined } : undefined,
+  }
+}
+
+const hm = (d: Date) => `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+const inToday = (start: string, end: string, now: Date) => {
+  const day = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+  return start.slice(0, 10) <= day && day <= end.slice(0, 10)
+}
 
 export default function LiveRoom() {
+  return USE_MOCK ? <LiveRoomDemo /> : <RealLiveRoom />
+}
+
+function RealLiveRoom() {
   const { id = '' } = useParams()
+  const [params] = useSearchParams()
   const { t, L, locale } = useI18n()
-  const toast = useToast()
-  const evr = useEvent(id)
-  const ev = evr.data
-  const exhibitors = businesses.filter((b) => ['c-agri', 'c-sea'].includes(b.categoryId))
-  const [viewers, setViewers] = useState(ev?.viewers ?? 1200)
-  const [showing, setShowing] = useState(0)
-  const [msgs, setMsgs] = useState<ChatMsg[]>([])
-  const [text, setText] = useState('')
-  const [hearts, setHearts] = useState<number[]>([])
-  const listRef = useRef<HTMLDivElement>(null)
+  const lt = liveText()
+  const isShow = isShowId(id)
+  const showR = useShow(id, isShow)
+  const evR = useEvent(isShow ? '' : id)
+  const remote = isShow ? showR : evR
+  const visitor = useShowVisitor(id)
+
+  const [room, setRoom] = useState<{ status: LiveStatus | null; sessionId: string | null }>({ status: null, sessionId: null })
+  const [role, setRole] = useState<JitsiRole | null>(null)
+  const [viewers, setViewers] = useState<number | null>(null)
+  const [hearts, setHearts] = useState<{ id: number; x: number }[]>([])
+  const [now, setNow] = useState(() => new Date())
 
   useEffect(() => {
-    const v = setInterval(() => setViewers((n) => n + Math.round((Math.random() - 0.35) * 14)), 1800)
-    const s = setInterval(() => setShowing((n) => (n + 1) % exhibitors.length), 7000)
-    let k = 0
-    const c = setInterval(() => {
-      const m = SCRIPT[k % SCRIPT.length]!
-      k++
-      setMsgs((prev) => [...prev.slice(-40), { ...m, id: Date.now() }])
-    }, 2600)
-    return () => { clearInterval(v); clearInterval(s); clearInterval(c) }
-  }, [exhibitors.length])
+    const clock = setInterval(() => setNow(new Date()), 60_000)
+    return () => clearInterval(clock)
+  }, [])
 
-  useEffect(() => {
-    listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: 'smooth' })
-  }, [msgs])
+  const show = showR.data ?? null
+  const ev = evR.data ?? null
+  const target = useMemo<LiveTarget | null>(() => {
+    if (isShow) return show ? showTarget(show, params.get('session'), params.get('launch')) : null
+    return ev ? eventTarget(ev, params.get('session')) : null
+  }, [isShow, show, ev, params])
 
-  if (evr.loading) return <LoadingBlock />
-  if (!ev) return <NotFound />
-  const ex = exhibitors[showing]!
+  if (remote.loading) return <div className="bg-[#05061c] text-white"><LoadingBlock /></div>
+  if (remote.error) return <ErrorBlock error={remote.error} onRetry={remote.reload} />
+  if (!target) return <NotFound />
+
+  const poster = target.cover ? img(target.cover, 1400, 790) : undefined
+  const backTo = `/events/${id}`
+  const needBadge = isShow && visitor.badge?.status !== 'ISSUED'
+  const stream = target.stream
+  const isLivestream = stream?.kind === 'LIVESTREAM' && !needBadge
 
   const react = () => {
-    const id = Date.now() + Math.random()
-    setHearts((h) => [...h, id])
-    setTimeout(() => setHearts((h) => h.filter((x) => x !== id)), 2200)
+    const h = { id: Date.now() + Math.random(), x: (Math.random() - 0.5) * 60 }
+    setHearts((list) => [...list, h])
+    setTimeout(() => setHearts((list) => list.filter((x) => x.id !== h.id)), 2200)
   }
+
+  const agenda = show
+    ? [...show.sessions].filter((s) => s.status !== 'CANCELED').sort((a, b) => a.start.localeCompare(b.start)).slice(0, 8).map((s) => ({
+        key: s.id,
+        time: `${new Date(s.start).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit', hour12: false })}–${new Date(s.end).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit', hour12: false })}`,
+        title: L(s.title),
+        now: s.status === 'LIVE',
+      }))
+    : (ev?.agendaOptions ?? []).map((a, i) => ({
+        key: String(i),
+        time: `${a.agendaStartTime}–${a.agendaEndTime}`,
+        title: L(a.agendaTitle),
+        now: !!ev && inToday(ev.startDate, ev.endDate, now) && a.agendaStartTime <= hm(now) && hm(now) < a.agendaEndTime,
+      }))
+  const booths = show?.booths.slice(0, 6) ?? []
+
+  const stage = needBadge ? (
+    <StagePlaceholder poster={poster} icon={Ticket} title={lt.needBadge} hint={lt.needBadgeHint}>
+      <Link to={backTo} className={buttonClass('gold', 'md', 'mt-2')}>{lt.backToEvent}</Link>
+    </StagePlaceholder>
+  ) : stream?.kind === 'LIVESTREAM' ? (
+    <LivestreamStage key={target.key} eventId={stream.eventId} sessionId={stream.sessionId} poster={poster} recordingUrl={target.recordingUrl} onRoom={setRoom} />
+  ) : stream?.kind === 'WEBINAR' ? (
+    <WebinarStage key={target.key} eventId={stream.eventId} poster={poster} recordingUrl={target.recordingUrl} onRole={setRole} onRoom={setRoom} />
+  ) : target.recordingUrl ? (
+    <ReplayPlayer url={target.recordingUrl} />
+  ) : (
+    <StagePlaceholder poster={poster} icon={CircleOff} title={lt.noStream} hint={lt.noStreamHint}>
+      <Link to={backTo} className={buttonClass('white', 'md', 'mt-2')}>{lt.backToEvent}</Link>
+    </StagePlaceholder>
+  )
+
+  const chat = isLivestream && room.sessionId ? (
+    <LiveChatPanel key={room.sessionId} sessionId={room.sessionId} status={room.status} onViewers={setViewers} onReact={react} />
+  ) : stream?.kind === 'WEBINAR' && !needBadge ? (
+    <ChatNotice text={role === 'OBSERVER' ? lt.webinarChatObserver : lt.webinarChatParticipant} />
+  ) : (
+    <ChatNotice text={CHAT_URL ? lt.chatWaiting : lt.chatMissing} />
+  )
 
   return (
     <div className="bg-[#05061c] pb-16 pt-5 text-white">
       <div className="container-page">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-          <Link to={`/events/${ev.id}`} className="inline-flex items-center gap-2 text-sm text-white/70 hover:text-white"><ArrowLeft className="size-4" /> {t.live.back}</Link>
+          <Link to={backTo} className="inline-flex items-center gap-2 text-sm text-white/70 hover:text-white"><ArrowLeft className="size-4" /> {t.live.back}</Link>
           <div className="flex items-center gap-2">
-            <Badge variant="live" className="gap-1.5 px-2.5 py-1"><LiveDot /> {t.events.live}</Badge>
-            <span className="inline-flex items-center gap-1.5 rounded-md bg-white/10 px-2.5 py-1 text-xs font-semibold tabular-nums">
-              <Users className="size-3.5" /> {formatNumber(viewers, locale)} {t.events.viewers}
-            </span>
+            {room.status === 'LIVE' && <Badge variant="live" className="gap-1.5 px-2.5 py-1"><LiveDot /> {t.events.live}</Badge>}
+            {room.status === 'ENDED' && <Badge variant="secondary" className="px-2.5 py-1">{lt.ended}</Badge>}
+            {(room.status === 'SCHEDULED' || room.status === 'READY') && <Badge variant="secondary" className="px-2.5 py-1">{lt.notStarted}</Badge>}
+            {isLivestream && viewers !== null && room.status !== 'ENDED' && (
+              <span className="inline-flex items-center gap-1.5 rounded-md bg-white/10 px-2.5 py-1 text-xs font-semibold tabular-nums">
+                <Users className="size-3.5" /> {formatNumber(viewers, locale)} {t.events.viewers}
+              </span>
+            )}
           </div>
         </div>
 
@@ -83,51 +184,16 @@ export default function LiveRoom() {
           {/* player */}
           <div>
             <div className="group relative aspect-video overflow-hidden rounded-2xl bg-black ring-1 ring-white/10">
-              <AnimatePresence mode="popLayout" initial={false}>
-                <motion.img
-                  key={ex.id}
-                  src={img(ex.coverImage, 1400, 790)}
-                  alt=""
-                  initial={{ opacity: 0, scale: 1.08 }}
-                  animate={{ opacity: 1, scale: 1.02 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 1.2 }}
-                  className="absolute inset-0 size-full object-cover"
-                />
-              </AnimatePresence>
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/30" />
-              <div className="absolute left-4 top-4 flex items-center gap-2">
-                <img src="/imgs/lg1.png" alt="VCCI" className="h-5 w-auto rounded bg-white/90 px-1.5 py-0.5" />
-                <span className="rounded bg-black/40 px-2 py-0.5 text-[11px] font-semibold backdrop-blur">HLS · 1080p</span>
-              </div>
-
-              {/* lower third */}
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={ex.id}
-                  initial={{ opacity: 0, x: -40 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                  transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-                  className="absolute bottom-16 left-4 flex max-w-[80%] items-center gap-3 rounded-xl bg-white/95 p-2.5 pr-4 text-navy shadow-2xl"
-                >
-                  <CompanyMark name={ex.nameEn} accent={ex.accent} className="size-10" />
-                  <div className="min-w-0">
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-primary">{t.live.nowShowing}</p>
-                    <p className="truncate text-sm font-bold">{ex.name}</p>
-                  </div>
-                </motion.div>
-              </AnimatePresence>
-
-              {/* reactions */}
+              {stage}
+              {/* reactions: chỉ là hiệu ứng tại máy người xem, không gửi đi */}
               <div className="pointer-events-none absolute bottom-16 right-6 h-64 w-16">
                 <AnimatePresence>
                   {hearts.map((h) => (
                     <motion.span
-                      key={h}
+                      key={h.id}
                       className="absolute bottom-0 left-1/2"
                       initial={{ y: 0, opacity: 1, scale: 0.6, x: 0 }}
-                      animate={{ y: -220, opacity: 0, scale: 1.3, x: (Math.random() - 0.5) * 60 }}
+                      animate={{ y: -220, opacity: 0, scale: 1.3, x: h.x }}
                       exit={{ opacity: 0 }}
                       transition={{ duration: 2, ease: 'easeOut' }}
                     >
@@ -136,100 +202,62 @@ export default function LiveRoom() {
                   ))}
                 </AnimatePresence>
               </div>
-
-              {/* controls */}
-              <div className="absolute inset-x-0 bottom-0 flex items-center gap-3 px-4 py-3">
-                <span className="inline-flex items-center gap-1.5 text-xs font-bold text-live"><LiveDot /> LIVE</span>
-                <div className="h-1 flex-1 overflow-hidden rounded-full bg-white/20"><div className="h-full w-full bg-live" /></div>
-                <button className="rounded p-1 text-white/80 hover:text-white" aria-label={t.ui.volume}><Volume2 className="size-4" /></button>
-                <button className="rounded p-1 text-white/80 hover:text-white" aria-label={t.ui.fullscreen}><Maximize2 className="size-4" /></button>
-              </div>
             </div>
 
             <div className="mt-4 flex flex-wrap items-start justify-between gap-4">
               <div className="max-w-2xl">
-                <h1 className="text-xl font-extrabold leading-snug md:text-2xl">{L(ev.title)}</h1>
-                <p className="mt-1 text-sm text-white/60">{L(ev.organizedBy)}</p>
+                <h1 className="text-xl font-extrabold leading-snug md:text-2xl">{L(target.title)}</h1>
+                {target.org && <p className="mt-1 text-sm text-white/60">{L(target.org)}</p>}
               </div>
-              <div className="flex gap-2">
-                <Button variant="ghost" className="bg-white/10 text-white hover:bg-white/15" onClick={react}><ThumbsUp /> {formatNumber(1284, locale)}</Button>
-                <Button variant="gold" onClick={() => toast({ kind: 'success', title: t.live.requestMeeting, description: ex.name })}><CalendarPlus /> {t.live.requestMeeting}</Button>
-              </div>
+              {isLivestream && room.status === 'LIVE' && (
+                <Button variant="ghost" className="bg-white/10 text-white hover:bg-white/15" aria-label={t.ui.react} onClick={react}><ThumbsUp /></Button>
+              )}
             </div>
 
             <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
-              <div className="rounded-2xl bg-white/[0.04] p-5 ring-1 ring-white/10">
-                <p className="text-sm font-bold">{t.live.agenda}</p>
-                <ol className="mt-3 space-y-2">
-                  {ev.agendaOptions.map((a, i) => {
-                    const now = i === 1
-                    return (
-                      <li key={i} className={cn('flex gap-3 rounded-lg p-2.5 text-sm', now ? 'bg-live/15 ring-1 ring-live/40' : 'text-white/70')}>
-                        <span className="w-24 shrink-0 font-mono text-xs leading-5">{a.agendaStartTime}–{a.agendaEndTime}</span>
-                        <span className="flex-1">{L(a.agendaTitle)}</span>
-                        {now && <LiveDot className="mt-1.5 text-live" />}
+              {agenda.length > 0 && (
+                <div className="rounded-2xl bg-white/[0.04] p-5 ring-1 ring-white/10">
+                  <p className="text-sm font-bold">{t.live.agenda}</p>
+                  <ol className="mt-3 space-y-2">
+                    {agenda.map((a) => (
+                      <li key={a.key} className={cn('flex gap-3 rounded-lg p-2.5 text-sm', a.now ? 'bg-live/15 ring-1 ring-live/40' : 'text-white/70')}>
+                        <span className="w-24 shrink-0 font-mono text-xs leading-5">{a.time}</span>
+                        <span className="flex-1">{a.title}</span>
+                        {a.now && <LiveDot className="mt-1.5 text-live" />}
                       </li>
-                    )
-                  })}
-                </ol>
-              </div>
-              <div className="rounded-2xl bg-white/[0.04] p-5 ring-1 ring-white/10">
-                <p className="text-sm font-bold">{t.live.exhibitors}</p>
-                <ul className="mt-3 space-y-2">
-                  {exhibitors.map((b, i) => (
-                    <li key={b.id}>
-                      <Link to={`/suppliers/${b.id}`} className={cn('flex items-center gap-3 rounded-lg p-2 transition hover:bg-white/5', i === showing && 'bg-white/[0.07]')}>
-                        <CompanyMark name={b.nameEn} accent={b.accent} className="size-8 rounded-lg text-[10px]" />
-                        <span className="min-w-0 flex-1 truncate text-sm">{b.name}</span>
-                        <VerifiedBadge compact />
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </div>
+                    ))}
+                  </ol>
+                </div>
+              )}
+              {booths.length > 0 && (
+                <div className="rounded-2xl bg-white/[0.04] p-5 ring-1 ring-white/10">
+                  <p className="text-sm font-bold">{t.live.exhibitors}</p>
+                  <ul className="mt-3 space-y-2">
+                    {booths.map((b) => {
+                      const row = (
+                        <>
+                          <CompanyMark name={L(b.org)} accent={b.accent} className="size-8 rounded-lg text-[10px]" />
+                          <span className="min-w-0 flex-1 truncate text-sm">{L(b.org)}</span>
+                          {b.verified && <VerifiedBadge compact />}
+                        </>
+                      )
+                      return (
+                        <li key={b.id}>
+                          {b.businessId
+                            ? <Link to={`/suppliers/${b.businessId}`} className="flex items-center gap-3 rounded-lg p-2 transition hover:bg-white/5">{row}</Link>
+                            : <div className="flex items-center gap-3 rounded-lg p-2">{row}</div>}
+                        </li>
+                      )
+                    })}
+                  </ul>
+                </div>
+              )}
               <SponsorVerticalBanner dark className="md:col-span-2" />
             </div>
           </div>
 
           {/* chat */}
-          <aside className="flex h-[620px] flex-col overflow-hidden rounded-2xl bg-white/[0.04] ring-1 ring-white/10 lg:sticky lg:top-32">
-            <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
-              <p className="text-sm font-bold">{t.live.chat}</p>
-              <span className="text-xs text-white/50">{msgs.length}</span>
-            </div>
-            <div ref={listRef} className="flex-1 space-y-2.5 overflow-y-auto p-4">
-              <AnimatePresence initial={false}>
-                {msgs.map((m) => (
-                  <motion.div key={m.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className={cn('text-[13px] leading-relaxed', m.me && 'rounded-lg bg-primary/20 p-2')}>
-                    <span className="mr-1.5 rounded bg-white/10 px-1 font-mono text-[10px] font-bold">{m.country}</span>
-                    <span className={cn('mr-1.5 font-semibold', m.country === 'VN' ? 'text-gold-bright' : 'text-sky-300')}>{m.name}</span>
-                    <span className="text-white/85">{m.text}</span>
-                  </motion.div>
-                ))}
-              </AnimatePresence>
-            </div>
-            <div className="border-t border-white/10 p-3">
-              {mainSponsor && (
-                <div className="mb-2 flex items-center gap-2 rounded-lg px-2 py-1.5" style={{ background: `linear-gradient(90deg, ${mainSponsor.color}, transparent)` }}>
-                  <SponsorMark mark={mainSponsor.mark} color="#ffffff22" className="size-6 rounded-md text-[9px]" />
-                  <span className="text-[11px] font-semibold">{t.home.sponsorMain}: {mainSponsor.name}</span>
-                </div>
-              )}
-              <form
-                className="flex gap-2"
-                onSubmit={(e) => {
-                  e.preventDefault()
-                  if (!text.trim()) return
-                  setMsgs((p) => [...p, { id: Date.now(), name: t.ui.you, country: 'VN', text, me: true }])
-                  setText('')
-                }}
-              >
-                <input value={text} onChange={(e) => setText(e.target.value)} placeholder={t.live.say} aria-label={t.live.say} className="h-10 min-w-0 flex-1 rounded-lg bg-white/10 px-3 text-sm text-white outline-none placeholder:text-white/40 focus:ring-2 focus:ring-primary" />
-                <button type="button" onClick={react} className="grid size-10 place-items-center rounded-lg bg-white/10 text-live hover:bg-white/15" aria-label={t.ui.react}><Heart className="size-4" /></button>
-                <button type="submit" className="grid size-10 place-items-center rounded-lg bg-primary hover:bg-primary-hover" aria-label={t.ui.send}><Send className="size-4" /></button>
-              </form>
-            </div>
-          </aside>
+          {chat}
         </div>
       </div>
     </div>
