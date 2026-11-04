@@ -8,11 +8,12 @@ import { useToast } from '@/components/ui/overlay'
 import { Button, buttonClass, Field, Input, Textarea } from '@/components/ui/primitives'
 import { Select } from '@/components/ui/select'
 import { useI18n } from '@/lib/i18n'
-import { completion, OPTIONS, SECTIONS, sectionDone, useProfile, type CompanyProfile, type Opt, type SectionKey, type VerifyStatus } from '@/lib/profile'
+import { BUSINESS_FORMS, completion, OPTIONS, SECTIONS, sectionDone, useProfile, type CompanyProfile, type Opt, type SectionKey, type VerifyStatus } from '@/lib/profile'
 import { cn } from '@/lib/utils'
 import { tx, withKo } from '@/lib/tx'
 import { FileUpload, GalleryUpload, ImageUpload, UploadGuide } from '@/components/upload/Upload'
 import { uploadPending } from '@/api/uploads'
+import { BranchesFields, LeadersFields } from '@/components/profile/KeyLeadersFields'
 import type { RuleKey } from '@/lib/upload'
 
 export default function MyProfile() {
@@ -244,8 +245,11 @@ function Q({ label, required, children, hint }: { label: string; required?: bool
 type FP<K extends keyof CompanyProfile> = { p: CompanyProfile; set: (v: CompanyProfile[K]) => void }
 
 function GeneralForm({ p, set }: FP<'general'>) {
-  const { t } = useI18n()
+  const { t, L } = useI18n()
   const g = p.general
+  const reg = p.registration
+  const form = BUSINESS_FORMS.find((x) => x.value === reg.businessForm)
+  const fromReg = tx('Lấy từ hồ sơ đăng ký, không sửa tại đây', 'From registration, read-only', '등록 정보, 수정 불가')
   const businessType = t.supplier.types[p.registration.businessType as keyof typeof t.supplier.types] ?? '—'
   const f = (k: keyof typeof g) => (e: { target: { value: string } }) => set({ ...g, [k]: e.target.value })
   return (
@@ -253,9 +257,24 @@ function GeneralForm({ p, set }: FP<'general'>) {
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label={(tx('Tên tiếng Việt', 'Vietnamese name')) + ' *'} htmlFor="g-vi"><Input id="g-vi" value={g.nameVi} onChange={f('nameVi')} /></Field>
         <Field label={(tx('Tên tiếng Anh', 'English name')) + ' *'} htmlFor="g-en"><Input id="g-en" value={g.nameEn} onChange={f('nameEn')} /></Field>
+        <Field label={tx('Tên viết tắt', 'Short name', '약칭')} htmlFor="g-short"><Input id="g-short" maxLength={255} placeholder={tx('VD: SOUTHWOOD', 'e.g. SOUTHWOOD', '예: SOUTHWOOD')} value={g.shortName} onChange={f('shortName')} /></Field>
         <Field label={tx('Mã số thuế', 'Tax code')} htmlFor="g-tax" hint={tx('Lấy từ hồ sơ đăng ký, không sửa tại đây', 'From registration, read-only')}><Input id="g-tax" value={g.taxCode} readOnly className="bg-muted" /></Field>
         <Field label={tx('Năm thành lập', 'Year founded')} htmlFor="g-year"><Input id="g-year" inputMode="numeric" value={g.foundedYear} onChange={f('foundedYear')} /></Field>
+        <Field label={tx('Tổng tài sản', 'Total assets', '총자산') + ` (${reg.totalAssetsCurrency || reg.charterCurrency || 'VND'})`} htmlFor="g-assets" hint={tx('Chỉ nhập số', 'Digits only', '숫자만 입력')}><Input id="g-assets" inputMode="numeric" maxLength={30} value={g.totalAssets} onChange={(e) => set({ ...g, totalAssets: e.target.value.replace(/\D/g, '') })} /></Field>
         <Field label={tx('Loại hình hoạt động', 'Business type', '사업 유형')} htmlFor="g-type" hint={tx('Lấy từ hồ sơ đăng ký, không sửa tại đây', 'From registration, read-only')} className="sm:col-span-2"><Input id="g-type" value={businessType} readOnly className="bg-muted" /></Field>
+      </div>
+      <div>
+        <p className="mb-3 text-[14px] font-semibold">{tx('Đăng ký kinh doanh', 'Business registration', '사업자 등록')}</p>
+        <div className="grid gap-4 sm:grid-cols-2">
+          {reg.businessRegNo && (
+            <>
+              <Field label={tx('Số đăng ký kinh doanh', 'Registration number', '등록 번호')} htmlFor="g-regno" hint={fromReg}><Input id="g-regno" value={reg.businessRegNo} readOnly className="bg-muted" /></Field>
+              <Field label={tx('Ngày cấp', 'Issue date', '발급일')} htmlFor="g-regdate" hint={fromReg}><Input id="g-regdate" type="date" value={reg.businessRegDate} readOnly className="bg-muted" /></Field>
+              <Field label={tx('Nơi cấp', 'Issued by', '발급 기관')} htmlFor="g-regplace" hint={fromReg}><Input id="g-regplace" value={reg.businessRegPlace} readOnly className="bg-muted" /></Field>
+            </>
+          )}
+          <Field label={tx('Loại hình doanh nghiệp', 'Legal form', '기업 형태')} htmlFor="g-form" hint={fromReg}><Input id="g-form" value={(reg.businessForm === 'OTHER' && reg.otherBusinessForm) || (form ? L(form) : '—')} readOnly className="bg-muted" /></Field>
+        </div>
       </div>
       <Q label={tx('Loại hình sở hữu', 'Ownership')} required><Choice cols={3} options={OPTIONS.ownership} value={g.ownership} onChange={(v) => set({ ...g, ownership: v })} /></Q>
       <Field label={tx('Các kênh online (website, fanpage, LinkedIn…)', 'Online channels (website, fanpage, LinkedIn…)')} htmlFor="g-ch"><Input id="g-ch" value={g.channels} onChange={f('channels')} /></Field>
@@ -264,13 +283,18 @@ function GeneralForm({ p, set }: FP<'general'>) {
         <Choice cols={3} options={[withKo({ value: 'YES', vi: 'Có', en: 'Yes' }), withKo({ value: 'NO', vi: 'Không', en: 'No' })]} value={g.womenOwned} onChange={(v) => set({ ...g, womenOwned: v as 'YES' | 'NO' })} />
       </Q>
       <div>
-        <p className="mb-3 text-[14px] font-semibold">{tx('Người liên hệ giao thương', 'Trade contact')}</p>
+        <p className="mb-3 text-[14px] font-semibold">{tx('Người liên hệ #1 (giao thương)', 'Contact person #1 (trade)', '담당자 #1 (거래)')}</p>
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label={(tx('Họ tên', 'Full name')) + ' *'} htmlFor="g-cn"><Input id="g-cn" value={g.contactName} onChange={f('contactName')} /></Field>
           <Field label={tx('Chức vụ', 'Title')} htmlFor="g-ct"><Input id="g-ct" value={g.contactTitle} onChange={f('contactTitle')} /></Field>
           <Field label={tx('Điện thoại / Zalo', 'Phone / Zalo')} htmlFor="g-cp"><Input id="g-cp" value={g.contactPhone} onChange={f('contactPhone')} /></Field>
           <Field label="Email *" htmlFor="g-ce"><Input id="g-ce" type="email" value={g.contactEmail} onChange={f('contactEmail')} /></Field>
         </div>
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <p className="text-[14px] font-semibold sm:col-span-2">{tx('Lãnh đạo chủ chốt', 'Key leaders', '주요 경영진')}</p>
+        <LeadersFields omit="contact1" value={g.keyLeaders} onChange={(role, field, v) => set({ ...g, keyLeaders: { ...g.keyLeaders, [role]: { ...g.keyLeaders[role], [field]: v } } })} />
+        <BranchesFields value={g.branches} onChange={(v) => set({ ...g, branches: v })} />
       </div>
     </div>
   )

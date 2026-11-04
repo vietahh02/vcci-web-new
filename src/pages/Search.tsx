@@ -1,7 +1,7 @@
 /** Marketplace listing: short video strip + category icon rail + filter sidebar + product grid. */
 import { AnimatePresence, motion } from 'motion/react'
-import { SearchX, SlidersHorizontal, X } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { ChevronLeft, ChevronRight, Infinity as InfinityIcon, SearchX, SlidersHorizontal, X } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { catalogApi, searchProductsPage, USE_MOCK, type ProductQuery } from '@/api'
 import { categories, products, type Product } from '@/data/mock'
@@ -14,7 +14,8 @@ import { tx } from '@/lib/tx'
 import { cn, formatNumber } from '@/lib/utils'
 
 const MOCK_CERTS = Array.from(new Set(products.flatMap((p) => p.certificates))).slice(0, 12)
-const MOQ_STEPS = [0, 50, 500, 2000, 5000]
+// 0 = không giới hạn, nằm ở đầu phải của thanh gạt
+const MOQ_STEPS = [50, 500, 2000, 5000, 0]
 
 export default function SearchPage() {
   const { t, L, lang, locale } = useI18n()
@@ -30,6 +31,8 @@ export default function SearchPage() {
   const [loadingMore, setLoadingMore] = useState(false)
   const [facetCerts, setFacetCerts] = useState<string[]>([])
   const [filtersOpen, setFiltersOpen] = useState(false)
+  const rail = useRef<HTMLDivElement>(null)
+  const [railEdge, setRailEdge] = useState({ start: false, end: false })
   const query = (pg: number): ProductQuery => ({ keyword, categoryId: categoryId || undefined, maxMoq: maxMoq || undefined, certificates: certs, sort, page: pg, size: 24 })
 
   // filters, sorting and paging are all applied by the BE; a new filter restarts from page 0
@@ -47,6 +50,27 @@ export default function SearchPage() {
   useEffect(() => {
     if (!USE_MOCK) catalogApi.popularCertificates(12).then(setFacetCerts, () => undefined)
   }, [lang])
+
+  const syncRail = () => {
+    const el = rail.current
+    if (el) setRailEdge({ start: el.scrollLeft > 4, end: el.scrollLeft + el.clientWidth < el.scrollWidth - 4 })
+  }
+  useEffect(() => {
+    if (!rail.current) return
+    const observer = new ResizeObserver(syncRail)
+    observer.observe(rail.current)
+    return () => observer.disconnect()
+  }, [])
+  // danh mục đang chọn luôn nằm trong vùng nhìn thấy; chờ font vì font tải muộn làm chip rộng ra
+  useEffect(() => {
+    document.fonts.ready.then(() => {
+      const el = rail.current
+      const chip = el?.querySelector<HTMLElement>('[aria-pressed="true"]')
+      if (el && chip) el.scrollTo({ left: chip.offsetLeft - (el.clientWidth - chip.offsetWidth) / 2, behavior: 'smooth' })
+      syncRail()
+    })
+  }, [categoryId])
+  const scrollRail = (dir: 1 | -1) => rail.current?.scrollBy({ left: dir * rail.current.clientWidth * 0.6, behavior: 'smooth' })
 
   const loadMore = () => {
     setLoadingMore(true)
@@ -72,19 +96,32 @@ export default function SearchPage() {
     setCerts([])
   }
 
+  const moqIndex = MOQ_STEPS.indexOf(maxMoq)
+  const moqLabel = maxMoq ? `≤ ${formatNumber(maxMoq, locale)}` : t.searchPage.any
+
   const filters = (
     <div className="space-y-7">
       <div>
-        <p className="mb-3 text-sm font-bold">{t.searchPage.maxMoq}</p>
-        <div className="flex flex-wrap gap-2">
-          {MOQ_STEPS.map((m) => (
-            <button key={m} onClick={() => setMaxMoq(m)} className={cn('rounded-full border px-3 py-1.5 text-xs font-semibold transition', maxMoq === m ? 'border-primary bg-primary text-primary-foreground' : 'hover:border-primary/50')}>
-              {m === 0 ? t.searchPage.any : `≤ ${formatNumber(m, locale)}`}
-            </button>
-          ))}
+        <div className="mb-2 flex items-baseline justify-between gap-2">
+          <p className="text-sm font-bold">{t.searchPage.maxMoq}</p>
+          <output className="text-xs font-semibold text-primary">{moqLabel}</output>
+        </div>
+        <input
+          type="range"
+          min={0}
+          max={MOQ_STEPS.length - 1}
+          value={moqIndex}
+          aria-label={t.searchPage.maxMoq}
+          aria-valuetext={moqLabel}
+          onChange={(e) => setMaxMoq(MOQ_STEPS[Number(e.target.value)]!)}
+          className="range-input"
+          style={{ '--fill': `${(moqIndex / (MOQ_STEPS.length - 1)) * 100}%` } as CSSProperties}
+        />
+        <div aria-hidden className="mt-1.5 flex items-center justify-between text-[11px] text-muted-foreground">
+          {MOQ_STEPS.map((m) => (m ? <span key={m}>{formatNumber(m, locale)}</span> : <InfinityIcon key={m} className="size-3.5" />))}
         </div>
       </div>
-      <div>
+      {ALL_CERTS.length > 0 && <div>
         <p className="mb-3 text-sm font-bold">{t.searchPage.certs}</p>
         <div className="space-y-2">
           {ALL_CERTS.map((c) => {
@@ -97,7 +134,7 @@ export default function SearchPage() {
             )
           })}
         </div>
-      </div>
+      </div>}
     </div>
   )
 
@@ -120,20 +157,33 @@ export default function SearchPage() {
 
       {/* category rail */}
       <div className="sticky top-[112px] z-30 border-b bg-background/90 backdrop-blur max-lg:top-[68px]">
-        <div className="container-page no-scrollbar flex gap-1 overflow-x-auto py-2">
+        <div className="relative">
+          {/* Vùng cuộn tràn hết bề ngang và canh lề bằng padding, để chip không bị cắt giữa màn hình ở mép container */}
+          <div ref={rail} onScroll={syncRail} className="no-scrollbar relative flex gap-1 overflow-x-auto px-4 py-2 md:px-[max(28px,calc((100%-1320px)/2+28px))]">
           {[{ id: '', name: t.searchPage.all, Icon: null }, ...categories.map((c) => ({ id: c.id, name: L(c.categoryName), Icon: categoryIcons[c.icon] }))].map(({ id, name, Icon }) => (
-            <button key={id} onClick={() => setCategory(id)} className={cn('relative flex shrink-0 items-center gap-2 rounded-full px-3.5 py-2 text-[13px] font-semibold transition-colors', categoryId === id ? 'text-primary-foreground' : 'text-foreground/70 hover:text-foreground')}>
+            <button key={id} aria-pressed={categoryId === id} onClick={() => setCategory(id)} className={cn('relative flex shrink-0 items-center gap-2 rounded-full px-3.5 py-2 text-[13px] font-semibold transition-colors', categoryId === id ? 'text-primary-foreground' : 'text-foreground/70 hover:text-foreground')}>
               {categoryId === id && <motion.span layoutId="search-cat" className="absolute inset-0 rounded-full bg-primary" transition={{ type: 'spring', bounce: 0.2, duration: 0.4 }} />}
               {Icon && <Icon className="relative size-4" />}
               <span className="relative">{name}</span>
             </button>
           ))}
+          </div>
+          {railEdge.start && (
+            <div className="absolute inset-y-0 left-0 hidden w-16 items-center bg-gradient-to-r from-background via-background to-transparent pl-2 md:flex">
+              <button onClick={() => scrollRail(-1)} aria-label={t.ui.previous} className="grid size-8 place-items-center rounded-full border bg-card shadow-sm transition hover:border-primary/50"><ChevronLeft className="size-4" /></button>
+            </div>
+          )}
+          {railEdge.end && (
+            <div className="absolute inset-y-0 right-0 hidden w-16 items-center justify-end bg-gradient-to-l from-background via-background to-transparent pr-2 md:flex">
+              <button onClick={() => scrollRail(1)} aria-label={t.ui.next} className="grid size-8 place-items-center rounded-full border bg-card shadow-sm transition hover:border-primary/50"><ChevronRight className="size-4" /></button>
+            </div>
+          )}
         </div>
       </div>
 
-      <div className="container-page mt-8 grid gap-10 lg:grid-cols-[220px_minmax(0,1fr)]">
+      <div className="container-page mt-8 grid gap-8 lg:grid-cols-[240px_minmax(0,1fr)]">
         <aside className="hidden lg:block">
-          <div className="sticky top-48">
+          <div className="sticky top-48 rounded-2xl border bg-card p-4 shadow-sm">
             <p className="mb-5 flex items-center gap-2 font-bold"><SlidersHorizontal className="size-4" /> {t.searchPage.filters}</p>
             {filters}
           </div>
@@ -150,8 +200,8 @@ export default function SearchPage() {
           </div>
 
           {!results ? (
-            <div className="grid grid-cols-2 gap-x-5 gap-y-8 md:grid-cols-3 xl:grid-cols-4">
-              {Array.from({ length: 8 }).map((_, i) => <div key={i}><Skeleton className="aspect-square" /><Skeleton className="mt-3 h-4" /><Skeleton className="mt-2 h-5 w-1/2" /></div>)}
+            <div className="grid grid-cols-2 gap-4 md:grid-cols-3 md:gap-5 xl:grid-cols-4">
+              {Array.from({ length: 8 }).map((_, i) => <div key={i} className="overflow-hidden rounded-2xl border bg-card"><Skeleton className="aspect-square rounded-none" /><div className="p-3.5"><Skeleton className="h-4" /><Skeleton className="mt-2 h-5 w-1/2" /></div></div>)}
             </div>
           ) : results.length === 0 ? (
             <div className="grid place-items-center py-20 text-center">
@@ -160,7 +210,7 @@ export default function SearchPage() {
               <p className="mt-1 text-sm text-muted-foreground">{t.common.noResultsHint}</p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-x-5 gap-y-8 md:grid-cols-3 xl:grid-cols-4">
+            <div className="grid grid-cols-2 gap-4 md:grid-cols-3 md:gap-5 xl:grid-cols-4">
               {results.map((p, i) => (
                 <motion.div key={p.id} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0, transition: { delay: i * 0.035 } }}>
                   <ProductCard product={p} />

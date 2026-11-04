@@ -1,6 +1,6 @@
 import * as DialogPrimitive from '@radix-ui/react-dialog'
 import { AnimatePresence, motion, useMotionValueEvent, useScroll } from 'motion/react'
-import { ChevronDown, ChevronRight, FilePlus2, LayoutGrid, LogOut, Menu, MessageSquare, Moon, Phone, Sun } from 'lucide-react'
+import { ChevronDown, ChevronRight, LayoutGrid, LogOut, Menu, MessageSquare, Moon, Phone, Sun } from 'lucide-react'
 import { useState } from 'react'
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { categories } from '@/data/mock'
@@ -35,10 +35,10 @@ export function Header() {
     { to: '/search', label: t.nav.products },
     { to: '/suppliers', label: t.nav.suppliers },
     { to: '/requests', label: t.nav.requests },
-    { to: '/events', label: t.nav.events },
-    { to: '/events', label: t.nav.live, live: true },
+    { to: '/events', label: t.nav.events, live: true },
     { to: '/legal-ai', label: t.nav.legal },
     { to: '/about', label: t.nav.about },
+    ...(session ? [{ to: '/account/catalog', label: tx('Sản phẩm & gian hàng', 'Products & booths', '제품 및 부스') }] : []),
   ]
 
   return (
@@ -75,9 +75,6 @@ export function Header() {
             <SearchBar autoFocusKey={!isHome || scrolled} />
           </div>
           <div className="ml-auto flex items-center gap-1">
-            <Link to="/requests?post=1" className={buttonClass('gold', 'sm', 'mr-1 hidden h-9 xl:inline-flex')}>
-              <FilePlus2 /> {t.nav.postRequest}
-            </Link>
             <Tooltip content={t.nav.messages}>
               <button className="relative hidden rounded-lg p-2.5 text-muted-foreground transition hover:bg-muted hover:text-foreground sm:block" aria-label={t.nav.messages}>
                 <MessageSquare className="size-[18px]" />
@@ -95,7 +92,6 @@ export function Header() {
             </button>
             {session ? (
               <>
-              <Link to="/account/catalog" className={buttonClass('ghost', 'sm', 'ml-2 hidden h-9 xl:inline-flex')}>{tx('Sản phẩm & gian hàng', 'Products & booths', '제품 및 부스')}</Link>
               <Link to="/account/profile" className="ml-2 flex items-center gap-2.5 rounded-xl py-1 pl-1 pr-3 transition hover:bg-muted" title={tx('Hồ sơ doanh nghiệp của tôi', 'My company profile')}>
                 <span className="relative grid size-9 place-items-center">
                   <svg viewBox="0 0 36 36" className="absolute inset-0 -rotate-90">
@@ -132,9 +128,11 @@ export function Header() {
             onClick={() => setMegaOpen((v) => !v)}
             className={cn('mr-1 inline-flex h-9 shrink-0 items-center gap-2 whitespace-nowrap rounded-lg px-3 text-[13px] font-bold transition xl:mr-3', megaOpen ? 'bg-primary text-primary-foreground' : 'bg-primary-soft text-primary hover:bg-primary hover:text-primary-foreground')}
             aria-expanded={megaOpen}
+            aria-label={t.nav.allCategories}
           >
             <LayoutGrid className="size-4" />
-            {t.nav.allCategories}
+            {/* Đã đăng nhập có thêm mục menu, màn 1024–1279px không đủ chỗ cho cả nhãn này */}
+            <span className={cn(session && 'hidden xl:inline')}>{t.nav.allCategories}</span>
             <ChevronDown className={cn('size-3.5 transition-transform', megaOpen && 'rotate-180')} />
           </button>
           {navItems.map((n) => (
@@ -288,8 +286,7 @@ function MobileNav({ open, onOpenChange, items }: { open: boolean; onOpenChange:
           <div className="mt-6 grid grid-cols-2 gap-2">
             {session ? (
               <>
-                <Link to="/account/catalog" onClick={() => onOpenChange(false)} className={buttonClass('outline', 'md', 'h-auto min-h-10 whitespace-normal py-2 text-center leading-tight')}>{tx('Sản phẩm & gian hàng', 'Products & booths', '제품 및 부스')}</Link>
-                <Link to="/account/profile" onClick={() => onOpenChange(false)} className={buttonClass('default', 'md', 'h-auto min-h-10 whitespace-normal py-2 text-center leading-tight')}>{tx('Hồ sơ doanh nghiệp', 'Company profile', '기업 프로필')}</Link>
+                <Link to="/account/profile" onClick={() => onOpenChange(false)} className={buttonClass('default', 'md', 'col-span-2 h-auto min-h-10 whitespace-normal py-2 text-center leading-tight')}>{tx('Hồ sơ doanh nghiệp', 'Company profile', '기업 프로필')}</Link>
                 <button
                   onClick={() => { onOpenChange(false); signOut(); navigate('/') }}
                   className={buttonClass('ghost', 'md', 'col-span-2 gap-2 text-muted-foreground')}

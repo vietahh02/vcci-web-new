@@ -1,12 +1,13 @@
 import { AnimatePresence, motion } from 'motion/react'
-import { ArrowLeft, ArrowRight, Check, Eye, EyeOff, Plus, Quote, RefreshCw, Trash2 } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Check, Eye, EyeOff, Quote, RefreshCw } from 'lucide-react'
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { authApi, liveApi, USE_MOCK, useHomeStats } from '@/api'
 import type { Captcha as CaptchaChallenge } from '@/api/auth'
-import { emptyProfile, useProfile, type DocFile, type Registration } from '@/lib/profile'
+import { BUSINESS_FORMS, emptyLeaders, emptyProfile, useProfile, type DocFile, type Registration } from '@/lib/profile'
+import { BranchesFields, LeadersFields, type PersonField } from '@/components/profile/KeyLeadersFields'
 import { ImageUpload, MultiFileUpload, UploadGuide } from '@/components/upload/Upload'
-import type { Branch, KeyLeaders, LeaderPerson, RegDocGroup } from '@/api/realApi'
+import type { Branch, KeyLeaders, RegDocGroup } from '@/api/realApi'
 import { clearRegisterUploadToken, uploadPending } from '@/api/uploads'
 import { tx } from '@/lib/tx'
 import { categories } from '@/data/mock'
@@ -153,45 +154,9 @@ export function Login() {
  * totalRevenue, reportYear, employees, website, fax, country, province, address, email, phone, representative*.
  * Legal documents: OrganizationDocumentType BUSINESS_LICENSE / TAX_REGISTRATION_CERTIFICATE.
  */
-const BUSINESS_FORMS = [
-  { value: 'PRIVATE', vi: 'Doanh nghiệp tư nhân', en: 'Sole proprietorship', ko: '개인 기업' },
-  { value: 'LLC', vi: 'Công ty TNHH', en: 'Limited liability company', ko: '유한책임회사' },
-  { value: 'JOINT_STOCK', vi: 'Công ty cổ phần', en: 'Joint stock company', ko: '주식회사' },
-  { value: 'JOINT_VENTURE', vi: 'Liên doanh', en: 'Joint venture', ko: '합작 투자 기업' },
-  { value: 'COOPERATIVE', vi: 'Hợp tác xã', en: 'Cooperative', ko: '협동조합' },
-  { value: 'STATE_OWNED', vi: 'Doanh nghiệp nhà nước', en: 'State-owned enterprise', ko: '국영 기업' },
-  { value: 'OTHER', vi: 'Khác', en: 'Other', ko: '기타' },
-]
 const EMPLOYEE_RANGES = ['1 – 10', '11 – 50', '51 – 200', '201 – 500', '500 – 1.000', '1.000 – 2.000', '2.000+']
 const REG_COUNTRIES = ['VN', 'KR', 'JP', 'CN', 'US', 'DE', 'FR', 'GB', 'AU', 'SG', 'TH']
 
-const GENDERS = [
-  { value: 'MALE', vi: 'Nam', en: 'Male', ko: '남' },
-  { value: 'FEMALE', vi: 'Nữ', en: 'Female', ko: '여' },
-  { value: 'OTHER', vi: 'Khác', en: 'Other', ko: '기타' },
-]
-type PersonField = keyof LeaderPerson
-/** "Lãnh đạo chủ chốt": which fields each role asks for; `required` marks the mandatory role (Người liên hệ #1). */
-const LEADER_ROLES: { key: keyof KeyLeaders; label: Parameters<typeof tx>; fields: PersonField[]; required?: boolean }[] = [
-  { key: 'contact1', label: ['Người liên hệ #1', 'Contact person #1', '담당자 #1'], fields: ['fullName', 'mobile', 'email'], required: true },
-  { key: 'chairman', label: ['Chủ tịch', 'Chairperson', '회장'], fields: ['fullName', 'gender', 'landline', 'mobile'] },
-  { key: 'ceo', label: ['Tổng Giám đốc / Giám đốc', 'CEO / Director', '대표이사 / 사장'], fields: ['fullName', 'gender', 'landline', 'mobile', 'email'] },
-  { key: 'chiefOfOffice', label: ['Chánh Văn phòng', 'Chief of office', '비서실장'], fields: ['fullName', 'landline', 'mobile', 'email'] },
-  { key: 'contact2', label: ['Người liên hệ #2', 'Contact person #2', '담당자 #2'], fields: ['fullName', 'mobile', 'email'] },
-]
-const PERSON_LABEL: Record<PersonField, Parameters<typeof tx>> = {
-  fullName: ['Họ tên', 'Full name', '성명'],
-  gender: ['Giới tính', 'Gender', '성별'],
-  landline: ['Điện thoại cố định', 'Landline', '유선 전화'],
-  mobile: ['Di động', 'Mobile', '휴대전화'],
-  email: ['Email', 'Email', '이메일'],
-}
-const PERSON_PLACEHOLDER: Record<Exclude<PersonField, 'gender'>, Parameters<typeof tx>> = {
-  fullName: ['VD: Nguyễn Văn A', 'e.g. Nguyen Van A', '예: Nguyen Van A'],
-  landline: ['VD: 024 3825 0000', 'e.g. 024 3825 0000', '예: 024 3825 0000'],
-  mobile: ['VD: 0912 345 678', 'e.g. 0912 345 678', '예: 0912 345 678'],
-  email: ['VD: ten@company.vn', 'e.g. name@company.vn', '예: name@company.vn'],
-}
 /** "Hồ sơ yêu cầu": 5 groups, max 5 files each; only the business registration certificate is mandatory. */
 const DOC_GROUPS: { key: RegDocGroup; label: Parameters<typeof tx>; items: Parameters<typeof tx>[]; required?: boolean }[] = [
   { key: 'application', label: ['Đơn xin gia nhập hội viên', 'Membership application', '회원 가입 신청서'], items: [['Đơn đăng ký hội viên Liên đoàn Thương mại & Công nghiệp Việt Nam (VCCI)', 'VCCI membership application form', 'VCCI 회원 가입 신청서'], ['Giấy chứng nhận đăng ký doanh nghiệp', 'Enterprise registration certificate', '사업자등록증']] },
@@ -200,7 +165,6 @@ const DOC_GROUPS: { key: RegDocGroup; label: Parameters<typeof tx>; items: Param
   { key: 'payment', label: ['Chứng từ thanh toán', 'Payment documents', '납부 증빙'], items: [['Biên lai thanh toán phí hội viên', 'Membership fee receipt', '회비 납부 영수증'], ['Chứng từ chuyển khoản', 'Bank transfer slip', '계좌 이체 증빙']] },
   { key: 'other', label: ['Tài liệu khác', 'Other documents', '기타 서류'], items: [['Tài liệu bổ sung', 'Supplementary documents', '추가 서류']] },
 ]
-const emptyPerson = (): LeaderPerson => ({ fullName: '', gender: '', landline: '', mobile: '', email: '' })
 
 type Reg = Registration & {
   nameVi: string; nameEn: string; shortName: string; taxCode: string; logo: string; loginEmail: string
@@ -220,12 +184,11 @@ export function Register() {
   const [r, setR] = useState<Reg>(() => ({
     ...emptyProfile().registration, nameVi: '', nameEn: '', shortName: '', taxCode: '', logo: '', loginEmail: '',
     otherBusinessForm: '', businessRegNo: '', businessRegDate: '', businessRegPlace: '', totalAssets: '',
-    leaders: { chairman: emptyPerson(), ceo: emptyPerson(), chiefOfOffice: emptyPerson(), contact1: emptyPerson(), contact2: emptyPerson() },
+    leaders: emptyLeaders(),
     branches: [], docs: { application: [], license: [], finance: [], payment: [], other: [] },
   }))
   const set = <K extends keyof Reg>(k: K, v: Reg[K]) => setR((x) => ({ ...x, [k]: v }))
   const setPerson = (role: keyof KeyLeaders, f: PersonField, v: string) => setR((x) => ({ ...x, leaders: { ...x.leaders, [role]: { ...x.leaders[role], [f]: v } } }))
-  const setBranch = (i: number, b: Partial<Branch>) => set('branches', r.branches.map((x, j) => (j === i ? { ...x, ...b } : x)))
   // the profile (mock) and the step-4 check still read legalDocs.license: mirror the first certificate there
   const setDocs = (g: RegDocGroup, v: DocFile[]) => setR((x) => ({ ...x, docs: { ...x.docs, [g]: v }, ...(g === 'license' ? { legalDocs: { ...x.legalDocs, license: v[0] ?? null } } : {}) }))
   const [today] = useState(() => new Date().toISOString().slice(0, 10))
@@ -383,40 +346,8 @@ export function Register() {
             )}
             {step === 2 && (
               <>
-                {LEADER_ROLES.map((role) => (
-                  <fieldset key={role.key} className="grid gap-3 rounded-xl border p-4 sm:col-span-2 sm:grid-cols-2">
-                    <legend className="px-1 text-[13px] font-semibold">{tx(...role.label)}{role.required && ' *'}</legend>
-                    {role.fields.map((f) => {
-                      const id = `${role.key}-${f}`
-                      const label = tx(...PERSON_LABEL[f]) + (role.required ? ' *' : '')
-                      const v = r.leaders[role.key][f]
-                      return f === 'gender' ? (
-                        <Field key={f} label={label} htmlFor={id}>
-                          <Select id={id} value={v} onValueChange={(x) => setPerson(role.key, f, x)} options={[{ value: '', label: '—' }, ...GENDERS.map((g) => ({ value: g.value, label: L(g) }))]} />
-                        </Field>
-                      ) : (
-                        <Field key={f} label={label} htmlFor={id} className={f === 'fullName' && role.fields.length % 2 === 1 ? 'sm:col-span-2' : undefined}>
-                          <Input id={id} placeholder={tx(...PERSON_PLACEHOLDER[f])} required={role.required} type={f === 'email' ? 'email' : f === 'fullName' ? 'text' : 'tel'} maxLength={f === 'fullName' || f === 'email' ? 255 : 20} value={v} onChange={(e) => setPerson(role.key, f, e.target.value)} />
-                        </Field>
-                      )
-                    })}
-                  </fieldset>
-                ))}
-                <div className="sm:col-span-2">
-                  <p className="mb-2 text-[13px] font-semibold">{tx('Chi nhánh / văn phòng đại diện trong và ngoài nước', 'Branches / representative offices (domestic & overseas)', '국내외 지사 / 대표 사무소')}</p>
-                  <div className="space-y-2">
-                    {r.branches.map((b, i) => (
-                      <div key={i} className="grid gap-2 sm:grid-cols-[1fr_1.6fr_auto]">
-                        <Input aria-label={tx('Tên chi nhánh', 'Branch name', '지사명')} placeholder={tx('Tên chi nhánh / VPĐD', 'Branch / office name', '지사 / 사무소명')} required maxLength={255} value={b.name} onChange={(e) => setBranch(i, { name: e.target.value })} />
-                        <Input aria-label={tx('Địa chỉ chi nhánh', 'Branch address', '지사 주소')} placeholder={tx('Địa chỉ (trong hoặc ngoài nước)', 'Address (domestic or overseas)', '주소 (국내 또는 해외)')} maxLength={1000} value={b.address} onChange={(e) => setBranch(i, { address: e.target.value })} />
-                        <button type="button" onClick={() => set('branches', r.branches.filter((_, j) => j !== i))} className="rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-destructive" aria-label={tx('Xoá chi nhánh', 'Remove branch', '지사 삭제')}><Trash2 className="size-4" /></button>
-                      </div>
-                    ))}
-                  </div>
-                  {r.branches.length < 20 && (
-                    <Button variant="ghost" className="mt-2" onClick={() => set('branches', [...r.branches, { name: '', address: '' }])}><Plus /> {tx('Thêm chi nhánh', 'Add branch', '지사 추가')}</Button>
-                  )}
-                </div>
+                <LeadersFields value={r.leaders} onChange={setPerson} />
+                <BranchesFields value={r.branches} onChange={(v) => set('branches', v)} />
               </>
             )}
             {step === 3 && (

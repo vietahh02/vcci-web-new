@@ -7,7 +7,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 import { fetchSession, logout as apiLogout } from '@/api/auth'
 import { USE_MOCK } from '@/api/config'
 import { onAuthExpired, tokens } from '@/api/http'
-import { fetchMyProfile } from '@/api/realApi'
+import { fetchMyProfile, type Branch, type KeyLeaders, type LeaderPerson } from '@/api/realApi'
 import type { Bilingual } from '@/lib/i18n'
 import { KO } from '@/lib/ko-profile'
 import { withKo } from '@/lib/tx'
@@ -89,6 +89,16 @@ export const OPTIONS = {
   ],
 } as const
 
+export const BUSINESS_FORMS = [
+  { value: 'PRIVATE', vi: 'Doanh nghiệp tư nhân', en: 'Sole proprietorship', ko: '개인 기업' },
+  { value: 'LLC', vi: 'Công ty TNHH', en: 'Limited liability company', ko: '유한책임회사' },
+  { value: 'JOINT_STOCK', vi: 'Công ty cổ phần', en: 'Joint stock company', ko: '주식회사' },
+  { value: 'JOINT_VENTURE', vi: 'Liên doanh', en: 'Joint venture', ko: '합작 투자 기업' },
+  { value: 'COOPERATIVE', vi: 'Hợp tác xã', en: 'Cooperative', ko: '협동조합' },
+  { value: 'STATE_OWNED', vi: 'Doanh nghiệp nhà nước', en: 'State-owned enterprise', ko: '국영 기업' },
+  { value: 'OTHER', vi: 'Khác', en: 'Other', ko: '기타' },
+]
+
 /* ---------------------------------------------------------------- data shape */
 export type VerifyStatus = 'SELF' | 'SUBMITTED' | 'VERIFIED'
 export interface RevenueRow {
@@ -102,6 +112,7 @@ export interface DocFile { id: string; name: string; kind: string; size: number;
 export interface MediaItem { id: string; url: string; caption: string; kind: string; fileId?: string }
 export interface Registration {
   businessForm: string; businessType: string; industries: string[]; charterCapital: string; charterCurrency: string
+  otherBusinessForm: string; businessRegNo: string; businessRegDate: string; businessRegPlace: string; totalAssetsCurrency: string
   totalRevenue: string; reportYear: string; employees: string; fax: string; website: string
   country: string; province: string; address: string; email: string; phone: string
   repName: string; repTitle: string; repEmail: string; repPhone: string
@@ -111,7 +122,7 @@ export interface Media { logo: string; cover: string; gallery: MediaItem[]; vide
 export interface Attendee { id: string; name: string; title: string; email: string; phone: string }
 
 export interface CompanyProfile {
-  general: { nameVi: string; nameEn: string; taxCode: string; ownership: string; foundedYear: string; channels: string; womenOwned: '' | 'YES' | 'NO'; factoryAddress: string; contactName: string; contactTitle: string; contactPhone: string; contactEmail: string }
+  general: { nameVi: string; nameEn: string; shortName: string; taxCode: string; ownership: string; foundedYear: string; channels: string; womenOwned: '' | 'YES' | 'NO'; factoryAddress: string; contactName: string; contactTitle: string; contactPhone: string; contactEmail: string; totalAssets: string; keyLeaders: KeyLeaders; branches: Branch[] }
   capability: { sectors: string[]; mainProducts: string[]; servedIndustries: string; keyCustomers: string; supplyCapacity: string; oem: string; monthlyCapacity: string; exportCapacityPct: string; moq: string; factoryArea: string; productionLines: string; qcProcess: string; certificates: Certificate[] }
   exports: { exportShare: string; markets: string[]; modes: string[]; traceability: string; euExperience: string; evidence: string; evidenceFileId?: string }
   finance: { revenues: RevenueRow[]; visibility: 'BAND' | 'HIDDEN' }
@@ -152,9 +163,12 @@ export function sectionDone(p: CompanyProfile, key: SectionKey): boolean {
 
 export const completion = (p: CompanyProfile) => Math.round((SECTIONS.filter((s) => sectionDone(p, s.key)).length / SECTIONS.length) * 100)
 
+const emptyPerson = (): LeaderPerson => ({ fullName: '', gender: '', landline: '', mobile: '', email: '' })
+export const emptyLeaders = (): KeyLeaders => ({ chairman: emptyPerson(), ceo: emptyPerson(), chiefOfOffice: emptyPerson(), contact1: emptyPerson(), contact2: emptyPerson() })
+
 const thisYear = new Date().getFullYear()
 export const emptyProfile = (name = '', taxCode = ''): CompanyProfile => ({
-  general: { nameVi: name, nameEn: '', taxCode, ownership: '', foundedYear: '', channels: '', womenOwned: '', factoryAddress: '', contactName: '', contactTitle: '', contactPhone: '', contactEmail: '' },
+  general: { nameVi: name, nameEn: '', shortName: '', taxCode, ownership: '', foundedYear: '', channels: '', womenOwned: '', factoryAddress: '', contactName: '', contactTitle: '', contactPhone: '', contactEmail: '', totalAssets: '', keyLeaders: emptyLeaders(), branches: [] },
   capability: { sectors: [], mainProducts: ['', '', ''], servedIndustries: '', keyCustomers: '', supplyCapacity: '', oem: '', monthlyCapacity: '', exportCapacityPct: '', moq: '', factoryArea: '', productionLines: '', qcProcess: '', certificates: [] },
   exports: { exportShare: '', markets: [], modes: [], traceability: '', euExperience: '', evidence: '' },
   finance: {
@@ -164,7 +178,7 @@ export const emptyProfile = (name = '', taxCode = ''): CompanyProfile => ({
   needs: { partnerTypes: [], opportunities: [], targetMarkets: [], readiness: '', barriers: [], documents: [], note: '' },
   attendees: [],
   registration: {
-    businessForm: '', businessType: 'VN_EXPORTER', industries: [], charterCapital: '', charterCurrency: 'VND', totalRevenue: '', reportYear: String(new Date().getFullYear() - 1),
+    businessForm: '', otherBusinessForm: '', businessRegNo: '', businessRegDate: '', businessRegPlace: '', totalAssetsCurrency: '', businessType: 'VN_EXPORTER', industries: [], charterCapital: '', charterCurrency: 'VND', totalRevenue: '', reportYear: String(new Date().getFullYear() - 1),
     employees: '', fax: '', website: '', country: 'VN', province: '', address: '', email: '', phone: '', repName: '', repTitle: '', repEmail: '', repPhone: '',
     legalDocs: { license: null, tax: null },
   },
@@ -229,6 +243,7 @@ function load(): { session: Session | null; profile: CompanyProfile; registratio
       const e = emptyProfile()
       st.profile = {
         ...e, ...st.profile,
+        general: { ...e.general, ...st.profile?.general },
         capability: { ...e.capability, ...st.profile?.capability },
         registration: { ...e.registration, ...st.profile?.registration },
         media: { ...e.media, ...st.profile?.media },

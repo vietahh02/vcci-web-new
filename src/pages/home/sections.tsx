@@ -44,7 +44,8 @@ export function TrustBand() {
         <Marquee duration={30} className="flex-1">
           {markets.map((m) => (
             <span key={m} className="inline-flex shrink-0 items-center gap-2 px-3 text-sm font-semibold text-foreground/70">
-              <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-[10px] font-bold">{m}</span>
+              {/* Ảnh thay vì emoji cờ vì Windows chỉ hiện emoji cờ thành hai chữ cái */}
+              <img src={`https://flagcdn.com/${m.toLowerCase()}.svg`} alt="" width={24} height={16} className="h-4 w-6 rounded-sm object-cover ring-1 ring-border" />
               {countryName[m] ? L(countryName[m]) : m}
             </span>
           ))}
@@ -180,17 +181,19 @@ export function FeaturedBusiness() {
         {/* switcher */}
         <div className="mt-12">
           <p className="mb-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">{t.home.featuredMore}</p>
-          <div className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4 md:mx-0 md:grid md:grid-cols-5 md:px-0">
+          {/* Mobile cuộn ngang nên cần -m/p chừa chỗ cho shadow; desktop bỏ overflow để không cắt shadow */}
+          <div className="no-scrollbar -m-4 flex gap-3 overflow-x-auto p-4 md:m-0 md:grid md:grid-cols-5 md:overflow-visible md:p-0">
             {list.map((x, k) => (
               <button
                 key={x.id}
                 onClick={() => setI(k)}
-                className={cn('relative flex min-w-56 items-center gap-3 overflow-hidden rounded-xl p-3 text-left transition md:min-w-0', k === i ? 'bg-background shadow-lg ring-1 ring-border' : 'hover:bg-background/60')}
+                aria-pressed={k === i}
+                className={cn('relative flex min-w-56 items-center gap-3 overflow-hidden rounded-xl p-3 text-left ring-1 transition md:min-w-0', k === i ? 'bg-background shadow-lg ring-primary/30' : 'bg-background/60 ring-border hover:bg-background')}
               >
-                <CompanyMark name={x.nameEn} accent={x.accent} className="size-9 rounded-lg text-[11px]" />
+                <CompanyMark name={x.nameEn} accent={x.accent} className="size-9 shrink-0 rounded-lg text-[11px]" />
                 <span className="min-w-0">
-                  <span className="block truncate text-[13px] font-semibold">{x.name}</span>
-                  <span className="block text-[11px] text-muted-foreground">{x.province}</span>
+                  <span className="line-clamp-2 text-[13px] font-semibold leading-snug" title={x.name}>{x.name}</span>
+                  <span className="mt-0.5 block truncate text-[11px] text-muted-foreground">{x.province}</span>
                 </span>
                 {k === i && !paused && (
                   <motion.span key={`p-${i}`} className="absolute inset-x-0 bottom-0 h-0.5 origin-left bg-primary" initial={{ scaleX: 0 }} animate={{ scaleX: 1 }} transition={{ duration: 7, ease: 'linear' }} />
@@ -292,7 +295,8 @@ export function Testimonials() {
         </Reveal>
 
         <div className="relative mt-12" onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)}>
-          <div ref={scroller} className="no-scrollbar -mx-4 flex snap-x snap-mandatory gap-5 overflow-x-auto scroll-smooth px-4 pb-4 pt-8 md:-mx-7 md:px-7">
+          {/* safe center: canh giữa khi ít thẻ, tự về đầu hàng khi tràn để không mất thẻ đầu */}
+          <div ref={scroller} className="no-scrollbar -mx-4 flex snap-x snap-mandatory gap-5 overflow-x-auto scroll-smooth px-4 pb-4 pt-8 [justify-content:safe_center] md:-mx-7 md:px-7">
             {testimonials.map((q, i) => (
               <motion.article
                 key={q.id}
@@ -329,7 +333,8 @@ export function Testimonials() {
               </motion.article>
             ))}
           </div>
-          <div className="mt-6 flex justify-center gap-3">
+          {/* Desktop hiện đủ 3 thẻ một hàng, nên chỉ cần nút khi có từ 4 thẻ */}
+          <div className={cn('mt-6 flex justify-center gap-3', testimonials.length < 2 ? 'hidden' : testimonials.length <= 3 && 'lg:hidden')}>
             <button onClick={() => scroll(-1)} className="grid size-11 place-items-center rounded-full border border-white/20 bg-white/5 backdrop-blur transition hover:bg-white/15" aria-label={t.ui.previous}><ChevronLeft className="size-5" /></button>
             <button onClick={() => scroll(1)} className="grid size-11 place-items-center rounded-full border border-white/20 bg-white/5 backdrop-blur transition hover:bg-white/15" aria-label={t.ui.next}><ChevronRight className="size-5" /></button>
           </div>
@@ -385,16 +390,15 @@ export function SponsorTiers() {
   const s = mainSponsor
   // only what the CMS has published: no sponsors, no section
   if (!s && !goldSponsors.length && !partnerSponsors.length) return null
+  const hasBoard = goldSponsors.length > 0 || partnerSponsors.length > 0
+  // Bảng đứng một mình thì đủ rộng để nhãn hạng nằm bên trái; đứng cạnh thẻ nhà tài trợ chính thì nhãn nằm trên
+  const tierRow = cn('grid gap-4 p-5 md:p-7', !s && 'lg:grid-cols-[13rem_minmax(0,1fr)] lg:gap-8')
+  const focusRing = 'outline-none focus-visible:ring-2 focus-visible:ring-primary'
   return (
     <section className="container-page mt-24">
-      <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
-        <Reveal>
-          <p className="text-xs font-bold uppercase tracking-[0.16em] text-primary">{t.live.sponsors}</p>
-          <h2 className="mt-2 text-2xl font-extrabold tracking-tight md:text-[32px]">{t.home.sponsorMain} & {t.home.sponsorPartners.toLowerCase()}</h2>
-        </Reveal>
-      </div>
+      <SectionHeader title={`${t.home.sponsorMain} & ${t.home.sponsorPartners.toLowerCase()}`} />
 
-      <div className={cn('grid gap-4', s && goldSponsors.length > 0 && 'lg:grid-cols-[1.4fr_1fr]')}>
+      <div className={cn('grid gap-4', s && hasBoard && 'lg:grid-cols-[1.25fr_1fr]')}>
         {/* main sponsor */}
         {s && <Reveal>
           <a href={s.url} className="border-spin group relative flex h-full min-h-64 flex-col justify-between overflow-hidden rounded-3xl p-7 text-white md:p-9" style={{ background: `linear-gradient(125deg, ${s.color} 0%, #08082e 75%)` }}>
@@ -417,36 +421,49 @@ export function SponsorTiers() {
           </a>
         </Reveal>}
 
-        {/* gold */}
-        {goldSponsors.length > 0 && <div className="flex flex-col gap-3">
-          <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-gold"><span className="h-px w-6 bg-gold" /> {t.home.sponsorGold}</p>
-          {goldSponsors.map((g, i) => (
-            <Reveal key={g.id} delay={i * 0.08}>
-              <a href={g.url} className="group flex items-center gap-4 rounded-2xl border border-gold/25 bg-gradient-to-r from-gold-soft/70 to-transparent p-4 transition hover:border-gold/60 hover:shadow-lg">
-                <SponsorMark mark={g.mark} color={g.color} className="size-12 transition-transform duration-300 group-hover:scale-110" />
-                <div className="min-w-0 flex-1">
-                  <p className="font-bold">{g.name}</p>
-                  {g.tagline && <p className="text-sm text-muted-foreground">{L(g.tagline)}</p>}
-                </div>
-                <ArrowUpRight className="size-4 text-muted-foreground transition group-hover:text-gold" />
-              </a>
-            </Reveal>
-          ))}
-        </div>}
-      </div>
+        {/* bảng nhà tài trợ: mỗi hạng một hàng, hạng cao có logo lớn hơn */}
+        {hasBoard && <Reveal delay={s ? 0.1 : 0}>
+          <div className="h-full divide-y overflow-hidden rounded-3xl border bg-card shadow-lg shadow-navy/5">
+            {goldSponsors.length > 0 && <div className={cn(tierRow, 'bg-gradient-to-r from-gold-soft/70 to-transparent')}>
+              <p className="flex items-center gap-2.5 self-start text-sm font-bold lg:mt-6">
+                <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-gold-soft text-gold ring-1 ring-gold/25"><Crown className="size-4" /></span>
+                {t.home.sponsorGold}
+              </p>
+              <ul className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,18rem),1fr))] gap-2">
+                {goldSponsors.map((g) => (
+                  <li key={g.id}>
+                    <a href={g.url} className={cn('group flex items-center gap-4 rounded-2xl p-3 transition hover:bg-background hover:shadow-md', focusRing)}>
+                      <SponsorMark mark={g.mark} color={g.color} className="size-14 rounded-2xl text-base transition-transform duration-300 group-hover:scale-105" />
+                      <span className="min-w-0 flex-1">
+                        <span className="block font-bold leading-snug">{g.name}</span>
+                        {g.tagline && <span className="mt-0.5 line-clamp-2 block text-sm text-muted-foreground">{L(g.tagline)}</span>}
+                      </span>
+                      <ArrowUpRight className="size-4 shrink-0 text-muted-foreground transition group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-gold" />
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>}
 
-      {/* partners — wordmarks, no boxes */}
-      {partnerSponsors.length > 0 && <div className="mt-10">
-        <p className="mb-4 text-center text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground">{t.home.sponsorPartners}</p>
-        <Marquee duration={34}>
-          {partnerSponsors.map((p) => (
-            <span key={p.id} className="inline-flex shrink-0 items-center gap-2.5 px-6 text-lg font-extrabold tracking-tight text-foreground/35 grayscale transition hover:text-foreground hover:grayscale-0">
-              <SponsorMark mark={p.mark} color={p.color} className="size-8 rounded-lg text-[10px] opacity-60" />
-              {p.name}
-            </span>
-          ))}
-        </Marquee>
-      </div>}
+            {partnerSponsors.length > 0 && <div className={tierRow}>
+              <p className="flex items-center gap-2.5 self-start text-sm font-bold lg:mt-2.5">
+                <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-primary-soft text-primary ring-1 ring-primary/15"><Handshake className="size-4" /></span>
+                {t.home.sponsorPartners}
+              </p>
+              <ul className="flex flex-wrap gap-1">
+                {partnerSponsors.map((p) => (
+                  <li key={p.id}>
+                    <a href={p.url} className={cn('inline-flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-semibold text-foreground/80 transition hover:bg-muted hover:text-foreground', focusRing)}>
+                      <SponsorMark mark={p.mark} color={p.color} className="size-9 rounded-lg text-[11px]" />
+                      {p.name}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>}
+          </div>
+        </Reveal>}
+      </div>
     </section>
   )
 }

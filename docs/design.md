@@ -50,7 +50,7 @@ Typography: Be Vietnam Pro 400–800. H1 hero 64px/1.08, H2 section 32px.
 | Đổi ảnh khi hover, nút yêu thích nảy | Thẻ sản phẩm |
 | Đếm ngược, chấm LIVE nhấp nháy | Sự kiện, yêu cầu nhập khẩu |
 | Danh sách yêu cầu tự cuộn | Trang chủ |
-| Marquee nhà tài trợ | Trang chủ |
+| Marquee thị trường tin dùng | Trang chủ |
 | Viền xoay conic | CTA, ô hỏi AI |
 | Zoom ảnh theo con trỏ | Chi tiết sản phẩm |
 | Stepper + QR quét + confetti | Đăng ký sự kiện |

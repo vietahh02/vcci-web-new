@@ -160,7 +160,7 @@ function Storefront({ b, remote }: { b: Business; remote: PublicProfile | null }
                     <h3 className="text-xl font-bold">{t.nav.products}</h3>
                     {items.length > 3 && <button onClick={() => setTab('products')} className="text-sm font-semibold text-primary">{t.common.viewAll}</button>}
                   </div>
-                  <div className="mt-5 grid grid-cols-2 gap-x-5 gap-y-8 md:grid-cols-3">
+                  <div className="mt-5 grid grid-cols-2 gap-4 md:grid-cols-3 md:gap-5">
                     {items.slice(0, 3).map((p) => <ProductCard key={p.id} product={p} />)}
                   </div>
                 </div>
@@ -172,7 +172,7 @@ function Storefront({ b, remote }: { b: Business; remote: PublicProfile | null }
             )}
             {tab === 'capability' && <Capability pp={pp} open={(slides, index) => setLightbox({ slides, index })} />}
             {tab === 'products' && (
-              <div className="grid grid-cols-2 gap-x-5 gap-y-8 md:grid-cols-3 lg:grid-cols-4">
+              <div className="grid grid-cols-2 gap-4 md:grid-cols-3 md:gap-5 lg:grid-cols-4">
                 {items.map((p) => <ProductCard key={p.id} product={p} />)}
               </div>
             )}
