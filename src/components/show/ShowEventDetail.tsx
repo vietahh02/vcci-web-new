@@ -11,6 +11,9 @@ import { eventTimeRange } from '@/lib/eventStatus'
 import { showStartsAt, showToEvent } from '@/lib/showEvent'
 import { tx } from '@/lib/tx'
 import { ShowFeedbackDialog } from '@/components/show/ShowFeedback'
+import { BusinessChatButton } from '@/components/live/BusinessChatButton'
+import { showLivePath } from '@/components/live/liveRef'
+import { SessionWatch } from '@/components/live/SessionWatch'
 import { BadgeCard, VisitorRegistration } from '@/components/show/VisitorRegistration'
 import { Dialog, DialogContent, UnderlineTabs, useToast } from '@/components/ui/overlay'
 import { Badge, Button, buttonClass, Field, Input, Progress, Textarea } from '@/components/ui/primitives'
@@ -365,6 +368,7 @@ function BoothDialog({ show, booth, onClose, onAsk }: { show: Show; booth: ShowB
             <Badge variant={booth.side === 'SELLER' ? 'default' : 'gold'}>{booth.side === 'SELLER' ? x.sellerSide : x.supportSide}</Badge>
             <CountryChip code={booth.country} />
             {booth.businessId && <Link to={`/suppliers/${booth.businessId}`} className="text-sm font-semibold text-primary hover:underline">{x.viewCompany}</Link>}
+            <BusinessChatButton businessId={booth.businessId} onOpen={onClose} />
           </div>
           <p className="text-sm leading-relaxed text-muted-foreground">{L(booth.about)}</p>
           <h3 className="font-bold">{x.products}</h3>
@@ -436,6 +440,7 @@ function ProductsTab({ show, onAsk, onOpenBooth }: { show: Show; onAsk: (b: Show
           </div>
           <p className="mt-3 line-clamp-2 font-semibold leading-snug">{L(p.name)}</p>
           <button type="button" onClick={() => onOpenBooth(b)} className="mt-0.5 text-xs text-muted-foreground hover:text-primary">{L(b.org)}</button>
+          <div><BusinessChatButton businessId={b.businessId} className="text-xs" /></div>
           <p className="mt-1 text-xs text-muted-foreground">{x.priceOnRequest}{p.moq ? ` · ${x.moq} ${p.moq}` : ''}</p>
           {/* DEC-EV8-08: a catalogue product is quoted on its own page (RfqDialog); the booth dialog stays for unlinked products */}
           {p.linkId ? <Link to={`/products/${p.linkId}`} className={buttonClass('outline', 'sm', 'mt-2')}>{x.askPrice}</Link> : <Button size="sm" variant="outline" className="mt-2" onClick={() => onAsk(b, p)}>{x.askPrice}</Button>}
@@ -489,6 +494,7 @@ function Launches({ show, visitor, onRegister, onOpenBooth }: { show: Show; visi
                         <span className="text-xs text-muted-foreground">{formatNumber(l.followers + (on ? 1 : 0), locale)} {x.followers}</span>
                         <Button size="sm" variant={on ? 'secondary' : 'outline'} onClick={() => toggleFollow(l.id, on)}>{on ? <BellRing /> : <Bell />} {on ? x.following : x.follow}</Button>
                       </div>
+                      {!USE_MOCK && l.live && l.streamEventId && <Link to={showLivePath(show.id, { launch: l.id })} className="mt-2 inline-flex items-center gap-1.5 text-xs font-bold text-live hover:underline"><LiveDot /> {x.joinLive}</Link>}
                     </div>
                   </li>
                 )
@@ -559,7 +565,7 @@ function Agenda({ show, visitor, onRegister, onOpen }: { show: Show; visitor: Re
                   </div>
                   <div className="flex flex-wrap items-center gap-2 md:justify-end">
                     {s.status === 'LIVE' && <Button size="sm" className="bg-live hover:bg-live/90" onClick={() => onOpen(s)}><LiveDot /> {x.joinLive}</Button>}
-                    {s.status === 'ENDED' && s.hasReplay && <Button size="sm" variant="outline" onClick={() => onOpen(s)}><PlayCircle /> {x.watchReplay}</Button>}
+                    {s.status === 'ENDED' && (s.hasReplay || s.recordingUrl) && <Button size="sm" variant="outline" onClick={() => onOpen(s)}><PlayCircle /> {x.watchReplay}</Button>}
                     {s.status === 'PUBLISHED' && (mine ? (
                       <>
                         <Badge variant={mine === 'BOOKED' ? 'success' : 'gold'}>{mine === 'BOOKED' ? x.booked : x.onWaitlist}</Badge>
@@ -617,7 +623,7 @@ function SessionDialog({ show, session, badgeOk, onClose, onRegister }: { show: 
   const x = useShowT()
   if (!session) return null
   const live = session.status === 'LIVE'
-  const replay = session.status === 'ENDED' && session.hasReplay
+  const replay = session.status === 'ENDED' && (session.hasReplay || !!session.recordingUrl)
   const watchable = live || replay
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
@@ -634,14 +640,18 @@ function SessionDialog({ show, session, badgeOk, onClose, onRegister }: { show: 
           {watchable && badgeOk && (
             <>
               <p className="flex items-center gap-2 text-sm font-semibold text-success"><CheckCircle2 className="size-4" /> {x.verified}</p>
-              <div className="relative aspect-video overflow-hidden rounded-xl bg-navy">
-                <img src={img(show.cover, 900, 500)} alt="" className="size-full object-cover opacity-50" />
-                <div className="absolute inset-0 grid place-items-center">
-                  <span className="grid size-16 place-items-center rounded-full bg-white/90 text-navy"><PlayCircle className="size-9" /></span>
-                </div>
-                <Badge variant={live ? 'live' : 'secondary'} className="absolute left-3 top-3 gap-1.5">{live ? <><LiveDot /> {x.sessionStatus.LIVE}</> : x.replayLabel}</Badge>
-              </div>
-              <p className="text-xs text-muted-foreground">{x.demoPlayer}</p>
+              {USE_MOCK ? (
+                <>
+                  <div className="relative aspect-video overflow-hidden rounded-xl bg-navy">
+                    <img src={img(show.cover, 900, 500)} alt="" className="size-full object-cover opacity-50" />
+                    <div className="absolute inset-0 grid place-items-center">
+                      <span className="grid size-16 place-items-center rounded-full bg-white/90 text-navy"><PlayCircle className="size-9" /></span>
+                    </div>
+                    <Badge variant={live ? 'live' : 'secondary'} className="absolute left-3 top-3 gap-1.5">{live ? <><LiveDot /> {x.sessionStatus.LIVE}</> : x.replayLabel}</Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground">{x.demoPlayer}</p>
+                </>
+              ) : <SessionWatch show={show} session={session} live={live} />}
             </>
           )}
           {!watchable && <p className="text-sm font-medium text-muted-foreground">{session.status === 'CANCELED' ? x.sessionStatus.CANCELED : x.notStarted}</p>}
