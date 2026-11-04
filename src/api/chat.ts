@@ -41,7 +41,65 @@ export interface ChatConversation {
   updatedAt?: string | null
   unreadCount?: number
   assigneeName?: string | null
+  createdAt?: string | null
+  closedAt?: string | null
   joined?: boolean
+  // phiếu hỗ trợ
+  ticketCode?: string | null
+  subject?: string | null
+  category?: string | null
+  categoryLabel?: string | null
+  department?: string | null
+  priority?: string | null
+  dueAt?: string | null
+  firstResponseAt?: string | null
+  dueSoon?: boolean
+  callbackRequestedAt?: string | null
+  rating?: number | null
+  ratingComment?: string | null
+  labels?: string[] | null
+  // tuỳ chọn của người xem + trạng thái hội thoại
+  pinned?: boolean
+  muted?: boolean
+  pinnedMessageId?: number | null
+  pinnedMessagePreview?: string | null
+  blockedByBusinessId?: string | null
+  online?: boolean | null
+}
+
+/** Loại tin (payload riêng theo loại — xem vcci-livestream-chat ChatMessageKind). */
+export type MessageKind = 'TEXT' | 'SYSTEM_NOTICE' | 'ATTACHMENT' | 'PRODUCT' | 'RFQ' | 'CHECKLIST' | 'LINK' | 'CALL' | 'APPOINTMENT' | 'INTERNAL_NOTE'
+export type Payload = Record<string, unknown>
+export interface ReplyRef { messageId: number; senderName?: string | null; messageKind?: string | null; body?: string | null }
+export interface Reaction { emoji: string; principalIds: string[] }
+export const REACTIONS = ['👍', '❤️', '😂', '😮', '🙏', '✅', '😍', '🥰', '😆', '😅', '😢', '😡', '🤔', '👀', '👏', '🙌', '👌', '🤝', '🎉', '🔥', '💯', '🚀'] as const
+
+export interface TicketCategory { code: string; label: string; department?: string | null }
+export interface SupportStatus { onlineOperators: number; avgFirstResponseMinutes?: number | null; slaHours: number; categories: TicketCategory[] }
+export interface AttachmentView { messageId: number; name: string; size: number; contentType: string; createdAtIso: string; senderName?: string | null }
+export interface AppointmentView { messageId: number; title: string; startAt: string; endAt?: string | null; location?: string | null }
+export interface SearchHit { messageId: number; seq: number; body: string; createdAtIso: string; senderName?: string | null }
+
+/** Thông tin cơ bản của DN (hội thoại B2B: DN đối tác; hội thoại hỗ trợ: DN mình). */
+export interface ChatBusiness {
+  id: string
+  name?: string | null
+  nameEn?: string | null
+  taxCode?: string | null
+  businessType?: string | null
+  address?: string | null
+  province?: string | null
+  website?: string | null
+  logoUrl?: string | null
+  contactName?: string | null
+  contactPhone?: string | null
+  contactEmail?: string | null
+  vcciVerified?: boolean | null
+}
+
+export interface ChatConversationDetail {
+  conversation: ChatConversation
+  business?: ChatBusiness | null
 }
 
 export interface ChatMessageDto {
@@ -56,6 +114,9 @@ export interface ChatMessageDto {
   seq: number
   createdAtIso: string
   clientMessageId?: string | null
+  payload?: Payload | null
+  replyTo?: ReplyRef | null
+  reactions?: Reaction[] | null
 }
 
 export interface BizEnvelope {
@@ -72,6 +133,8 @@ export interface BizEnvelope {
   epochMs: number
   conversationStatus?: string | null
   duplicate?: boolean
+  payload?: Payload | null
+  replyTo?: ReplyRef | null
 }
 
 export class ChatError extends Error {
@@ -108,19 +171,73 @@ async function call<T>(path: string, init: { method?: string; body?: unknown; qu
 }
 
 const conv = (id: string) => `/api/business-chat/conversations/${encodeURIComponent(id)}`
+const post = <T,>(path: string, body: unknown = {}) => call<T>(path, { method: 'POST', body })
+
+/** Tải tệp (multipart) — cùng xử lý token / lỗi như call(). */
+async function upload<T>(path: string, form: FormData, retried = false): Promise<T> {
+  if (!CHAT_URL) throw new ChatError('chat not configured', 0)
+  const at = tokens.access()
+  let res: Response
+  try {
+    res = await fetch(`${CHAT_URL}${path}`, { method: 'POST', headers: at ? { Authorization: `Bearer ${at}` } : {}, body: form })
+  } catch {
+    throw new ChatError('network', 0)
+  }
+  if (res.status === 401 && !retried && tokens.refresh() && (await refreshOnce())) return upload<T>(path, form, true)
+  const data = (await res.json().catch(() => null)) as (T & { error?: string }) | null
+  if (!res.ok) throw new ChatError(data?.error ?? `HTTP ${res.status}`, res.status)
+  return data as T
+}
 
 export const chatApi = {
   me: () => call<ChatMe>('/api/business-chat/me'),
   conversations: (channel?: string) => call<ChatConversation[]>('/api/business-chat/conversations', { query: { channel, limit: 50 } }),
   /** Mở (hoặc lấy lại) hội thoại hỗ trợ của DN đang đăng nhập (DN + kênh theo token). */
   ensureSupport: () => call<{ conversationId: string }>('/api/business-chat/conversations/ensure', { method: 'POST', body: {} }),
-  /** Mở (hoặc lấy lại) hội thoại B2B giữa DN của mình và DN đối tác. */
-  ensureB2b: (businessId: string, otherBusinessId: string, principalId: string) => call<{ conversationId: string }>('/api/business-chat/conversations/b2b', { method: 'POST', body: { businessId, otherBusinessId, channel: B2B, principalId } }),
+  /** Mở (hoặc lấy lại) hội thoại B2B giữa DN đang đăng nhập và DN khác; hai bên dùng chung một hội thoại. */
+  ensureB2b: (businessId: string, otherBusinessId: string, principalId: string) =>
+    call<{ conversationId: string }>('/api/business-chat/conversations/b2b', { method: 'POST', body: { businessId, otherBusinessId, channel: B2B, principalId } }),
+  detail: (id: string) => call<ChatConversationDetail>(`${conv(id)}/detail`),
   join: (id: string) => call<{ participantId: string }>(`${conv(id)}/participants/portal`, { method: 'POST', body: {} }),
   messages: (id: string, limit = 50, beforeSeq?: number) => call<ChatMessageDto[]>(`${conv(id)}/messages`, { query: { limit, beforeSeq } }),
   send: (id: string, body: string, clientMessageId: string) => call<BizEnvelope>(`${conv(id)}/messages`, { method: 'POST', body: { body, clientMessageId } }),
   read: (id: string) => call<{ lastReadSeq: number }>(`${conv(id)}/read`, { method: 'POST', body: {} }),
   unreadCount: () => call<{ total: number; conversations: number }>('/api/business-chat/unread-count'),
+  conversation: (id: string) => call<ChatConversation>(conv(id)),
+
+  // ---- tin nhiều dạng
+  sendRich: (id: string, r: { kind: MessageKind; body?: string; payload?: Payload; replyToMessageId?: number | null; clientMessageId?: string }) =>
+    post<BizEnvelope>(`${conv(id)}/messages/rich`, r),
+  uploadFile: (id: string, file: Blob, name: string, opts: { caption?: string; clientMessageId?: string; replyToMessageId?: number | null } = {}) => {
+    const fd = new FormData()
+    fd.append('file', file, name)
+    if (opts.caption) fd.append('caption', opts.caption)
+    if (opts.clientMessageId) fd.append('clientMessageId', opts.clientMessageId)
+    if (opts.replyToMessageId) fd.append('replyToMessageId', String(opts.replyToMessageId))
+    return upload<BizEnvelope>(`${conv(id)}/attachments`, fd)
+  },
+  attachmentUrl: (id: string, messageId: number) => call<{ url: string }>(`${conv(id)}/attachments/${messageId}/url`),
+  attachments: (id: string) => call<AttachmentView[]>(`${conv(id)}/attachments`),
+  appointments: (id: string) => call<AppointmentView[]>(`${conv(id)}/appointments`),
+  search: (id: string, q: string) => call<SearchHit[]>(`${conv(id)}/search`, { query: { q } }),
+  react: (id: string, messageId: number, emoji: string) => post<{ reactions: Reaction[] }>(`${conv(id)}/messages/${messageId}/reactions`, { emoji }),
+  checklist: (id: string, messageId: number, index: number, done: boolean) =>
+    post<{ payload: Payload }>(`${conv(id)}/messages/${messageId}/checklist`, { index, done }),
+
+  // ---- tuỳ chọn hội thoại
+  pin: (id: string, value: boolean) => post<ChatConversation>(`${conv(id)}/pin`, { value }),
+  mute: (id: string, value: boolean) => post<ChatConversation>(`${conv(id)}/mute`, { value }),
+  pinMessage: (id: string, messageId: number | null) => post<ChatConversation>(`${conv(id)}/pinned-message`, { messageId }),
+  block: (id: string, value: boolean) => post<ChatConversation>(`${conv(id)}/block`, { value }),
+  report: (id: string, reason: string) => post<{ conversationId: string; ticketCode: string }>(`${conv(id)}/report`, { reason }),
+
+  // ---- phiếu hỗ trợ
+  createTicket: (r: { subject: string; category?: string; priority?: string; body?: string }) =>
+    post<{ conversationId: string; ticketCode: string }>('/api/business-chat/tickets', r),
+  callback: (id: string) => post<ChatConversation>(`${conv(id)}/callback`),
+  closeTicket: (id: string) => post<ChatConversation>(`${conv(id)}/close`),
+  rate: (id: string, score: number, comment?: string) => post<ChatConversation>(`${conv(id)}/rating`, { score, comment }),
+  supportStatus: () => call<SupportStatus>('/api/business-chat/support/status'),
 }
 
 export const newClientId = () =>

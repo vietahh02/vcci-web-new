@@ -18,6 +18,7 @@ import Events from '@/pages/Events'
 import Home from '@/pages/Home'
 import LegalAI from '@/pages/LegalAI'
 import LiveRoom from '@/pages/LiveRoom'
+import Messages from '@/pages/Messages'
 import MyCatalog from '@/pages/MyCatalog'
 import NotFound from '@/pages/NotFound'
 import ProductDetail from '@/pages/ProductDetail'
@@ -76,12 +77,14 @@ export default function App() {
                     <Route path="/register" element={<Register />} />
                     <Route path="/account/profile" element={<MyProfile />} />
                     <Route path="/account/catalog" element={<MyCatalog />} />
+                    <Route path="/messages" element={<Messages />} />
                     <Route path="*" element={<NotFound />} />
                   </Routes>
                 </motion.main>
               </AnimatePresence>
               {!bare && <Footer />}
-              {!bare && <ChatWidget />}
+              {/* trang Tin nhắn đã có khung chat đầy đủ: ẩn widget để không mở hai kết nối chat */}
+              {!bare && location.pathname !== '/messages' && <ChatWidget />}
             </ToastProvider>
           </TooltipProvider>
         </MotionConfig>

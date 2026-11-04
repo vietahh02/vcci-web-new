@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { B2B, CHAT_SOCKET_URL, ChatSocket, SUPPORT, chatApi, newClientId } from '@/api/chat'
-import type { BizEnvelope, ChatConversation, ChatMe, ChatMessageDto, SocketState } from '@/api/chat'
+import type { BizEnvelope, ChatConversation, ChatMe, ChatMessageDto, MessageKind, Payload, Reaction, ReplyRef, SocketState } from '@/api/chat'
 
-/** Tin trên widget (gộp lịch sử REST + realtime + bong bóng tạm). */
+/** Tin trên widget / trang Tin nhắn (gộp lịch sử REST + realtime + bong bóng tạm). */
 export interface WidgetMsg {
   key: string
   serverId?: number
@@ -15,23 +15,43 @@ export interface WidgetMsg {
   senderName?: string | null
   system?: string | null
   state: 'pending' | 'sent' | 'failed'
+  kind: MessageKind
+  payload?: Payload | null
+  replyTo?: ReplyRef | null
+  reactions?: Reaction[]
 }
 
 const PAGE = 50
 const ACK_TIMEOUT = 8000
+const OPEN_B2B = 'vcci:chat-b2b'
+
+/** Mở widget chat ở kênh B2B với doanh nghiệp `businessId` (nút "Chat ngay" / "Nhắn tin" ở trang sản phẩm, nhà cung cấp). */
+export const openB2bChat = (businessId: string) => window.dispatchEvent(new CustomEvent(OPEN_B2B, { detail: businessId }))
+
+export function onOpenB2bChat(fn: (businessId: string) => void) {
+  const h = (e: Event) => fn(String((e as CustomEvent<string>).detail))
+  window.addEventListener(OPEN_B2B, h)
+  return () => window.removeEventListener(OPEN_B2B, h)
+}
+
+const kindOf = (k?: string | null): MessageKind => (k ?? 'TEXT') as MessageKind
 
 const fromDto = (m: ChatMessageDto, ids: Set<string>): WidgetMsg => ({
   key: `s-${m.messageId}`,
   serverId: m.messageId,
   seq: m.seq,
   clientId: m.clientMessageId ?? undefined,
-  text: m.body,
+  text: m.body ?? '',
   at: Date.parse(m.createdAtIso) || Date.now(),
   mine: !!m.principalId && ids.has(m.principalId) && m.senderKind !== 'SYSTEM',
   senderKind: m.senderKind,
   senderName: m.senderName,
   system: m.senderKind === 'SYSTEM' ? m.systemEvent ?? 'INFO' : null,
   state: 'sent',
+  kind: kindOf(m.messageKind),
+  payload: m.payload,
+  replyTo: m.replyTo,
+  reactions: m.reactions ?? [],
 })
 
 const fromEnv = (e: BizEnvelope, ids: Set<string>): WidgetMsg => ({
@@ -39,13 +59,17 @@ const fromEnv = (e: BizEnvelope, ids: Set<string>): WidgetMsg => ({
   serverId: e.serverMessageId ?? undefined,
   seq: e.seq,
   clientId: e.clientMessageId ?? undefined,
-  text: e.body,
+  text: e.body ?? '',
   at: e.epochMs || Date.now(),
   mine: !!e.principalId && ids.has(e.principalId) && e.senderKind !== 'SYSTEM',
   senderKind: e.senderKind,
   senderName: e.senderName,
   system: e.senderKind === 'SYSTEM' ? e.systemEvent ?? 'INFO' : null,
   state: 'sent',
+  kind: kindOf(e.messageKind),
+  payload: e.payload,
+  replyTo: e.replyTo,
+  reactions: [],
 })
 
 function merge(list: WidgetMsg[], m: WidgetMsg): WidgetMsg[] {
@@ -63,9 +87,12 @@ function merge(list: WidgetMsg[], m: WidgetMsg): WidgetMsg[] {
   return [...list, m].sort((a, b) => (a.seq ?? Number.MAX_SAFE_INTEGER) - (b.seq ?? Number.MAX_SAFE_INTEGER) || a.at - b.at)
 }
 
+const byActivity = (a: ChatConversation, b: ChatConversation) =>
+  (Date.parse(b.lastActivityAt ?? b.createdAt ?? '') || 0) - (Date.parse(a.lastActivityAt ?? a.createdAt ?? '') || 0)
+
 /**
- * Trạng thái chat thật của ChatWidget cho doanh nghiệp đã đăng nhập. Một socket cho cả phiên (vào room biz:<orgId>
- * để nhận bizInbox -> badge chưa đọc kể cả khi widget đóng); hội thoại đang mở thì bizJoin.
+ * Trạng thái chat thật cho doanh nghiệp đã đăng nhập (widget + trang Tin nhắn). Một socket cho cả phiên (vào room
+ * biz:<orgId> để nhận bizInbox -> badge chưa đọc kể cả khi đóng); hội thoại đang mở thì bizJoin.
  */
 export function useBizChat(enabled: boolean, open: boolean) {
   const [me, setMe] = useState<ChatMe | null>(null)
@@ -100,8 +127,10 @@ export function useBizChat(enabled: boolean, open: boolean) {
     idsRef.current = ids
   }, [ids])
 
-  const support = convs.find((c) => c.channel === SUPPORT) ?? null
-  const b2b = convs.filter((c) => c.channel === B2B)
+  // phiếu hỗ trợ (mới trước); "support" = phiếu đang mở gần nhất
+  const tickets = useMemo(() => convs.filter((c) => c.channel === SUPPORT).sort(byActivity), [convs])
+  const support = tickets.find((c) => c.status === 'OPEN') ?? null
+  const b2b = useMemo(() => convs.filter((c) => c.channel === B2B).sort((a, b) => Number(!!b.pinned) - Number(!!a.pinned) || byActivity(a, b)), [convs])
 
   // ---- danh tính + danh sách + số chưa đọc ban đầu
   // đăng xuất -> xoá trạng thái chat của phiên trước (chỉ khi chuyển enabled true -> false)
@@ -144,6 +173,17 @@ export function useBizChat(enabled: boolean, open: boolean) {
       .catch(() => undefined)
   }, [])
 
+  /** Nạp lại tóm tắt một hội thoại (sau ghim / chặn / đánh giá / đổi trạng thái). */
+  const refreshConversation = useCallback(async (cid: string) => {
+    try {
+      const c = await chatApi.conversation(cid)
+      setConvs((rows) => (rows.some((r) => r.id === cid) ? rows.map((r) => (r.id === cid ? c : r)) : [c, ...rows]))
+      return c
+    } catch {
+      return null
+    }
+  }, [])
+
   const settle = useCallback((env: BizEnvelope) => {
     const c = env.clientMessageId ?? ''
     if (c && timers.current[c]) {
@@ -180,6 +220,14 @@ export function useBizChat(enabled: boolean, open: boolean) {
         if (env.conversationStatus) setConvs((rows) => rows.map((r) => (r.id === cid ? { ...r, status: env.conversationStatus } : r)))
         if (openRef.current && env.principalId && !idsRef.current.has(env.principalId)) markRead(cid)
       }) as never)
+      .on('bizReaction', ((e: { conversationId: string; messageId: number; reactions: Reaction[] }) => {
+        if (String(e.conversationId) !== activeRef.current) return
+        setMessages((l) => l.map((m) => (m.serverId === e.messageId ? { ...m, reactions: e.reactions } : m)))
+      }) as never)
+      .on('bizMessageUpdated', ((e: { conversationId: string; messageId: number; payload: Payload }) => {
+        if (String(e.conversationId) !== activeRef.current) return
+        setMessages((l) => l.map((m) => (m.serverId === e.messageId ? { ...m, payload: e.payload } : m)))
+      }) as never)
       .on('bizInbox', ((e: { conversationId: string; principalId?: string; preview?: string; epochMs: number; status?: string }) => {
         const cid = String(e.conversationId)
         const fromMe = !!e.principalId && idsRef.current.has(e.principalId)
@@ -193,7 +241,9 @@ export function useBizChat(enabled: boolean, open: boolean) {
         if (!fromMe && !(openRef.current && cid === activeRef.current)) setUnread((u) => u + 1)
       }) as never)
       .on('bizConversation', ((e: { conversationId: string; status: string }) => {
-        setConvs((rows) => rows.map((r) => (r.id === String(e.conversationId) ? { ...r, status: e.status } : r)))
+        const cid = String(e.conversationId)
+        setConvs((rows) => rows.map((r) => (r.id === cid ? { ...r, status: e.status } : r)))
+        void refreshConversation(cid)
       }) as never)
       .on('bizRead', ((e: { conversationId: string; principalId: string; lastReadSeq: number }) => {
         if (String(e.conversationId) !== activeRef.current || idsRef.current.has(e.principalId)) return
@@ -222,7 +272,7 @@ export function useBizChat(enabled: boolean, open: boolean) {
       sockRef.current = null
       Object.values(pending).forEach(clearTimeout)
     }
-  }, [enabled, me?.organizationId, markRead, settle])
+  }, [enabled, me?.organizationId, markRead, settle, refreshConversation])
 
   // ---- mở hội thoại
   const activate = useCallback(
@@ -255,6 +305,39 @@ export function useBizChat(enabled: boolean, open: boolean) {
     [markRead],
   )
 
+  /** Mở (hoặc tạo) hội thoại B2B với DN khác rồi chuyển vào hội thoại đó. */
+  const startB2b = useCallback(
+    async (otherBusinessId: string) => {
+      if (!me?.organizationId) return
+      setError(null)
+      try {
+        const { conversationId } = await chatApi.ensureB2b(me.organizationId, otherBusinessId, me.principalId)
+        setConvs(await chatApi.conversations())
+        await activate(conversationId)
+      } catch (e) {
+        setError(String((e as Error).message ?? e))
+      }
+    },
+    [me, activate],
+  )
+
+  /** Phiếu hỗ trợ mới (tiêu đề + lĩnh vực + nội dung đầu tiên) rồi mở phiếu đó. */
+  const newTicket = useCallback(
+    async (r: { subject: string; category?: string; body?: string }) => {
+      setError(null)
+      try {
+        const { conversationId } = await chatApi.createTicket(r)
+        setConvs(await chatApi.conversations())
+        await activate(conversationId)
+        return conversationId
+      } catch (e) {
+        setError(String((e as Error).message ?? e))
+        return null
+      }
+    },
+    [activate],
+  )
+
   // mở widget -> đánh dấu đã đọc hội thoại đang xem
   useEffect(() => {
     if (open && activeId) markRead(activeId)
@@ -279,21 +362,28 @@ export function useBizChat(enabled: boolean, open: boolean) {
     [settle],
   )
 
-  /** Gửi tin; kênh hỗ trợ chưa có hội thoại thì tạo (ensure) trước. */
+  /** Bong bóng tạm khi chờ server (tin chữ / tệp đang tải). */
+  const pendingBubble = (clientId: string, text: string, kind: MessageKind = 'TEXT', payload?: Payload, replyTo?: ReplyRef | null): WidgetMsg => ({
+    key: `t-${clientId}`, clientId, text, at: Date.now(), mine: true, senderKind: 'PORTAL_BUSINESS_USER', state: 'pending', kind, payload, replyTo, reactions: [],
+  })
+
+  /**
+   * Gửi tin chữ; chưa có hội thoại (kênh hỗ trợ) thì mở phiếu mới lấy câu đầu làm tiêu đề. Có trích dẫn thì đi REST
+   * (socket chỉ nhận tin chữ thường).
+   */
   const send = useCallback(
-    async (body: string, retryId?: string) => {
+    async (body: string, retryId?: string, reply?: ReplyRef | null) => {
       const text = body.trim()
       if (!text) return
       let cid = activeRef.current
       const clientId = retryId ?? newClientId()
       setMessages((l) =>
-        retryId
-          ? l.map((m) => (m.clientId === retryId && m.serverId == null ? { ...m, state: 'pending' } : m))
-          : [...l, { key: `t-${clientId}`, clientId, text, at: Date.now(), mine: true, senderKind: 'PORTAL_BUSINESS_USER', state: 'pending' }],
+        retryId ? l.map((m) => (m.clientId === retryId && m.serverId == null ? { ...m, state: 'pending' } : m)) : [...l, pendingBubble(clientId, text, 'TEXT', undefined, reply)],
       )
       try {
         if (!cid) {
-          const { conversationId } = await chatApi.ensureSupport()
+          const subject = text.length > 80 ? `${text.slice(0, 77)}…` : text
+          const { conversationId } = await chatApi.createTicket({ subject, category: 'OTHER' })
           cid = conversationId
           activeRef.current = cid
           setActiveId(cid)
@@ -303,6 +393,16 @@ export function useBizChat(enabled: boolean, open: boolean) {
       } catch (e) {
         setError(String((e as Error).message ?? e))
         setMessages((l) => l.map((m) => (m.clientId === clientId ? { ...m, state: 'failed' } : m)))
+        return
+      }
+      if (reply) {
+        chatApi
+          .sendRich(cid, { kind: 'TEXT', body: text, replyToMessageId: reply.messageId, clientMessageId: clientId })
+          .then(settle)
+          .catch((e) => {
+            setError(String((e as Error).message ?? e))
+            setMessages((l) => l.map((m) => (m.clientId === clientId && m.serverId == null ? { ...m, state: 'failed' } : m)))
+          })
         return
       }
       const s = sockRef.current
@@ -316,8 +416,64 @@ export function useBizChat(enabled: boolean, open: boolean) {
         restSend(cid, text, clientId)
       }
     },
-    [restSend],
+    [restSend, settle],
   )
+
+  /** Tin nhiều dạng (thẻ sản phẩm, RFQ, lịch hẹn, liên kết) vào hội thoại đang mở. */
+  const sendRich = useCallback(
+    async (kind: MessageKind, payload: Payload, body?: string, reply?: ReplyRef | null) => {
+      const cid = activeRef.current
+      if (!cid) return false
+      setError(null)
+      try {
+        settle(await chatApi.sendRich(cid, { kind, payload, body, replyToMessageId: reply?.messageId ?? null, clientMessageId: newClientId() }))
+        return true
+      } catch (e) {
+        setError(String((e as Error).message ?? e))
+        return false
+      }
+    },
+    [settle],
+  )
+
+  /** Gửi tệp / ảnh / ghi âm vào hội thoại đang mở. */
+  const sendFile = useCallback(
+    async (file: Blob, name: string, reply?: ReplyRef | null) => {
+      const cid = activeRef.current
+      if (!cid) return
+      const clientId = newClientId()
+      setMessages((l) => [...l, pendingBubble(clientId, '', 'ATTACHMENT', { name, size: file.size, contentType: file.type }, reply)])
+      try {
+        settle(await chatApi.uploadFile(cid, file, name, { clientMessageId: clientId, replyToMessageId: reply?.messageId ?? null }))
+      } catch (e) {
+        setError(String((e as Error).message ?? e))
+        setMessages((l) => l.filter((m) => m.clientId !== clientId))
+      }
+    },
+    [settle],
+  )
+
+  const react = useCallback(async (messageId: number, emoji: string) => {
+    const cid = activeRef.current
+    if (!cid) return
+    try {
+      const r = await chatApi.react(cid, messageId, emoji)
+      setMessages((l) => l.map((m) => (m.serverId === messageId ? { ...m, reactions: r.reactions } : m)))
+    } catch (e) {
+      setError(String((e as Error).message ?? e))
+    }
+  }, [])
+
+  const toggleChecklist = useCallback(async (messageId: number, index: number, done: boolean) => {
+    const cid = activeRef.current
+    if (!cid) return
+    try {
+      const r = await chatApi.checklist(cid, messageId, index, done)
+      setMessages((l) => l.map((m) => (m.serverId === messageId ? { ...m, payload: r.payload } : m)))
+    } catch (e) {
+      setError(String((e as Error).message ?? e))
+    }
+  }, [])
 
   const notifyTyping = useCallback(() => {
     const cid = activeRef.current
@@ -327,5 +483,11 @@ export function useBizChat(enabled: boolean, open: boolean) {
     sockRef.current?.emit('bizTyping', { conversationId: cid })
   }, [])
 
-  return { me, convs, support, b2b, activeId, activate, messages, hasOlder, loadOlder, loading, error, setError, socketState, typing, otherReadSeq, unread, send, notifyTyping }
+  return {
+    me, convs, tickets, support, b2b, activeId, activate, startB2b, newTicket, refreshConversation, messages, hasOlder, loadOlder,
+    loading, error, setError, socketState, typing, otherReadSeq, unread, send, sendRich, sendFile, react, toggleChecklist,
+    notifyTyping,
+  }
 }
+
+export type BizChat = ReturnType<typeof useBizChat>

@@ -9,6 +9,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { liveApi, USE_MOCK, useBusiness, useOrgProducts } from '@/api'
 import { ErrorBlock, LoadingBlock } from '@/components/ui/StateViews'
+import { openB2bChat } from '@/components/layout/useBizChat'
 import { buildPublicProfile, type PublicProfile } from '@/data/capability'
 import { categories, type Business } from '@/data/mock'
 import { CompanyMark, VerifiedBadge } from '@/components/brand'
@@ -110,6 +111,11 @@ function Storefront({ b, remote }: { b: Business; remote: PublicProfile | null }
             }}>
               {following ? <BadgeCheck /> : <Plus />} {t.supplier.follow}
             </Button>
+            {!pp.own && (
+              <Button variant="ghost" className="border border-white/25 text-white hover:bg-white/10" onClick={() => openB2bChat(b.id)}>
+                <MessageSquare /> {tx('Nhắn tin', 'Message', '메시지')}
+              </Button>
+            )}
             <ContactDialog id={b.id} name={b.name} email={pp.facts.contact.email} />
           </div>
         </div>

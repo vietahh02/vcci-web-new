@@ -1,31 +1,40 @@
 import { AnimatePresence, motion } from 'motion/react'
-import { ArrowUp, Bot, Check, CheckCheck, ChevronLeft, Clock, LogIn, MessageCircle, RotateCw, Send, X } from 'lucide-react'
-import { Fragment, useEffect, useRef, useState } from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
-import { chatApi, chatConfigured, OPEN_B2B } from '@/api/chat'
+import { ArrowUp, ChevronLeft, ChevronRight, Handshake, Headset, LogIn, MessageCircle, Minus, X } from 'lucide-react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import type { WidgetMsg } from './useBizChat'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { SUPPORT, chatApi, chatConfigured, type SupportStatus } from '@/api/chat'
 import { tokens } from '@/api/http'
+import { ChatComposer } from '@/components/chat/ChatComposer'
+import { ChatAvatar, ChatMessages } from '@/components/chat/ChatMessages'
+import { listTime } from '@/components/chat/chatFormat'
 import { useI18n } from '@/lib/i18n'
 import { useProfile } from '@/lib/profile'
+import { tx } from '@/lib/tx'
 import { cn } from '@/lib/utils'
 import { chatText } from './chatWidgetText'
-import { useBizChat } from './useBizChat'
+import { onOpenB2bChat, useBizChat } from './useBizChat'
 
 /**
- * Floating business chat (channels PORTAL_BUSINESS_SUPPORT / PORTAL_BUSINESS_B2B) — nối dịch vụ chat thật
- * (vcci-livestream-chat: REST + Socket.IO). Doanh nghiệp phải đăng nhập (khách: yêu cầu đăng nhập, xem
- * vcci_docs/docs/dev/impl-chat-ho-tro.md). Giao diện giữ nguyên bản mock.
+ * Widget chat nổi (kênh PORTAL_BUSINESS_SUPPORT / PORTAL_BUSINESS_B2B) — nối dịch vụ chat thật
+ * (vcci-livestream-chat: REST + Socket.IO). Mở ra là màn chính (hỗ trợ VCCI + hội thoại gần đây), chọn một hội thoại
+ * để chat; trang /messages là bản đầy đủ. Doanh nghiệp phải đăng nhập (xem vcci_docs/docs/dev/impl-chat-ho-tro.md).
  */
 export function ChatWidget() {
   const { t, lang } = useI18n()
-  const tx = chatText(lang)
+  const tx2 = chatText(lang)
   const { session } = useProfile()
   const navigate = useNavigate()
   const location = useLocation()
   const [open, setOpen] = useState(false)
+  // màn chính (hub) hay đang trong một hội thoại; kênh của hội thoại đang mở
+  const [inConv, setInConv] = useState(false)
   const [channel, setChannel] = useState<'support' | 'b2b'>('support')
-  const [text, setText] = useState('')
-  const [b2bTarget, setB2bTarget] = useState<string | null>(null)
+  const [reply, setReply] = useState<WidgetMsg | null>(null)
+  const [supportStatus, setSupportStatus] = useState<SupportStatus | null>(null)
   const [showTop, setShowTop] = useState(false)
+  // DN cần mở chat B2B (từ openB2bChat) khi chưa sẵn sàng: chờ đăng nhập + nạp danh tính xong mới tạo hội thoại
+  const pendingB2b = useRef<string | null>(null)
   const listRef = useRef<HTMLDivElement>(null)
 
   const configured = chatConfigured()
@@ -33,30 +42,60 @@ export function ChatWidget() {
   const chat = useBizChat(configured && loggedIn, open)
   const hasOrg = !!chat.me?.organizationId
   const ready = configured && loggedIn && hasOrg
-  const { activate, support, activeId, me, setError } = chat
+  const { activate, startB2b, setError, support, activeId } = chat
+  const myOrgId = chat.me?.organizationId
 
-  useEffect(() => {
-    const onOpen = (e: Event) => {
-      setChannel('b2b')
+  const openSupport = useCallback(() => {
+    setChannel('support')
+    setInConv(true)
+    setReply(null)
+    void activate(support?.id ?? null)
+  }, [activate, support])
+
+  const openConv = (id: string, ch: 'support' | 'b2b' = 'b2b') => {
+    setReply(null)
+    setChannel(ch)
+    setInConv(true)
+    void activate(id)
+  }
+
+  const backToHub = () => {
+    setInConv(false)
+    void activate(null)
+  }
+
+  const openB2b = useCallback(
+    (businessId: string) => {
       setOpen(true)
-      setB2bTarget((e as CustomEvent<string>).detail)
-    }
-    window.addEventListener(OPEN_B2B, onOpen)
-    return () => window.removeEventListener(OPEN_B2B, onOpen)
-  }, [])
+      if (businessId === myOrgId) {
+        setInConv(false)
+        setError(tx2.b2bSelf)
+        return
+      }
+      setChannel('b2b')
+      setInConv(true)
+      void startB2b(businessId)
+    },
+    [myOrgId, setError, startB2b, tx2.b2bSelf],
+  )
 
-  useEffect(() => {
-    if (!b2bTarget || !ready || !me?.organizationId) return
-    setB2bTarget(null)
-    chatApi.ensureB2b(me.organizationId, b2bTarget, me.principalId).then((r) => activate(r.conversationId), (e: Error) => setError(e.message))
-  }, [b2bTarget, ready, me, activate, setError])
+  useEffect(
+    () =>
+      onOpenB2bChat((businessId) => {
+        if (ready) return openB2b(businessId)
+        pendingB2b.current = businessId
+        setOpen(true)
+      }),
+    [ready, openB2b],
+  )
 
-  // kênh hỗ trợ: mở widget -> nạp hội thoại hỗ trợ (nếu đã có); kênh B2B: chọn từ danh sách
+  // vừa đăng nhập / nạp xong danh tính -> mở yêu cầu chat B2B còn chờ
   useEffect(() => {
-    if (!open || !ready) return
-    if (channel === 'support' && support && activeId !== support.id) void activate(support.id)
-    if (channel === 'b2b' && activeId && activeId === support?.id) void activate(null)
-  }, [open, ready, channel, support, activeId, activate])
+    const businessId = pendingB2b.current
+    if (!ready || !businessId) return
+    pendingB2b.current = null
+    openB2b(businessId)
+  }, [ready, openB2b])
 
   // vừa mở widget / đổi hội thoại: nhảy ngay xuống cuối (đợi khung render xong); tin mới: cuộn mượt
   const lastOpenKey = useRef('')
@@ -76,200 +115,155 @@ export function ChatWidget() {
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
-  function send(body: string) {
-    if (!body.trim() || !ready) return
-    void chat.send(body)
-    setText('')
-  }
+  useEffect(() => {
+    if (open && ready) chatApi.supportStatus().then(setSupportStatus, () => undefined)
+  }, [open, ready])
+
+  // đang ở trang nhà cung cấp -> gợi ý chat thẳng với DN đó
+  const supplierId = /^\/suppliers\/([^/]+)/.exec(location.pathname)?.[1]
 
   const active = chat.convs.find((c) => c.id === activeId) ?? null
+  const isSupport = channel === 'support'
   const status = active?.status === 'ARCHIVED' ? 'CLOSED' : active?.status
-  const lastMineSeq = [...chat.messages].reverse().find((m) => m.mine && m.seq != null)?.seq
-  const b2bList = channel === 'b2b' && !activeId
-  const statusLine = !ready
-    ? t.chat.online
-    : chat.typing
-      ? `${chat.typing} ${tx.typing}`
-      : chat.socketState === 'connected'
-        ? t.chat.online
-        : chat.socketState === 'connecting'
-          ? tx.connecting
-          : tx.offline
+  const statusLine = chat.typing
+    ? `${chat.typing} ${tx2.typing}`
+    : chat.socketState === 'connecting'
+      ? tx2.connecting
+      : chat.socketState !== 'connected' && ready
+        ? tx2.offline
+        : isSupport ? tx2.online : tx('Doanh nghiệp đối tác', 'Partner business', '파트너 기업')
   const dot = !ready || chat.socketState === 'connected' ? 'bg-emerald-400' : 'bg-amber-400'
-  const sysText = (code?: string | null, fallback?: string) =>
-    code === 'CLOSED' ? tx.sysCLOSED : code === 'REOPENED' ? tx.sysREOPENED : code === 'BLOCKED' ? tx.sysBLOCKED : fallback
+  const recent = [...chat.b2b, ...chat.tickets].sort((a, b) => (Date.parse(b.lastActivityAt ?? '') || 0) - (Date.parse(a.lastActivityAt ?? '') || 0)).slice(0, 5)
+  const greetName = chat.me?.displayName || session?.companyName
   const toLogin = () => {
     setOpen(false)
     navigate(`/login?return=${encodeURIComponent(location.pathname + location.search)}`)
   }
+  const iconBtn = 'grid size-9 place-items-center rounded-[10px] bg-white/10 transition hover:bg-white/20'
 
   return (
     <div className="fixed bottom-4 right-4 z-[60] flex flex-col items-end gap-3 sm:bottom-6 sm:right-6">
       <AnimatePresence>
         {open && (
-          <motion.div
+          <motion.section
             initial={{ opacity: 0, y: 20, scale: 0.92 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.92 }}
             transition={{ type: 'spring', bounce: 0.22, duration: 0.45 }}
             style={{ transformOrigin: 'bottom right' }}
-            className="flex h-[min(560px,calc(100dvh-110px))] w-[min(380px,calc(100vw-32px))] flex-col overflow-hidden rounded-2xl border bg-popover shadow-2xl shadow-navy/25"
+            aria-label={tx('Chat với VCCI và đối tác', 'Chat with VCCI and partners', 'VCCI 및 파트너와 채팅')}
+            className="flex h-[min(600px,calc(100dvh-110px))] w-[min(380px,calc(100vw-32px))] flex-col overflow-hidden rounded-[20px] border bg-popover shadow-2xl shadow-navy/25"
           >
-            <div className="relative overflow-hidden bg-navy px-4 pb-3 pt-4 text-white">
-              <div className="absolute -right-10 -top-10 size-40 rounded-full bg-primary/50 blur-2xl" />
-              <div className="relative flex items-center gap-3">
-                {channel === 'b2b' && activeId ? (
-                  <button onClick={() => void activate(null)} className="grid size-10 place-items-center rounded-xl bg-white/10 ring-1 ring-white/20 hover:bg-white/20" aria-label={tx.back}>
-                    <ChevronLeft className="size-5" />
-                  </button>
-                ) : (
-                  <div className="grid size-10 place-items-center rounded-xl bg-white/10 ring-1 ring-white/20"><Bot className="size-5" /></div>
-                )}
-                <div className="min-w-0 flex-1">
-                  <p className="truncate font-bold">{channel === 'b2b' && active ? active.businessName ?? t.chat.channels.b2b : t.chat.title}</p>
-                  <p className="flex items-center gap-1.5 text-xs text-white/70"><span className={cn('size-1.5 rounded-full', dot)} /> {statusLine}</p>
-                </div>
-                <button onClick={() => setOpen(false)} className="rounded-md p-1.5 hover:bg-white/10" aria-label={t.ui.close}><X className="size-4" /></button>
-              </div>
-              <div className="relative mt-3 inline-flex rounded-lg bg-white/10 p-0.5">
-                {(['support', 'b2b'] as const).map((c) => (
-                  <button key={c} onClick={() => setChannel(c)} className={cn('relative rounded-md px-3 py-1 text-xs font-semibold', channel === c ? 'text-navy' : 'text-white/75')}>
-                    {channel === c && <motion.span layoutId="chat-ch" className="absolute inset-0 rounded-md bg-white" />}
-                    <span className="relative">{t.chat.channels[c]}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div ref={listRef} className="flex-1 space-y-3 overflow-y-auto bg-muted/40 p-4">
-              {channel === 'support' && (
-                <motion.div initial={{ opacity: 0, y: 8, scale: 0.96 }} animate={{ opacity: 1, y: 0, scale: 1 }} className="max-w-[85%] rounded-2xl rounded-bl-md border bg-card px-3.5 py-2.5 text-[13.5px] leading-relaxed">
-                  {t.chat.greet}
-                </motion.div>
-              )}
-
-              {!configured && <p className="rounded-xl border bg-card px-3 py-2 text-xs text-muted-foreground">{tx.notConfigured}</p>}
-
-              {configured && !loggedIn && (
-                <div className="space-y-2 rounded-2xl border bg-card p-3.5 text-[13px]">
-                  <p className="font-semibold">{tx.loginTitle}</p>
-                  <p className="text-muted-foreground">{tx.loginDesc}</p>
-                  <button onClick={toLogin} className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground transition hover:bg-primary-hover">
-                    <LogIn className="size-3.5" /> {tx.login}
-                  </button>
-                </div>
-              )}
-
-              {configured && loggedIn && chat.me && !hasOrg && <p className="rounded-xl border bg-card px-3 py-2 text-xs text-muted-foreground">{tx.noOrg}</p>}
-
-              {ready && b2bList && (
-                chat.b2b.length === 0 ? (
-                  <p className="rounded-xl border bg-card px-3 py-2 text-xs text-muted-foreground">{tx.b2bEmpty}</p>
-                ) : (
-                  <div className="space-y-2">
-                    {chat.b2b.map((c) => (
-                      <button key={c.id} onClick={() => void activate(c.id)} className="flex w-full items-center gap-3 rounded-xl border bg-card px-3 py-2 text-left transition hover:border-primary">
-                        <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-primary/10 text-xs font-bold text-primary">{(c.businessName ?? '?').slice(0, 1)}</span>
-                        <span className="min-w-0 flex-1">
-                          <span className="block truncate text-sm font-semibold">{c.businessName ?? c.businessId}</span>
-                          <span className="block truncate text-xs text-muted-foreground">{c.lastPreviewText}</span>
-                        </span>
-                        {!!c.unreadCount && <span className="rounded-full bg-destructive px-1.5 text-[11px] font-bold text-white">{c.unreadCount}</span>}
-                      </button>
-                    ))}
+            {!inConv ? (
+              <>
+                {/* Màn chính */}
+                <div className="flex shrink-0 flex-col gap-1.5 bg-navy px-5 pb-14 pt-5 text-white">
+                  <div className="flex items-center justify-between">
+                    <span className="rounded-md bg-white px-2 py-1 text-xs font-bold text-navy">VCCI</span>
+                    <button onClick={() => setOpen(false)} className={iconBtn} aria-label={tx('Thu nhỏ', 'Minimize', '최소화')}><Minus className="size-4" /></button>
                   </div>
-                )
-              )}
-
-              {ready && !b2bList && (
-                <>
-                  {chat.hasOlder && (
-                    <button onClick={() => void chat.loadOlder()} className="mx-auto block text-xs font-medium text-primary hover:underline">{tx.loadOlder}</button>
-                  )}
-                  {chat.loading && <div className="mx-auto size-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />}
-                  {chat.messages.map((m) =>
-                    m.system ? (
-                      <p key={m.key} className="text-center text-[11.5px] text-muted-foreground">{sysText(m.system, m.text)}</p>
-                    ) : (
-                      <Fragment key={m.key}>
-                        <motion.div
-                          initial={{ opacity: 0, y: 8, scale: 0.96 }}
-                          animate={{ opacity: 1, y: 0, scale: 1 }}
-                          onClick={m.state === 'failed' ? () => void chat.send(m.text, m.clientId) : undefined}
-                          className={cn(
-                            'max-w-[85%] whitespace-pre-wrap break-words rounded-2xl px-3.5 py-2.5 text-[13.5px] leading-relaxed',
-                            m.mine ? 'ml-auto rounded-br-md bg-primary text-primary-foreground' : 'rounded-bl-md border bg-card',
-                            m.state === 'pending' && 'opacity-70',
-                            m.state === 'failed' && 'cursor-pointer ring-2 ring-destructive/60',
-                          )}
-                        >
-                          {!m.mine && m.senderKind === 'CMS_OPERATOR' && <span className="mb-0.5 block text-[11px] font-semibold text-primary">{m.senderName ?? tx.staff}</span>}
-                          {m.text}
-                        </motion.div>
-                        {m.mine && (m.state !== 'sent' || m.seq === lastMineSeq) && (
-                          <p className={cn('-mt-2 flex items-center justify-end gap-1 text-[11px]', m.state === 'failed' ? 'text-destructive' : 'text-muted-foreground')}>
-                            {m.state === 'pending' && (<><Clock className="size-3" /> {tx.sending}</>)}
-                            {m.state === 'failed' && (<><RotateCw className="size-3" /> {tx.failed}</>)}
-                            {m.state === 'sent' && (m.seq != null && chat.otherReadSeq >= m.seq ? (<><CheckCheck className="size-3 text-primary" /> {tx.seen}</>) : (<><Check className="size-3" /> {tx.sent}</>))}
-                          </p>
-                        )}
-                      </Fragment>
-                    ),
-                  )}
-                  {status === 'CLOSED' && <p className="text-center text-[11.5px] text-muted-foreground">{tx.closed}</p>}
-                  {status === 'BLOCKED' && <p className="text-center text-[11.5px] text-destructive">{tx.blocked}</p>}
-                </>
-              )}
-
-              {chat.error && ready && <p className="text-center text-[11.5px] text-destructive">{chat.error}</p>}
-
-              {chat.typing && (
-                <div className="flex w-16 items-center justify-center gap-1 rounded-2xl rounded-bl-md border bg-card py-3">
-                  {[0, 1, 2].map((i) => (
-                    <motion.span key={i} className="size-1.5 rounded-full bg-muted-foreground" animate={{ y: [0, -4, 0] }} transition={{ repeat: Infinity, duration: 0.8, delay: i * 0.15 }} />
-                  ))}
+                  <strong className="mt-2 text-xl">{greetName ? `${tx('Xin chào', 'Hello', '안녕하세요')}, ${greetName}` : t.chat.title}</strong>
+                  <span className="text-[13px] text-white/70">{tx('Trao đổi với nhà cung cấp hoặc nhận hỗ trợ từ VCCI.', 'Talk to suppliers or get help from VCCI.', '공급업체와 대화하거나 VCCI의 지원을 받으세요.')}</span>
                 </div>
-              )}
-              {ready && channel === 'support' && chat.messages.length === 0 && !chat.loading && (
-                <div className="flex flex-wrap gap-2 pt-1">
-                  {t.chat.quick.map((q) => (
-                    <button key={q} onClick={() => send(q)} className="rounded-full border bg-background px-3 py-1.5 text-xs font-medium transition hover:border-primary hover:text-primary">
-                      {q}
-                    </button>
-                  ))}
+                <div className="-mt-10 flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto px-4 pb-4">
+                  {!configured && <p className="rounded-[14px] border bg-card p-3.5 text-xs text-muted-foreground">{tx2.notConfigured}</p>}
+                  {configured && !loggedIn && (
+                    <div className="space-y-2 rounded-[14px] border bg-card p-3.5 text-[13px] shadow-sm">
+                      <p className="font-semibold">{tx2.loginTitle}</p>
+                      <p className="text-muted-foreground">{tx2.loginDesc}</p>
+                      <button onClick={toLogin} className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground transition hover:bg-primary-hover">
+                        <LogIn className="size-3.5" /> {tx2.login}
+                      </button>
+                    </div>
+                  )}
+                  {configured && loggedIn && chat.me && !hasOrg && <p className="rounded-[14px] border bg-card p-3.5 text-xs text-muted-foreground">{tx2.noOrg}</p>}
+                  {ready && (
+                    <>
+                      <button onClick={openSupport} className="flex items-center gap-2.5 rounded-[14px] border bg-card p-3.5 text-left shadow-sm transition hover:border-primary">
+                        <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-gold-soft text-gold"><Headset className="size-5" /></span>
+                        <span className="min-w-0 flex-1">
+                          <strong className="block">{tx('Hỗ trợ từ VCCI', 'Support from VCCI', 'VCCI 지원')}</strong>
+                          <span className="block truncate text-xs text-muted-foreground">
+                            {supportStatus
+                              ? `${supportStatus.onlineOperators} ${tx('cán bộ trực tuyến', 'officers online', '명 온라인')}${supportStatus.avgFirstResponseMinutes != null ? ` · ${tx('phản hồi ~', 'reply ~', '응답 ~')}${supportStatus.avgFirstResponseMinutes} ${tx('phút', 'min', '분')}` : ''}`
+                              : support?.lastPreviewText ?? tx('Đặt câu hỏi cho cán bộ VCCI', 'Ask a VCCI officer', 'VCCI 담당자에게 질문')}
+                          </span>
+                        </span>
+                        {!!support?.unreadCount && <span className="grid min-w-5 place-items-center rounded-full bg-primary px-1.5 text-[11px] font-bold leading-5 text-white">{support.unreadCount}</span>}
+                        <ChevronRight className="size-4 text-muted-foreground" />
+                      </button>
+                      {supplierId && supplierId !== myOrgId && (
+                        <button onClick={() => openB2b(supplierId)} className="flex items-center gap-2.5 rounded-[14px] border bg-card p-3.5 text-left shadow-sm transition hover:border-primary">
+                          <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary-soft text-primary"><Handshake className="size-5" /></span>
+                          <span className="min-w-0 flex-1"><strong className="block">{tx('Chat với nhà cung cấp', 'Chat with this supplier', '공급업체와 채팅')}</strong><span className="block truncate text-xs text-muted-foreground">{tx('Nhắn tin trực tiếp với doanh nghiệp đang xem', 'Message the business you are viewing', '보고 있는 기업에 메시지 보내기')}</span></span>
+                          <ChevronRight className="size-4 text-muted-foreground" />
+                        </button>
+                      )}
+                      <h3 className="mx-1 mt-2 text-[13px] font-semibold text-muted-foreground">{tx('Gần đây', 'Recent', '최근')}</h3>
+                      {recent.length === 0 && <p className="mx-1 text-xs text-muted-foreground">{tx2.b2bEmpty}</p>}
+                      {recent.map((c) => (
+                        <button key={c.id} onClick={() => openConv(c.id, c.channel === SUPPORT ? 'support' : 'b2b')} className="flex items-center gap-2.5 rounded-xl px-1 py-2 text-left transition hover:bg-muted">
+                          <ChatAvatar id={c.businessId} name={c.businessName} vcci={c.channel === SUPPORT} size={36} />
+                          <span className="min-w-0 flex-1">
+                            <span className="flex items-center gap-2">
+                              <strong className="flex-1 truncate text-[13px]">{c.channel === SUPPORT ? c.subject ?? tx('Hỗ trợ từ VCCI', 'Support from VCCI', 'VCCI 지원') : c.businessName ?? c.businessId}</strong>
+                              <span className="shrink-0 text-[11px] text-muted-foreground">{listTime(c.lastActivityAt)}</span>
+                            </span>
+                            <span className={cn('block truncate text-xs', c.unreadCount ? 'font-semibold' : 'text-muted-foreground')}>{c.lastPreviewText ?? ''}</span>
+                          </span>
+                          {!!c.unreadCount && <span className="size-2 shrink-0 rounded-full bg-primary" aria-label={tx('Chưa đọc', 'Unread', '읽지 않음')} />}
+                        </button>
+                      ))}
+                      {chat.error && <p className="text-center text-[11.5px] text-destructive">{chat.error}</p>}
+                    </>
+                  )}
                 </div>
-              )}
-            </div>
+                <Link to="/messages" onClick={() => setOpen(false)} className="shrink-0 border-t p-3.5 text-center text-[13px] font-semibold text-primary hover:bg-muted">
+                  {tx('Mở trang Tin nhắn đầy đủ', 'Open the full Messages page', '전체 메시지 페이지 열기')}
+                </Link>
+              </>
+            ) : (
+              <>
+                {/* Trong một hội thoại */}
+                <div className="flex shrink-0 items-center gap-3 bg-navy px-4 py-3.5 text-white">
+                  <button onClick={backToHub} className={iconBtn} aria-label={tx2.back}><ChevronLeft className="size-5" /></button>
+                  <ChatAvatar id={active?.businessId} name={active?.businessName} vcci={isSupport} size={36} />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-bold">{isSupport ? tx('Hỗ trợ từ VCCI', 'Support from VCCI', 'VCCI 지원') : active?.businessName ?? t.chat.channels.b2b}</p>
+                    <p className="flex items-center gap-1.5 truncate text-xs text-white/70"><span className={cn('size-1.5 shrink-0 rounded-full', dot)} /> {statusLine}</p>
+                  </div>
+                  <button onClick={() => setOpen(false)} className={iconBtn} aria-label={t.ui.close}><X className="size-4" /></button>
+                </div>
 
-            <form
-              onSubmit={(e) => {
-                e.preventDefault()
-                send(text)
-              }}
-              className="flex items-center gap-2 border-t p-3"
-            >
-              <input
-                value={text}
-                onChange={(e) => {
-                  setText(e.target.value)
-                  chat.notifyTyping()
-                }}
-                disabled={!ready || b2bList || status === 'BLOCKED'}
-                maxLength={4000}
-                placeholder={configured && !loggedIn ? tx.loginToSend : t.chat.say}
-                aria-label={t.chat.say}
-                className="h-10 flex-1 rounded-xl border bg-background px-3 text-sm outline-none focus:border-primary disabled:opacity-60"
-              />
-              <button
-                type="submit"
-                disabled={!ready || b2bList || !text.trim() || status === 'BLOCKED'}
-                className="grid size-10 place-items-center rounded-xl bg-primary text-primary-foreground transition hover:bg-primary-hover active:scale-95 disabled:opacity-50"
-                aria-label={t.ui.send}
-              >
-                <Send className="size-4" />
-              </button>
-            </form>
-          </motion.div>
+                <div ref={listRef} className="flex-1 space-y-3 overflow-y-auto bg-muted/40 p-4">
+                  {isSupport && (
+                    <div className="max-w-[85%] rounded-[16px_16px_16px_4px] border bg-card px-3.5 py-2.5 text-[13.5px] leading-relaxed">{t.chat.greet}</div>
+                  )}
+                  <ChatMessages chat={chat} partner={isSupport ? null : active ? { id: active.businessId, name: active.businessName } : null} compact onReply={setReply} />
+                  {status === 'CLOSED' && <p className="text-center text-[11.5px] text-muted-foreground">{tx2.closed}</p>}
+                  {status === 'BLOCKED' && <p className="text-center text-[11.5px] text-destructive">{tx2.blocked}</p>}
+                  {chat.error && <p className="text-center text-[11.5px] text-destructive">{chat.error}</p>}
+                  {isSupport && chat.messages.length === 0 && !chat.loading && (
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      {t.chat.quick.map((q) => (
+                        <button key={q} onClick={() => void chat.send(q)} className="rounded-full border bg-background px-3 py-1.5 text-xs font-medium transition hover:border-primary hover:text-primary">{q}</button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <ChatComposer
+                  key={activeId ?? 'new'}
+                  chat={chat}
+                  compact
+                  disabled={!ready || (!isSupport && !activeId) || status === 'BLOCKED'}
+                  reply={reply}
+                  onClearReply={() => setReply(null)}
+                  placeholder={t.chat.say}
+                />
+              </>
+            )}
+          </motion.section>
         )}
       </AnimatePresence>
 
@@ -293,7 +287,7 @@ export function ChatWidget() {
           whileTap={{ scale: 0.94 }}
           onClick={() => setOpen((v) => !v)}
           className="relative grid size-14 place-items-center rounded-full bg-primary text-primary-foreground shadow-xl shadow-primary/40"
-          aria-label={t.chat.title}
+          aria-label={chat.unread > 0 ? `${t.chat.title}, ${chat.unread} ${tx('tin chưa đọc', 'unread', '읽지 않음')}` : t.chat.title}
           aria-expanded={open}
         >
           {!open && <span className="absolute inset-0 animate-ping rounded-full bg-primary/40 [animation-duration:2.4s]" />}
@@ -312,4 +306,3 @@ export function ChatWidget() {
     </div>
   )
 }
-

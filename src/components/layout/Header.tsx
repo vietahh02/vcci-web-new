@@ -1,8 +1,10 @@
 import * as DialogPrimitive from '@radix-ui/react-dialog'
 import { AnimatePresence, motion, useMotionValueEvent, useScroll } from 'motion/react'
 import { ChevronDown, ChevronRight, FilePlus2, LayoutGrid, LogOut, Menu, MessageSquare, Moon, Phone, Sun } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
+import { chatApi, chatConfigured } from '@/api/chat'
+import { tokens } from '@/api/http'
 import { categories } from '@/data/mock'
 import { categoryIcons, Logo } from '@/components/brand'
 import { LiveDot } from '@/components/effects'
@@ -28,6 +30,18 @@ export function Header() {
   const [mobileOpen, setMobileOpen] = useState(false)
   const location = useLocation()
   const isHome = location.pathname === '/'
+  const [chatUnread, setChatUnread] = useState(0)
+
+  // số tin chưa đọc (B2B + hỗ trợ) cho nút Tin nhắn; làm mới khi đổi trang
+  useEffect(() => {
+    if (!session || !chatConfigured() || !tokens.access()) return
+    let alive = true
+    chatApi.unreadCount().then((u) => alive && setChatUnread(u.total), () => undefined)
+    return () => {
+      alive = false
+    }
+  }, [session, location.pathname])
+  const unreadShown = session ? chatUnread : 0
 
   useMotionValueEvent(scrollY, 'change', (v) => setScrolled(v > 40))
 
@@ -79,10 +93,10 @@ export function Header() {
               <FilePlus2 /> {t.nav.postRequest}
             </Link>
             <Tooltip content={t.nav.messages}>
-              <button className="relative hidden rounded-lg p-2.5 text-muted-foreground transition hover:bg-muted hover:text-foreground sm:block" aria-label={t.nav.messages}>
+              <Link to="/messages" className="relative hidden rounded-lg p-2.5 text-muted-foreground transition hover:bg-muted hover:text-foreground sm:block" aria-label={t.nav.messages}>
                 <MessageSquare className="size-[18px]" />
-                <span className="absolute right-1.5 top-1.5 grid size-4 place-items-center rounded-full bg-live text-[9px] font-bold text-white">3</span>
-              </button>
+                {unreadShown > 0 && <span className="absolute right-1.5 top-1.5 grid size-4 place-items-center rounded-full bg-live text-[9px] font-bold text-white">{unreadShown > 9 ? '9+' : unreadShown}</span>}
+              </Link>
             </Tooltip>
             <NotificationBell />
             <LangSwitcher />
