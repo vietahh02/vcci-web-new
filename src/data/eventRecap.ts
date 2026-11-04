@@ -8,6 +8,8 @@ import type { Bilingual } from '@/lib/i18n'
 
 const b = (vi: string, en: string): Bilingual => ({ vi, en })
 
+/** A product in a post-event ranking: public counts only, never who. */
+export interface RecapProduct { id: string; name: Bilingual; image: string; org: string; count: number }
 export interface RecapStat { label: Bilingual; value: number; suffix?: string }
 export interface Recap {
   stats: RecapStat[]
@@ -17,6 +19,8 @@ export interface Recap {
   participants: { name: string; country: string }[]
   testimonials: { quote: Bilingual; name: string; org: string }[]
   next?: { title: Bilingual; inDays: number }
+  /** Live mode: most favourited products (system-wide count, up to 8). */
+  favoriteProducts?: RecapProduct[]
   /** Live mode: banner uploaded for the post-event page. */
   banner?: string
   /** Live mode: average of the approved, public ratings. */

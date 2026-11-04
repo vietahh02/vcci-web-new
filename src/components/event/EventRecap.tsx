@@ -1,7 +1,8 @@
 /** "Event highlights" block for ended events — headline numbers, video, takeaways, sessions with replay, gallery, participants, testimonials. */
 import { motion } from 'motion/react'
-import { BellRing, Building2, Camera, PlayCircle, Quote, Star } from 'lucide-react'
-import { useState } from 'react'
+import { BellRing, Building2, Camera, Heart, PlayCircle, Quote, Star } from 'lucide-react'
+import { useState, type ComponentType } from 'react'
+import { Link } from 'react-router-dom'
 import { CountryChip } from '@/components/brand'
 import { CountUp } from '@/components/effects'
 import { Dialog, DialogContent, useToast } from '@/components/ui/overlay'
@@ -9,6 +10,7 @@ import { Badge, Button } from '@/components/ui/primitives'
 import { API_BASE, USE_MOCK } from '@/api'
 import { safeHttpUrl } from '@/components/live/liveRef'
 import { useEventRecap } from '@/api/eventApi'
+import type { RecapProduct } from '@/data/eventRecap'
 import type { EventItem } from '@/data/mock'
 import { useI18n } from '@/lib/i18n'
 import { isOnlineShowEvent } from '@/lib/eventStatus'
@@ -28,6 +30,27 @@ function galleryTile(i: number, n: number) {
   if (n === 3) return 'aspect-[4/3] md:col-span-2 md:aspect-[2/1]'
   if (n === 4 && i === 1) return 'col-span-2 aspect-[2/1]'
   return 'aspect-[4/3]'
+}
+
+/** A ranking of products in the recap: same picture-and-name card as the Show product tab, counts only. */
+function RecapProducts({ ev, title, icon: Icon, items, wide, count }: { ev: EventItem; title: string; icon: ComponentType<{ className?: string }>; items: RecapProduct[]; wide: boolean; count: (n: number) => string }) {
+  const { L } = useI18n()
+  const from = /^s-\d+$/.test(ev.id) ? `?fromEvent=${ev.id}` : ''
+  return (
+    <div>
+      <h3 className="flex items-center gap-2 text-xl font-extrabold"><Icon className="size-5 text-primary" /> {title}</h3>
+      <div className={`mt-3 grid grid-cols-2 gap-x-4 gap-y-6 ${wide ? 'md:grid-cols-4' : 'sm:grid-cols-3'}`}>
+        {items.map((p) => (
+          <Link key={p.id} to={`/products/${p.id}${from}`} className="group block min-w-0">
+            <div className="aspect-square overflow-hidden rounded-xl bg-muted"><img src={img(p.image, 400, 400)} alt="" loading="lazy" className="size-full object-cover transition-transform duration-700 group-hover:scale-105" /></div>
+            <p className="mt-2 line-clamp-2 text-sm font-semibold leading-snug group-hover:text-primary">{L(p.name)}</p>
+            {p.org && <p className="mt-0.5 truncate text-xs text-muted-foreground">{p.org}</p>}
+            {p.count > 0 && <Badge variant="secondary" className="mt-1.5">{count(p.count)}</Badge>}
+          </Link>
+        ))}
+      </div>
+    </div>
+  )
 }
 
 export function EventRecap({ ev }: { ev: EventItem }) {
@@ -50,8 +73,9 @@ export function EventRecap({ ev }: { ev: EventItem }) {
   const hasVideo = sample || !!r.video.url
   const hasSessions = ev.agendaOptions.length > 0
   const rating = r.rating && r.rating.count > 0 ? r.rating : null
+  const favorites = r.favoriteProducts ?? []
   // API failed or nothing recorded yet: no empty headings on the page
-  if (!r.stats.length && !hasVideo && !r.takeaways.length && !hasSessions && !r.gallery.length && !r.participants.length && !r.testimonials.length && !rating && !r.next) return null
+  if (!r.stats.length && !hasVideo && !r.takeaways.length && !hasSessions && !r.gallery.length && !r.participants.length && !r.testimonials.length && !rating && !r.next && !favorites.length) return null
   return (
     <section aria-label="recap" className="space-y-10">
       {r.stats.length > 0 && <div>
@@ -102,6 +126,10 @@ export function EventRecap({ ev }: { ev: EventItem }) {
             {ev.speakers.map((s) => <span key={s.name} className="rounded-full border px-3 py-1.5 text-sm"><b>{s.name}</b> · <span className="text-muted-foreground">{L(s.title)}</span></span>)}
           </div>
         )}
+      </div>}
+
+      {favorites.length > 0 && <div className="grid gap-8">
+        <RecapProducts ev={ev} title={tx('Sản phẩm được yêu thích', 'Most favourited products', '인기 즐겨찾기 제품')} icon={Heart} items={favorites} wide count={(n) => tx(`${n} lượt yêu thích`, `${n} favourites`, `즐겨찾기 ${n}회`)} />
       </div>}
 
       {r.gallery.length > 0 && <div>

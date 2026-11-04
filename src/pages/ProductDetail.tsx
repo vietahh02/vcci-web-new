@@ -1,16 +1,16 @@
 import { AnimatePresence, motion } from 'motion/react'
-import { Award, CheckCircle2, CreditCard, Heart, MapPin, MessageSquare, Package, Send, Share2, ShieldCheck } from 'lucide-react'
+import { Award, CheckCircle2, CreditCard, MapPin, MessageSquare, Package, Send, Share2, ShieldCheck } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { catalogApi, getCategory, getProduct, liveApi, tokens, USE_MOCK, useBusiness, useRelatedProducts } from '@/api'
+import { getCategory, getProduct, liveApi, USE_MOCK, useBusiness, useRelatedProducts } from '@/api'
 import { openBusinessChat } from '@/api/chat'
-import { tx } from '@/lib/tx'
 import { businessStub } from '@/api/adapters/business'
 import { type Product } from '@/data/mock'
 import { ErrorBlock } from '@/components/ui/StateViews'
 import { CompanyMark, SectionHeader, VerifiedBadge } from '@/components/brand'
 import { ReputationStars } from '@/components/reputation/Reputation'
 import { ProductCard } from '@/components/cards'
+import { FavoriteButton } from '@/components/catalog/FavoriteButton'
 import { Reveal, Stagger, StaggerItem } from '@/components/effects'
 import { Dialog, DialogContent, DialogTrigger, UnderlineTabs, useToast } from '@/components/ui/overlay'
 import { Badge, Button, buttonClass, Field, Input, Skeleton, Textarea } from '@/components/ui/primitives'
@@ -158,7 +158,7 @@ function ProductView({ product }: { product: Product }) {
             <Button variant="outline" size="lg" onClick={() => { if (USE_MOCK) toast({ kind: 'info', title: t.product.chatNow, description: supplier.name }); else openBusinessChat(product.organizationId) }}>
               <MessageSquare /> {t.product.chatNow}
             </Button>
-            <FavoriteButton product={product} />
+            <FavoriteButton productId={product.id} className="size-12 rounded-xl" />
             <Button variant="ghost" size="icon" className="size-12 rounded-xl" aria-label={t.product.share} onClick={() => void share()}><Share2 /></Button>
           </div>
 
@@ -246,32 +246,6 @@ function ProductView({ product }: { product: Product }) {
         </Stagger>
       </section>
     </div>
-  )
-}
-
-/** Favourite toggle: stored per account on the BE in live mode (needs sign-in), toast-only in mock mode. */
-function FavoriteButton({ product }: { product: Product }) {
-  const { t } = useI18n()
-  const toast = useToast()
-  const [on, setOn] = useState(false)
-  useEffect(() => {
-    if (USE_MOCK || !tokens.access()) return
-    catalogApi.favoriteIds([product.id]).then((s) => setOn(s.has(product.id)), () => undefined)
-  }, [product.id])
-  const toggle = () => {
-    if (USE_MOCK) { toast({ kind: 'success', title: t.product.addFav }); return }
-    if (!tokens.access()) { toast({ kind: 'info', title: tx('Vui lòng đăng nhập để lưu sản phẩm yêu thích', 'Please sign in to save favourites', '즐겨찾기를 저장하려면 로그인하세요') }); return }
-    const next = !on
-    setOn(next)
-    ;(next ? catalogApi.addFavorite(product.id) : catalogApi.removeFavorite(product.id)).then(
-      () => toast({ kind: 'success', title: next ? t.product.addFav : tx('Đã bỏ khỏi yêu thích', 'Removed from favourites', '즐겨찾기에서 제거됨') }),
-      (e: Error) => { setOn(!next); toast({ kind: 'info', title: e.message }) },
-    )
-  }
-  return (
-    <Button variant="ghost" size="icon" className="size-12 rounded-xl" aria-label={t.product.addFav} aria-pressed={on} onClick={toggle}>
-      <Heart className={on ? 'fill-red-500 text-red-500' : ''} />
-    </Button>
   )
 }
 

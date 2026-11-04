@@ -2,7 +2,7 @@
 import type { EventItem, Product } from '@/data/mock'
 import type { Participant, Side } from '@/data/eventParticipants'
 import type { Material } from '@/data/eventExtras'
-import type { Recap } from '@/data/eventRecap'
+import type { Recap, RecapProduct } from '@/data/eventRecap'
 import type { EventProgramme } from '@/data/schedules'
 import type { TradedProduct } from '@/data/eventProducts'
 import { arr, bi, biAny, id, num, str, url, type Raw } from './common'
@@ -44,6 +44,11 @@ export const toTradedProduct = (r: Raw): TradedProduct => ({ product: toProduct(
 
 export const toMaterial = (r: Raw): Material => ({ id: id(r.id), kind: (str(r.kind, 'REPORT') as Material['kind']), title: biAny(r.title), meta: str(r.meta), url: r.url ? url(r.url, '') : undefined })
 
+const toRecapProducts = (v: unknown): RecapProduct[] => arr(v).map((x) => {
+  const p = x.product ?? x
+  return { id: id(p.productId ?? p.id), name: biAny(p.productName ?? p.name), image: url(p.image ?? arr<string>(p.productImages)[0]), org: str(p.organizationName ?? p.org), count: num(x.count ?? x.quotes ?? x.favorites ?? x.favoriteCount ?? x.inquiries) }
+}).filter((p) => p.id)
+
 export function toRecap(r: Raw): Recap {
   return {
     stats: arr(r.stats).map((s) => ({ label: biAny(s.label), value: num(s.value), suffix: s.suffix ? str(s.suffix) : undefined })),
@@ -54,6 +59,7 @@ export function toRecap(r: Raw): Recap {
     testimonials: arr(r.testimonials).map((q) => ({ quote: biAny(q.quote), name: str(q.name), org: str(q.org) })),
     next: r.next ? { title: biAny(r.next.title), inDays: num(r.next.inDays) } : undefined,
     banner: r.banner ? url(r.banner, '') : undefined,
+    favoriteProducts: toRecapProducts(r.favoriteProducts),
     rating: r.rating ? { average: num(r.rating.average), count: num(r.rating.count) } : undefined,
   }
 }

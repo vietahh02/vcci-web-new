@@ -1,13 +1,14 @@
 /** Detail page of a Show Hub event (online trade show). Rendered by EventDetail when the id is a show. */
 import { motion } from 'motion/react'
 import { Bell, BellRing, Building2, CalendarDays, CheckCircle2, Clock, Globe2, MapPin, Mic2, PlayCircle, Radio, Search, Send, Store, Ticket, Users, Video } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { CompanyMark, CountryChip } from '@/components/brand'
 import { useEventRecap } from '@/api/eventApi'
 import { Countdown, LiveDot, Reveal } from '@/components/effects'
 import { EventParticipants } from '@/components/event/EventParticipants'
 import { EventRecap } from '@/components/event/EventRecap'
+import { FavoriteButton } from '@/components/catalog/FavoriteButton'
 import { eventTimeRange, isOnlineFormat } from '@/lib/eventStatus'
 import { showOrganisations, showStartsAt, showToEvent } from '@/lib/showEvent'
 import { tx } from '@/lib/tx'
@@ -21,7 +22,7 @@ import { Badge, Button, buttonClass, Field, Input, Progress, Textarea } from '@/
 import { Select } from '@/components/ui/select'
 import { showLabel, type Show, type ShowBooth, type ShowLabel, type ShowProduct, type ShowSession } from '@/data/shows'
 import { useI18n } from '@/lib/i18n'
-import { liveApi, USE_MOCK } from '@/api'
+import { catalogApi, liveApi, tokens, USE_MOCK } from '@/api'
 import { useShowVisitor, type VisitorBadge } from '@/lib/showReg'
 import { ShowFormatContext, useShowT } from '@/lib/showText'
 import { cn, formatDate, formatMoney, formatNumber, img } from '@/lib/utils'
@@ -453,6 +454,13 @@ function ProductsTab({ show, onAsk, onOpenBooth }: { show: Show; onAsk: (b: Show
   const x = useShowT()
   const online = isOnlineFormat(show.format)
   const all = show.booths.flatMap((b) => b.products.map((p) => ({ b, p }))).sort((a, c) => Number(!!c.p.featured) - Number(!!a.p.featured))
+  // favourites of the whole tab in one request; a guest has none and is sent to sign in on click
+  const [favorites, setFavorites] = useState<Set<string> | null>(null)
+  const favoriteKey = all.map(({ p }) => p.linkId).filter(Boolean).join(',')
+  useEffect(() => {
+    if (USE_MOCK || !tokens.access() || !favoriteKey) return
+    catalogApi.favoriteIds(favoriteKey.split(',')).then(setFavorites, () => undefined)
+  }, [favoriteKey])
   if (!all.length) return <p className="text-muted-foreground">{tx('Chưa có sản phẩm nào.', 'No products yet.', '아직 제품이 없습니다.')}</p>
   return (
     <div className="grid gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-4">
@@ -466,7 +474,10 @@ function ProductsTab({ show, onAsk, onOpenBooth }: { show: Show; onAsk: (b: Show
         )
         return (
         <div key={`${b.id}-${p.id}`} className="group">
-          {toProduct ? <Link to={toProduct} className="block" aria-label={L(p.name)}>{picture}</Link> : picture}
+          <div className="relative">
+            {toProduct ? <Link to={toProduct} className="block" aria-label={L(p.name)}>{picture}</Link> : picture}
+            {p.linkId && <FavoriteButton productId={p.linkId} initial={favorites?.has(p.linkId) ?? false} className="absolute right-2 top-2 size-9 rounded-full bg-white/90 text-navy shadow hover:bg-white" />}
+          </div>
           <p className="mt-3 line-clamp-2 font-semibold leading-snug">{toProduct ? <Link to={toProduct} className="hover:text-primary">{L(p.name)}</Link> : L(p.name)}</p>
           {online ? <OrgName booth={b} /> : <button type="button" onClick={() => onOpenBooth(b)} className="mt-0.5 text-xs text-muted-foreground hover:text-primary">{L(b.org)}</button>}
           <div><BusinessChatButton organizationId={b.businessId} showName={L(show.title)} className="text-xs" /></div>
