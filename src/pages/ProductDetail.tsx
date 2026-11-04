@@ -1,7 +1,7 @@
 import { AnimatePresence, motion } from 'motion/react'
 import { Award, CheckCircle2, CreditCard, MapPin, MessageSquare, Package, Send, Share2, ShieldCheck } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { getCategory, getProduct, liveApi, USE_MOCK, useBusiness, useRelatedProducts } from '@/api'
 import { openBusinessChat } from '@/api/chat'
 import { businessStub } from '@/api/adapters/business'
@@ -251,6 +251,9 @@ function ProductView({ product }: { product: Product }) {
 
 function RfqDialog({ product }: { product: Product }) {
   const { t, L } = useI18n()
+  // arrived from a show's product list: the quote counts as interest at that show. A plain visit sends nothing.
+  const [params] = useSearchParams()
+  const sourceEventPid = /^s-\d+$/.exec(params.get('fromEvent') ?? '')?.[0]
   const toast = useToast()
   const [open, setOpen] = useState(false)
   const [sent, setSent] = useState(false)
@@ -278,7 +281,7 @@ function RfqDialog({ product }: { product: Product }) {
                   toast({ kind: 'success', title: t.product.sent, description: L(product.productName) })
                   return
                 }
-                liveApi.sendProductRfq(product.id, body).then(
+                liveApi.sendProductRfq(product.id, { ...body, sourceEventPid }).then(
                   () => { setSent(true); toast({ kind: 'success', title: t.product.sent, description: L(product.productName) }) },
                   (err: Error) => toast({ kind: 'info', title: err.message }),
                 )

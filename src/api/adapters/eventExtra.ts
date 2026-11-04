@@ -60,6 +60,7 @@ export function toRecap(r: Raw): Recap {
     next: r.next ? { title: biAny(r.next.title), inDays: num(r.next.inDays) } : undefined,
     banner: r.banner ? url(r.banner, '') : undefined,
     favoriteProducts: toRecapProducts(r.favoriteProducts),
+    mostInquiredProducts: toRecapProducts(r.mostInquiredProducts),
     rating: r.rating ? { average: num(r.rating.average), count: num(r.rating.count) } : undefined,
   }
 }

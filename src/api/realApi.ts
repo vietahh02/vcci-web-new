@@ -85,11 +85,11 @@ export async function getProduct(pid: string): Promise<Product | null> {
 }
 /** GET /api/products/search?organizationId= */
 export const fetchOrgProducts = async (orgId: string) => embeddedProducts.get(orgId) ?? toPage<Raw>(await apiFetch('/api/products/search', { query: { organizationId: orgId, page: 0, size: 50 } }), 50).items.map(toProduct)
-/** POST /api/products/{id}/rfq with {quantity, destination, message} (stored on the quotation and put in the seller's email). */
-export async function sendProductRfq(pid: string, body: { quantity: number | string; destination: string; message: string }) {
+/** POST /api/products/{id}/rfq with {quantity, destination, message} (stored on the quotation and put in the seller's email). `sourceEventPid`: the show the buyer came from, counted as interest there. */
+export async function sendProductRfq(pid: string, body: { quantity: number | string; destination: string; message: string; sourceEventPid?: string }) {
   return apiFetch(`/api/products/${encodeURIComponent(pid)}/rfq`, {
     method: 'POST',
-    json: { quantity: String(body.quantity), destination: body.destination, message: body.message },
+    json: { quantity: String(body.quantity), destination: body.destination, message: body.message, sourceEventPid: body.sourceEventPid },
   })
 }
 

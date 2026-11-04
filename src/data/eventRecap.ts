@@ -21,6 +21,8 @@ export interface Recap {
   next?: { title: Bilingual; inDays: number }
   /** Live mode: most favourited products (system-wide count, up to 8). */
   favoriteProducts?: RecapProduct[]
+  /** Live mode: products most businesses asked about at this show (up to 8); counts only, never who. */
+  mostInquiredProducts?: RecapProduct[]
   /** Live mode: banner uploaded for the post-event page. */
   banner?: string
   /** Live mode: average of the approved, public ratings. */

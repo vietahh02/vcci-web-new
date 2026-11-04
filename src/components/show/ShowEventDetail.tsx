@@ -4,7 +4,7 @@ import { Bell, BellRing, Building2, CalendarDays, CheckCircle2, Clock, Globe2, M
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { CompanyMark, CountryChip } from '@/components/brand'
-import { useEventRecap } from '@/api/eventApi'
+import { useEventProducts, useEventRecap } from '@/api/eventApi'
 import { Countdown, LiveDot, Reveal } from '@/components/effects'
 import { EventParticipants } from '@/components/event/EventParticipants'
 import { EventRecap } from '@/components/event/EventRecap'
@@ -403,7 +403,7 @@ function BoothDialog({ show, booth, onClose, onAsk }: { show: Show; booth: ShowB
                   <p className="line-clamp-1 text-sm font-semibold">{L(p.name)} {p.featured && <Badge variant="gold" className="ml-1">{x.featured}</Badge>}</p>
                   <p className="line-clamp-1 text-xs text-muted-foreground">{L(p.blurb)}{p.moq ? ` · ${x.moq} ${p.moq}` : ''}</p>
                   <div className="mt-1.5 flex gap-3 text-xs font-semibold">
-                    {p.linkId ? <Link to={`/products/${p.linkId}`} className="text-primary hover:underline">{x.askPrice}</Link> : <button type="button" className="text-primary hover:underline" onClick={() => onAsk(booth, p)}>{x.askPrice}</button>}
+                    {p.linkId ? <Link to={`/products/${p.linkId}?fromEvent=${show.id}`} className="text-primary hover:underline">{x.askPrice}</Link> : <button type="button" className="text-primary hover:underline" onClick={() => onAsk(booth, p)}>{x.askPrice}</button>}
                     {p.linkId && <Link to={`/products/${p.linkId}`} className="text-muted-foreground hover:text-foreground">{x.viewProduct}</Link>}
                   </div>
                 </div>
@@ -453,7 +453,11 @@ function ProductsTab({ show, onAsk, onOpenBooth }: { show: Show; onAsk: (b: Show
   const { L } = useI18n()
   const x = useShowT()
   const online = isOnlineFormat(show.format)
-  const all = show.booths.flatMap((b) => b.products.map((p) => ({ b, p }))).sort((a, c) => Number(!!c.p.featured) - Number(!!a.p.featured))
+  // how many businesses asked about each product (public count, never who): featured first, then the most asked about
+  const traded = useEventProducts(showToEvent(show)).data
+  const interest = useMemo(() => new Map((traded ?? []).map((t) => [t.product.id, t.quotes])), [traded])
+  const interestOf = (p: ShowProduct) => (p.linkId ? interest.get(p.linkId) ?? 0 : 0)
+  const all = show.booths.flatMap((b) => b.products.map((p) => ({ b, p }))).sort((a, c) => Number(!!c.p.featured) - Number(!!a.p.featured) || interestOf(c.p) - interestOf(a.p))
   // favourites of the whole tab in one request; a guest has none and is sent to sign in on click
   const [favorites, setFavorites] = useState<Set<string> | null>(null)
   const favoriteKey = all.map(({ p }) => p.linkId).filter(Boolean).join(',')
@@ -465,7 +469,7 @@ function ProductsTab({ show, onAsk, onOpenBooth }: { show: Show; onAsk: (b: Show
   return (
     <div className="grid gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-4">
       {all.map(({ b, p }) => {
-        const toProduct = online && p.linkId ? `/products/${p.linkId}` : null
+        const toProduct = online && p.linkId ? `/products/${p.linkId}?fromEvent=${show.id}` : null
         const picture = (
           <div className="relative aspect-square overflow-hidden rounded-xl bg-muted">
             <img src={img(p.image, 500, 500)} alt="" loading="lazy" className="size-full object-cover transition-transform duration-700 group-hover:scale-105" />
@@ -482,8 +486,9 @@ function ProductsTab({ show, onAsk, onOpenBooth }: { show: Show; onAsk: (b: Show
           {online ? <OrgName booth={b} /> : <button type="button" onClick={() => onOpenBooth(b)} className="mt-0.5 text-xs text-muted-foreground hover:text-primary">{L(b.org)}</button>}
           <div><BusinessChatButton organizationId={b.businessId} showName={L(show.title)} className="text-xs" /></div>
           <p className="mt-1 text-xs text-muted-foreground">{x.priceOnRequest}{p.moq ? ` · ${x.moq} ${p.moq}` : ''}</p>
+          {interestOf(p) > 0 && <Badge variant="secondary" className="mt-1.5">{tx(`${interestOf(p)} doanh nghiệp quan tâm`, `${interestOf(p)} businesses interested`, `${interestOf(p)}개 기업 관심`)}</Badge>}
           {/* DEC-EV8-08: a catalogue product is quoted on its own page (RfqDialog); the booth dialog stays for unlinked products */}
-          {p.linkId ? <Link to={`/products/${p.linkId}`} className={buttonClass('outline', 'sm', 'mt-2')}>{x.askPrice}</Link> : !online && <Button size="sm" variant="outline" className="mt-2" onClick={() => onAsk(b, p)}>{x.askPrice}</Button>}
+          {p.linkId ? <div><Link to={`/products/${p.linkId}?fromEvent=${show.id}`} className={buttonClass('outline', 'sm', 'mt-2')}>{x.askPrice}</Link></div> : !online && <Button size="sm" variant="outline" className="mt-2" onClick={() => onAsk(b, p)}>{x.askPrice}</Button>}
         </div>
         )
       })}

@@ -1,6 +1,6 @@
 /** "Event highlights" block for ended events — headline numbers, video, takeaways, sessions with replay, gallery, participants, testimonials. */
 import { motion } from 'motion/react'
-import { BellRing, Building2, Camera, Heart, PlayCircle, Quote, Star } from 'lucide-react'
+import { BellRing, Building2, Camera, Heart, MessageSquareQuote, PlayCircle, Quote, Star } from 'lucide-react'
 import { useState, type ComponentType } from 'react'
 import { Link } from 'react-router-dom'
 import { CountryChip } from '@/components/brand'
@@ -31,6 +31,8 @@ function galleryTile(i: number, n: number) {
   if (n === 4 && i === 1) return 'col-span-2 aspect-[2/1]'
   return 'aspect-[4/3]'
 }
+
+const interestLabel = (n: number) => tx(`${n} doanh nghiệp quan tâm`, `${n} businesses interested`, `${n}개 기업 관심`)
 
 /** A ranking of products in the recap: same picture-and-name card as the Show product tab, counts only. */
 function RecapProducts({ ev, title, icon: Icon, items, wide, count }: { ev: EventItem; title: string; icon: ComponentType<{ className?: string }>; items: RecapProduct[]; wide: boolean; count: (n: number) => string }) {
@@ -74,8 +76,9 @@ export function EventRecap({ ev }: { ev: EventItem }) {
   const hasSessions = ev.agendaOptions.length > 0
   const rating = r.rating && r.rating.count > 0 ? r.rating : null
   const favorites = r.favoriteProducts ?? []
+  const inquired = r.mostInquiredProducts ?? []
   // API failed or nothing recorded yet: no empty headings on the page
-  if (!r.stats.length && !hasVideo && !r.takeaways.length && !hasSessions && !r.gallery.length && !r.participants.length && !r.testimonials.length && !rating && !r.next && !favorites.length) return null
+  if (!r.stats.length && !hasVideo && !r.takeaways.length && !hasSessions && !r.gallery.length && !r.participants.length && !r.testimonials.length && !rating && !r.next && !favorites.length && !inquired.length) return null
   return (
     <section aria-label="recap" className="space-y-10">
       {r.stats.length > 0 && <div>
@@ -128,8 +131,9 @@ export function EventRecap({ ev }: { ev: EventItem }) {
         )}
       </div>}
 
-      {favorites.length > 0 && <div className="grid gap-8">
-        <RecapProducts ev={ev} title={tx('Sản phẩm được yêu thích', 'Most favourited products', '인기 즐겨찾기 제품')} icon={Heart} items={favorites} wide count={(n) => tx(`${n} lượt yêu thích`, `${n} favourites`, `즐겨찾기 ${n}회`)} />
+      {(favorites.length > 0 || inquired.length > 0) && <div className={`grid gap-8 ${favorites.length > 0 && inquired.length > 0 ? 'lg:grid-cols-2' : ''}`}>
+        {favorites.length > 0 && <RecapProducts ev={ev} title={tx('Sản phẩm được yêu thích', 'Most favourited products', '인기 즐겨찾기 제품')} icon={Heart} items={favorites} wide={!inquired.length} count={(n) => tx(`${n} lượt yêu thích`, `${n} favourites`, `즐겨찾기 ${n}회`)} />}
+        {inquired.length > 0 && <RecapProducts ev={ev} title={tx('Sản phẩm doanh nghiệp quan tâm nhiều', 'Products businesses asked about most', '기업 관심이 많은 제품')} icon={MessageSquareQuote} items={inquired} wide={!favorites.length} count={interestLabel} />}
       </div>}
 
       {r.gallery.length > 0 && <div>
