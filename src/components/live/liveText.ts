@@ -23,6 +23,7 @@ export const liveText = () => ({
   backToEvent: tx('Về trang sự kiện', 'Back to the event', '행사 페이지로'),
   needBadge: tx('Cần thẻ tham quan để xem phiên này', 'A visitor badge is required to watch', '이 세션을 보려면 방문 배지가 필요합니다'),
   needBadgeHint: tx('Đăng ký tham quan ở trang sự kiện rồi quay lại.', 'Register as a visitor on the event page, then come back.', '행사 페이지에서 방문 등록 후 다시 오세요.'),
+  checkingRegistration: tx('Đang kiểm tra đăng ký…', 'Checking your registration…', '등록 정보를 확인하는 중…'),
   needRegister: tx('Cần đăng ký tham gia để xem phiên này', 'Registration is required to watch', '이 세션을 보려면 참가 등록이 필요합니다'),
   needRegisterHint: tx('Đăng ký tham gia ở trang sự kiện rồi quay lại.', 'Register on the event page, then come back.', '행사 페이지에서 참가 등록 후 다시 오세요.'),
   unmute: tx('Bật tiếng', 'Unmute', '소리 켜기'),

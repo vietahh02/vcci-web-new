@@ -14,11 +14,13 @@ import { useProfile } from '@/lib/profile'
 import { tx } from '@/lib/tx'
 import { newBadgeCode, type useShowVisitor, type VisitorBadge } from '@/lib/showReg'
 import { useShowT } from '@/lib/showText'
-import { formatMoney } from '@/lib/utils'
+import { cn, formatMoney } from '@/lib/utils'
 
 type Visitor = ReturnType<typeof useShowVisitor>
 const DEMO_OTP = '123456'
 const MAX_TRIES = 5
+const OTP_DIGITS = /^\d{6}$/
+const CONFIRM_CODE_LENGTH = 12
 const emailOk = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)
 
 export function BadgeCard({ show, badge }: { show: Show; badge: VisitorBadge }) {
@@ -102,6 +104,14 @@ export function VisitorRegistration({ show, open, onOpenChange, visitor }: { sho
     if (locked) return
     if (!USE_MOCK) {
       setBusy(true)
+      // the same box takes the code from the mail of someone who registered before: the BE answers a repeat like a new registration, so the page cannot tell which it is
+      if (otp.length === CONFIRM_CODE_LENGTH) {
+        liveApi.showRestoreVisitor(show.id, form.email, otp).then(
+          (r) => { setBusy(false); setErr(''); visitor.restore(r) },
+          (e: Error) => { setBusy(false); setTries((n) => n + 1); setErr(e.message) },
+        )
+        return
+      }
       liveApi.showVerifyOtp(show.id, form.email, otp).then(
         (r) => {
           setBusy(false)
@@ -192,14 +202,14 @@ export function VisitorRegistration({ show, open, onOpenChange, visitor }: { sho
 
           {view === 1 && (
             <>
-              <p className="text-sm text-muted-foreground">{x.reg.otpSent} <b className="text-foreground">{form.email}</b>. {USE_MOCK ? x.reg.otpHint : x.reg.otpHintLive}</p>
-              <Input inputMode="numeric" maxLength={6} value={otp} disabled={locked} onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))} className="h-14 text-center font-mono text-2xl tracking-[0.6em]" aria-label="OTP" />
+              <p className="text-sm text-muted-foreground">{x.reg.otpSent} <b className="text-foreground">{form.email}</b>. {USE_MOCK ? x.reg.otpHint : <>{x.reg.otpHintLive} {x.reg.registeredHint}</>}</p>
+              <Input maxLength={CONFIRM_CODE_LENGTH} autoCapitalize="characters" autoComplete="one-time-code" value={otp} disabled={locked} onChange={(e) => setOtp(e.target.value.replace(/[^0-9a-z]/gi, '').toUpperCase())} className={cn('h-14 text-center font-mono', otp.length > 6 ? 'text-lg tracking-widest' : 'text-2xl tracking-[0.6em]')} aria-label={x.reg.codeInput} />
               {locked ? (
                 <p className="flex items-center gap-2 text-sm font-medium text-destructive"><ShieldAlert className="size-4" /> {x.reg.locked}</p>
               ) : (
                 err && <p className="text-sm font-medium text-destructive">{err} · {MAX_TRIES - tries} {x.reg.attemptsLeft}</p>
               )}
-              <Button className="w-full" size="lg" disabled={otp.length !== 6 || locked || busy} onClick={verify}>{busy ? <Loader2 className="animate-spin" /> : null} {x.reg.verify}</Button>
+              <Button className="w-full" size="lg" disabled={!(OTP_DIGITS.test(otp) || otp.length === CONFIRM_CODE_LENGTH) || locked || busy} onClick={verify}>{busy ? <Loader2 className="animate-spin" /> : null} {x.reg.verify}</Button>
               <Button variant="ghost" className="w-full" disabled={cooldown > 0 || locked} onClick={() => {
                 setOtp(''); setErr('')
                 if (USE_MOCK) return setCooldown(30)

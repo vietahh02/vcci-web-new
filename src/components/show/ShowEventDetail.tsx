@@ -4,7 +4,7 @@ import { Bell, BellRing, Building2, CalendarDays, CheckCircle2, Clock, Globe2, M
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { CompanyMark, CountryChip } from '@/components/brand'
-import { useEventProducts, useEventRecap, useMyShowVisits, visitBadgeStatus } from '@/api/eventApi'
+import { useEventProducts, useEventRecap } from '@/api/eventApi'
 import { Countdown, LiveDot, Reveal } from '@/components/effects'
 import { EventParticipants } from '@/components/event/EventParticipants'
 import { AddToCalendar } from '@/components/event/AddToCalendar'
@@ -26,8 +26,8 @@ import { Badge, Button, buttonClass, Field, Input, Progress, Textarea } from '@/
 import { Select } from '@/components/ui/select'
 import { showLabel, type Show, type ShowBooth, type ShowLabel, type ShowProduct, type ShowSession } from '@/data/shows'
 import { useI18n } from '@/lib/i18n'
-import { useProfile } from '@/lib/profile'
 import { catalogApi, liveApi, tokens, USE_MOCK } from '@/api'
+import { useAccountVisit, useMailLinkRestore } from '@/components/show/useVisitorRecovery'
 import { useShowVisitor, type VisitorBadge } from '@/lib/showReg'
 import { ShowFormatContext, useShowT } from '@/lib/showText'
 import { cn, formatDate, formatMoney, formatNumber, img } from '@/lib/utils'
@@ -55,15 +55,9 @@ export function ShowEventDetail({ show }: { show: Show }) {
   const x = useShowT(show)
   const visitor = useShowVisitor(show.id)
   const cancelRegistration = useCancelRegistration(visitor)
-  // registered from another browser, or approved since: the account's registration brings the state here
-  const { session: account } = useProfile()
-  const myVisit = useMyShowVisits(!!account).data?.find((v) => v.showId === show.id && visitBadgeStatus(v.status))
-  const { badge: heldBadge, saveBadge } = visitor
-  useEffect(() => {
-    const status = myVisit && visitBadgeStatus(myVisit.status)
-    if (!myVisit || !status || heldBadge?.status === status) return
-    saveBadge({ visitorId: myVisit.visitorId, code: myVisit.badgeCode, name: myVisit.fullName, email: myVisit.email, company: account?.companyName ?? '', visitorType: myVisit.visitorType, status, issuedAt: new Date().toISOString() })
-  }, [myVisit?.visitorId, myVisit?.status, heldBadge?.status])
+  // registered from another browser, or approved since: the account's registration or the mail link brings the state here
+  useAccountVisit(show.id, visitor)
+  useMailLinkRestore(show.id, visitor)
   // ONLINE: products go straight into the show, so nothing about booths exists on this page (EV8-16). OFFLINE/HYBRID keep all of it.
   const online = isOnlineFormat(show.format)
   const [tab, setTab] = useState<Tab>('overview')

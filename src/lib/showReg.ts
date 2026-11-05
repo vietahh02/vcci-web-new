@@ -4,6 +4,8 @@ import { useCallback, useEffect, useState } from 'react'
 export type BadgeStatus = 'ISSUED' | 'PENDING_PAYMENT' | 'PENDING_APPROVAL'
 export interface VisitorBadge { visitorId?: string; code: string; name: string; email: string; company: string; visitorType: string; status: BadgeStatus; issuedAt: string }
 export type BookingState = 'BOOKED' | 'WAITLIST'
+/** What the BE returns to restore a registration on another device (POST /api/public/shows/{id}/visitors/restore). */
+export interface RestoredVisitor { badge: VisitorBadge; bookings: Record<string, BookingState> }
 /** What happened to the post-show feedback invitation in this browser. */
 export type FeedbackState = 'SENT' | 'SKIPPED'
 interface Stored { badge?: VisitorBadge; bookings: Record<string, BookingState>; inquiries: { boothId: string; at: string }[]; feedback?: FeedbackState }
@@ -45,6 +47,7 @@ export function useShowVisitor(showId: string) {
     inquiries: state.inquiries,
     feedback: state.feedback,
     saveBadge: (badge: VisitorBadge) => update((s) => ({ ...s, badge })),
+    restore: ({ badge, bookings }: RestoredVisitor) => update((s) => ({ ...s, badge, bookings })),
     setFeedback: (feedback: FeedbackState) => update((s) => ({ ...s, feedback })),
     cancelBadge: () => update(() => empty),
     setBooking: (sessionId: string, v: BookingState | null) =>

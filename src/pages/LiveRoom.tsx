@@ -15,6 +15,8 @@ import { parseLiveEventId, safeHttpUrl, toLiveKind, type LiveKind } from '@/comp
 import { liveText } from '@/components/live/liveText'
 import { ReplayPlayer } from '@/components/live/HlsPlayer'
 import { StagePlaceholder } from '@/components/live/StagePlaceholder'
+import { RestoreVisitorForm } from '@/components/show/RestoreVisitorForm'
+import { useAccountVisit } from '@/components/show/useVisitorRecovery'
 import { WebinarStage } from '@/components/live/WebinarStage'
 import { SponsorVerticalBanner } from '@/components/sponsor'
 import { ErrorBlock, LoadingBlock } from '@/components/ui/StateViews'
@@ -90,6 +92,8 @@ function RealLiveRoom() {
   const evR = useEvent(isShow ? '' : id)
   const remote = isShow ? showR : evR
   const visitor = useShowVisitor(id)
+  // another browser or device: the account's registration comes from the server; a guest restores it below with the code from the mail
+  const { checking } = useAccountVisit(id, visitor, isShow)
 
   const [room, setRoom] = useState<{ status: LiveStatus | null; sessionId: string | null }>({ status: null, sessionId: null })
   const [role, setRole] = useState<JitsiRole | null>(null)
@@ -142,7 +146,9 @@ function RealLiveRoom() {
   const companies = [...new Map((show?.booths ?? []).map((b) => [b.businessId ?? L(b.org), b])).values()].slice(0, 6)
   const online = isOnlineFormat(show?.format)
 
-  const stage = needBadge ? (
+  const stage = needBadge && checking ? (
+    <StagePlaceholder poster={poster} busy title={lt.checkingRegistration} />
+  ) : needBadge ? (
     <StagePlaceholder poster={poster} icon={Ticket} title={online ? lt.needRegister : lt.needBadge} hint={online ? lt.needRegisterHint : lt.needBadgeHint}>
       <Link to={backTo} className={buttonClass('gold', 'md', 'mt-2')}>{lt.backToEvent}</Link>
     </StagePlaceholder>
@@ -206,6 +212,8 @@ function RealLiveRoom() {
                 </AnimatePresence>
               </div>
             </div>
+
+            {needBadge && !checking && <RestoreVisitorForm showId={id} visitor={visitor} online={online} />}
 
             <div className="mt-4 flex flex-wrap items-start justify-between gap-4">
               <div className="max-w-2xl">

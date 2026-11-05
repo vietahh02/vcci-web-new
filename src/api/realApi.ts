@@ -2,6 +2,7 @@
  * LIVE data access layer: portal backend (vcci-portal-apis). Paths/params follow docs/dev/impl-*.md.
  * Public reads marked `orMock` serve sample data when the call fails, and only then: an empty response stays empty.
  */
+import type { RestoredVisitor } from '@/lib/showReg'
 import type { Business, Category, EventItem, ImportRequest, Product, SponsorTier } from '@/data/mock'
 import type { PublicProfile } from '@/data/capability'
 import type { Show } from '@/data/shows'
@@ -228,6 +229,14 @@ export async function showVerifyOtp(feId: string, email: string, otp: string) {
   return { ...toVisitor(r), badgeCode: str(r.badgeCode || r.code) }
 }
 export const showResendOtp = async (feId: string, email: string) => toVisitor(await apiFetch<Raw>(`/api/public/shows/${beShowId(feId)}/visitors/resend-otp`, { method: 'POST', json: { email } }))
+/** POST /api/public/shows/{id}/visitors/restore (a registration made on another device: email + the code from the mail; every failure is the same error) */
+export async function showRestoreVisitor(feId: string, email: string, badgeCode: string): Promise<RestoredVisitor> {
+  const r = await apiFetch<Raw>(`/api/public/shows/${beShowId(feId)}/visitors/restore`, { method: 'POST', json: { email, badgeCode } })
+  return {
+    badge: { visitorId: id(r.visitorId), code: str(r.badgeCode), name: str(r.fullName), email: str(r.email), company: str(r.companyName), visitorType: str(r.visitorType), status: 'ISSUED', issuedAt: str(r.issuedAt) || new Date().toISOString() },
+    bookings: (r.bookings ?? {}) as RestoredVisitor['bookings'],
+  }
+}
 /** GET /api/public/shows/visitors/badge/{code} */
 export async function showBadge(code: string) {
   const r = await apiFetch<Raw>(`/api/public/shows/visitors/badge/${encodeURIComponent(code)}`)
