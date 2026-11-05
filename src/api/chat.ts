@@ -375,5 +375,6 @@ export interface LegalAiSource { title?: string | null; sectionTitle?: string | 
 export interface LegalAiAnswer { answer: string; sources?: LegalAiSource[] | null }
 
 export const legalAiApi = {
-  ask: (message: string) => call<LegalAiAnswer>('/api/chat', { method: 'POST', query: { message } }),
+  /** language: ngôn ngữ người dùng đang chọn trên hệ thống, câu trả lời sẽ theo ngôn ngữ này. */
+  ask: (message: string, language: string) => call<LegalAiAnswer>('/api/chat', { method: 'POST', query: { message, language } }),
 }
