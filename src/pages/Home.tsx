@@ -15,7 +15,8 @@ import { Pager, usePaged } from '@/components/ui/pager'
 import { Badge, Button, buttonClass, Input } from '@/components/ui/primitives'
 import { Select } from '@/components/ui/select'
 import { useI18n } from '@/lib/i18n'
-import { CategoryTiles, EventsAgenda, FeaturedBusiness, SponsorTiers, Testimonials, TrustBand, WhyList } from '@/pages/home/sections'
+import { useProfile } from '@/lib/profile'
+import { CategoryTiles, EventsAgenda, FeaturedBusiness, SponsorTiers, Testimonials, WhyList } from '@/pages/home/sections'
 import { formatNumber, img } from '@/lib/utils'
 
 export default function Home() {
@@ -23,7 +24,7 @@ export default function Home() {
     <>
       <Hero />
       <SourcingDock />
-      <TrustBand />
+      {/* TrustBand (legal verification / 63 provinces / B2B support / languages) hidden on home; component kept in home/sections.tsx */}
       <CategoryTiles />
       <ProductsSection />
       <FeaturedBusiness />
@@ -138,6 +139,7 @@ function Hero() {
 /* ================================================================ SOURCING DOCK (GS-style 3-column) */
 function SourcingDock() {
   const { t, L } = useI18n()
+  const { session } = useProfile()
   const navigate = useNavigate()
   const slides = (useEvents().data ?? []).filter((e) => e.eventStatus !== 'ENDED').slice(0, 3)
   const [slide, setSlide] = useState(0)
@@ -217,7 +219,7 @@ function SourcingDock() {
 
         {/* account + quick RFQ */}
         <div className="flex flex-col gap-3">
-          <div className="rounded-2xl border bg-gradient-to-br from-primary-soft to-background p-4">
+          {!session && <div className="rounded-2xl border bg-gradient-to-br from-primary-soft to-background p-4">
             <div className="flex items-center gap-3">
               <div className="grid size-11 place-items-center rounded-full bg-primary/10 text-primary"><UserRound className="size-5" /></div>
               <div>
@@ -230,7 +232,7 @@ function SourcingDock() {
               <Link to="/login" className={buttonClass('outline', 'sm', 'h-9')}>{t.nav.login}</Link>
               <Link to="/register" className={buttonClass('default', 'sm', 'h-9')}>{t.nav.register}</Link>
             </div>
-          </div>
+          </div>}
           <form
             className="flex-1 rounded-2xl border p-4"
             onSubmit={(e) => {

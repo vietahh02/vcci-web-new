@@ -113,7 +113,7 @@ export function ChatComposer({
           {emoji && (
             <div className="absolute bottom-full right-0 z-20 mb-2 grid w-48 grid-cols-4 gap-1 rounded-xl border bg-popover p-2 shadow-lg">
               {EMOJIS.map((e) => (
-                <button key={e} type="button" onClick={() => { setDraft((d) => d + e); setEmoji(false) }} className="grid size-9 place-items-center rounded-lg text-lg hover:bg-muted" aria-label={e}>{e}</button>
+                <button key={e} type="button" onClick={() => { setDraft((d) => d + e); setEmoji(false) }} className="grid size-9 place-items-center rounded-full text-lg hover:bg-primary-soft hover:text-primary" aria-label={e}>{e}</button>
               ))}
             </div>
           )}
@@ -131,7 +131,7 @@ export function ChatComposer({
           aria-label={placeholder}
           className="max-h-32 min-h-10 flex-1 resize-none bg-transparent py-2.5 text-sm outline-none [field-sizing:content] disabled:opacity-60"
         />
-        <button type="submit" disabled={disabled || !draft.trim()} aria-label={tx('Gửi', 'Send', '보내기')} className={cn('grid size-10 shrink-0 place-items-center rounded-xl text-white transition active:scale-95 disabled:opacity-50', accent)}>
+        <button type="submit" disabled={disabled || !draft.trim()} aria-label={tx('Gửi', 'Send', '보내기')} className={cn('grid size-10 shrink-0 place-items-center rounded-full text-white transition-all duration-200 active:scale-95 disabled:opacity-50', accent)}>
           <Send className="size-4" />
         </button>
       </form>

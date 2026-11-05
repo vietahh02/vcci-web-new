@@ -281,7 +281,7 @@ export default function Messages() {
         ) : showThread ? (
           <>
             <div className="flex h-[72px] shrink-0 items-center gap-3 border-b bg-card px-5">
-              <button onClick={back} className="grid size-9 place-items-center rounded-lg hover:bg-muted md:hidden" aria-label={w.back}><ChevronLeft className="size-5" /></button>
+              <button onClick={back} className="grid size-9 place-items-center rounded-full hover:bg-primary-soft hover:text-primary md:hidden" aria-label={w.back}><ChevronLeft className="size-5" /></button>
               <ChatAvatar id={partner?.id} name={partner?.name} vcci={isSupport} />
               <div className="min-w-0 flex-1">
                 <div className="flex min-w-0 items-center gap-2">

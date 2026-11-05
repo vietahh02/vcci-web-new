@@ -225,8 +225,8 @@ export default function LiveRoom() {
                 }}
               >
                 <input value={text} onChange={(e) => setText(e.target.value)} placeholder={t.live.say} aria-label={t.live.say} className="h-10 min-w-0 flex-1 rounded-lg bg-white/10 px-3 text-sm text-white outline-none placeholder:text-white/40 focus:ring-2 focus:ring-primary" />
-                <button type="button" onClick={react} className="grid size-10 place-items-center rounded-lg bg-white/10 text-live hover:bg-white/15" aria-label={t.ui.react}><Heart className="size-4" /></button>
-                <button type="submit" className="grid size-10 place-items-center rounded-lg bg-primary hover:bg-primary-hover" aria-label={t.ui.send}><Send className="size-4" /></button>
+                <button type="button" onClick={react} className="grid size-10 place-items-center rounded-full bg-white/10 text-live hover:bg-white/15" aria-label={t.ui.react}><Heart className="size-4" /></button>
+                <button type="submit" className="grid size-10 place-items-center rounded-full bg-primary hover:bg-primary-hover hover:shadow-md" aria-label={t.ui.send}><Send className="size-4" /></button>
               </form>
             </div>
           </aside>

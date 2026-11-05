@@ -198,6 +198,9 @@
     padding-inline: 16px;
   }
   @media (min-width: 768px) { .container-page { padding-inline: 28px; } }
+  /* wide screens: use the space instead of leaving large side gutters */
+  @media (min-width: 1440px) { .container-page { max-width: 1440px; } }
+  @media (min-width: 1800px) { .container-page { max-width: 1640px; } }
 
   .bg-grid {
     background-image:

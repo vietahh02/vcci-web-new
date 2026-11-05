@@ -159,7 +159,7 @@ function ProductView({ product }: { product: Product }) {
               <MessageSquare /> {t.product.chatNow}
             </Button>
             <FavoriteButton product={product} />
-            <Button variant="ghost" size="icon" className="size-12 rounded-xl" aria-label={t.product.share} onClick={() => void share()}><Share2 /></Button>
+            <Button variant="ghost" size="icon" className="size-12 rounded-full" aria-label={t.product.share} onClick={() => void share()}><Share2 /></Button>
           </div>
 
           <div className="mt-10">
@@ -269,7 +269,7 @@ function FavoriteButton({ product }: { product: Product }) {
     )
   }
   return (
-    <Button variant="ghost" size="icon" className="size-12 rounded-xl" aria-label={t.product.addFav} aria-pressed={on} onClick={toggle}>
+    <Button variant="ghost" size="icon" className="size-12 rounded-full" aria-label={t.product.addFav} aria-pressed={on} onClick={toggle}>
       <Heart className={on ? 'fill-red-500 text-red-500' : ''} />
     </Button>
   )

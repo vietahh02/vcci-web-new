@@ -95,8 +95,6 @@ export interface Show {
   format?: 'ONLINE' | 'OFFLINE' | 'HYBRID'
   /** Physical venue, present only for OFFLINE/HYBRID shows; shown as secondary info. */
   physicalVenue?: Bilingual
-  /** Minimum visitor age; registration requires confirming it (backend always asks for ageConfirmed). */
-  minAge?: number
   boothCapacity: number
   visitorTicketFee: number
   ticketCurrency: 'VND' | 'USD'

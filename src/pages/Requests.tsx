@@ -7,7 +7,8 @@ import { browseImportRequests, getCategory, liveApi, USE_MOCK } from '@/api'
 import { categories, type ImportRequest } from '@/data/mock'
 import { CountryChip } from '@/components/brand'
 import { useToast } from '@/components/ui/overlay'
-import { Button, Field, Input, Skeleton, Textarea } from '@/components/ui/primitives'
+import { buttonClass, Button, Field, Input, Skeleton, Textarea } from '@/components/ui/primitives'
+import { DateField } from '@/components/ui/DateField'
 import { Select } from '@/components/ui/select'
 import { SuccessState } from '@/pages/ProductDetail'
 import { useI18n } from '@/lib/i18n'
@@ -40,29 +41,30 @@ export default function Requests() {
 
   return (
     <>
+      {/* 1. intro: compact, with a jump to the form below */}
       <section className="relative overflow-hidden border-b bg-gradient-to-br from-gold-soft/80 via-background to-primary-soft/60">
-        <div className="container-page grid gap-10 py-12 lg:grid-cols-[minmax(0,1fr)_460px] lg:py-16">
-          <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} className="lg:pt-6">
-            <nav aria-label={t.ui.breadcrumb} className="text-[13px] text-muted-foreground">
-              <Link to="/" className="hover:text-foreground">{t.common.home}</Link> / <span className="text-foreground">{t.nav.requests}</span>
-            </nav>
-            <h1 className="mt-4 text-4xl font-extrabold tracking-tight text-balance md:text-5xl">{t.requests.title}</h1>
-            <p className="mt-4 max-w-lg text-lg text-muted-foreground">{t.requests.sub}</p>
-            <ol className="mt-10 grid gap-6 sm:grid-cols-2">
-              {t.home.steps.map((s, i) => (
-                <motion.li key={s.t} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 + i * 0.08 }} className="flex gap-3">
-                  <span className="text-3xl font-extrabold leading-none text-gold/50">{i + 1}</span>
-                  <div>
-                    <p className="font-bold">{s.t}</p>
-                    <p className="mt-0.5 text-sm text-muted-foreground">{s.d}</p>
-                  </div>
-                </motion.li>
-              ))}
-            </ol>
+        <div className="container-page py-10 md:py-12">
+          <nav aria-label={t.ui.breadcrumb} className="text-[13px] text-muted-foreground">
+            <Link to="/" className="hover:text-foreground">{t.common.home}</Link> / <span className="text-foreground">{t.nav.requests}</span>
+          </nav>
+          <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} className="mt-4 flex flex-wrap items-end justify-between gap-6">
+            <div className="min-w-0">
+              <h1 className="text-4xl font-extrabold tracking-tight text-balance md:text-5xl">{t.requests.title}</h1>
+              <p className="mt-3 max-w-2xl text-muted-foreground md:text-lg">{t.requests.sub}</p>
+            </div>
+            <a href="#post-request" className={buttonClass('gold', 'lg')}><FilePlus2 /> {t.nav.postRequest}</a>
           </motion.div>
-          <motion.div ref={formRef} initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
-            <PostForm need={params.get('need') ?? ''} qty={params.get('qty') ?? ''} unit={params.get('unit') ?? ''} />
-          </motion.div>
+          <ol className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {t.home.steps.map((s, i) => (
+              <motion.li key={s.t} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 + i * 0.06 }} className="flex items-start gap-3 rounded-2xl border bg-background/70 p-4 backdrop-blur">
+                <span className="grid size-8 shrink-0 place-items-center rounded-full bg-gradient-to-b from-[#f2d36b] to-[#d9a62a] text-sm font-extrabold text-[#2b1d00] shadow-md shadow-amber-500/30">{i + 1}</span>
+                <div className="min-w-0">
+                  <p className="text-sm font-bold">{s.t}</p>
+                  <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">{s.d}</p>
+                </div>
+              </motion.li>
+            ))}
+          </ol>
         </div>
       </section>
 
@@ -111,6 +113,17 @@ export default function Requests() {
           )}
         </div>
       </section>
+
+      {/* 2. post form: below the list, same page */}
+      <section id="post-request" ref={formRef} className="container-page mt-16 scroll-mt-32 pb-16">
+        <div className="mx-auto max-w-3xl">
+          <div className="mb-5">
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary">{t.nav.postRequest}</p>
+            <h2 className="mt-1 text-2xl font-extrabold tracking-tight">{t.requests.postTitle}</h2>
+          </div>
+          <PostForm need={params.get('need') ?? ''} qty={params.get('qty') ?? ''} unit={params.get('unit') ?? ''} />
+        </div>
+      </section>
     </>
   )
 }
@@ -120,6 +133,7 @@ function PostForm({ need, qty, unit }: { need: string; qty: string; unit: string
   const { t, L } = useI18n()
   const toast = useToast()
   const [sent, setSent] = useState(false)
+  const [dates, setDates] = useState({ startTime: '', endTime: '' })
 
   return (
     <div className="rounded-2xl border bg-card shadow-2xl shadow-navy/10">
@@ -162,8 +176,8 @@ function PostForm({ need, qty, unit }: { need: string; qty: string; unit: string
             <Field label={t.requests.unit} htmlFor="pr-unit"><Select id="pr-unit" name="unit" defaultValue={UNITS.includes(unit) ? unit : 'MT'} options={UNITS.map((u) => ({ value: u, label: u }))} /></Field>
           </div>
           <Field label={t.requests.price} htmlFor="pr-price"><Input id="pr-price" name="price" type="number" min={0} step="0.01" required /></Field>
-          <Field label={t.requests.start} htmlFor="pr-start"><Input id="pr-start" name="startTime" type="date" required /></Field>
-          <Field label={t.requests.end} htmlFor="pr-end"><Input id="pr-end" name="endTime" type="date" required /></Field>
+          <Field label={t.requests.start} htmlFor="pr-start"><DateField id="pr-start" name="startTime" value={dates.startTime} onChange={(e) => setDates((d) => ({ ...d, startTime: e.target.value }))} required /></Field>
+          <Field label={t.requests.end} htmlFor="pr-end"><DateField id="pr-end" name="endTime" value={dates.endTime} min={dates.startTime} onChange={(e) => setDates((d) => ({ ...d, endTime: e.target.value }))} required /></Field>
           <Field label={t.requests.description} htmlFor="pr-desc" className="sm:col-span-2"><Textarea id="pr-desc" name="description" className="min-h-20" placeholder={t.product.messagePh} /></Field>
           <Button type="submit" variant="gold" size="lg" className="sm:col-span-2"><FilePlus2 /> {t.requests.post}</Button>
         </form>

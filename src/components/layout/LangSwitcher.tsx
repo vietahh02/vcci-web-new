@@ -9,7 +9,7 @@ export function LangSwitcher({ className }: { className?: string }) {
   return (
     <DropdownMenu modal={false}>
       <DropdownMenuTrigger
-        className={cn('group inline-flex items-center gap-1 rounded-lg p-2.5 text-[13px] font-bold text-muted-foreground transition hover:bg-muted hover:text-foreground data-[state=open]:bg-muted data-[state=open]:text-foreground', className)}
+        className={cn('group inline-flex items-center gap-1 rounded-full px-3 py-2 text-[13px] font-bold text-muted-foreground transition-all duration-200 hover:bg-primary-soft hover:text-primary data-[state=open]:bg-muted data-[state=open]:text-foreground', className)}
         aria-label={t.ui.language}
       >
         <Globe className="size-[18px]" /> {LANGS.find((l) => l.code === lang)?.short}

@@ -21,7 +21,7 @@ export function ProductCard({ product, className }: { product: Product; classNam
       <SmartImage
         src={img(product.productImages[0]!, 520, 520)}
         alt={L(product.productName)}
-        className="aspect-square rounded-xl"
+        className="aspect-square rounded-2xl"
         imgClassName="group-hover:scale-105"
       />
       <p className="mt-3 line-clamp-2 text-[14px] font-medium leading-snug text-foreground/90 group-hover:text-primary">{L(product.productName)}</p>
@@ -40,7 +40,7 @@ export function SupplierCard({ business }: { business: Business }) {
   const { t, L } = useI18n()
   const items = (useOrgProducts(business.id, USE_MOCK || liveApi.hasEmbeddedProducts(business.id)).data ?? []).slice(0, 3)
   return (
-    <Tilt className="h-full rounded-2xl" max={6}>
+    <Tilt className="h-full rounded-3xl" max={6}>
       <Link
         to={`/suppliers/${business.id}`}
         className="group flex h-full flex-col overflow-hidden rounded-2xl border bg-card shadow-sm transition-[box-shadow,border-color] duration-300 hover:border-primary/30 hover:shadow-2xl hover:shadow-navy/12"
@@ -58,13 +58,13 @@ export function SupplierCard({ business }: { business: Business }) {
                 alt={L(p.productName)}
                 loading="lazy"
                 style={{ transitionDelay: `${i * 60}ms` }}
-                className="size-11 rounded-lg object-cover ring-2 ring-white/80"
+                className="size-11 rounded-full object-cover ring-2 ring-white/80"
               />
             ))}
           </div>
         </div>
         <div className="relative flex flex-1 flex-col px-5 pb-5">
-          <CompanyMark name={business.nameEn} accent={business.accent} className="-mt-8 size-16 rounded-2xl border-4 border-card text-lg shadow-md" />
+          <CompanyMark name={business.nameEn} accent={business.accent} className="-mt-8 size-16 rounded-full border-4 border-card text-lg shadow-md" />
           <p className="mt-3 line-clamp-2 text-[16px] font-bold leading-snug transition-colors group-hover:text-primary">{business.name}</p>
           <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] text-muted-foreground">
             <ReputationStars orgId={business.id} legacyScore={business.reputationScore} className="text-foreground" />
@@ -91,7 +91,7 @@ export function SupplierRow({ business }: { business: Business }) {
   return (
     <article className="group grid gap-5 border-b py-6 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
       <div className="flex gap-4">
-        <CompanyMark name={business.nameEn} accent={business.accent} className="size-14 rounded-xl text-base" />
+        <CompanyMark name={business.nameEn} accent={business.accent} className="size-14 rounded-full text-base" />
         <div className="min-w-0">
           <Link to={`/suppliers/${business.id}`} className="text-[17px] font-bold leading-snug hover:text-primary">{business.name}</Link>
           <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] text-muted-foreground">
@@ -105,11 +105,11 @@ export function SupplierRow({ business }: { business: Business }) {
       </div>
       <div className="flex items-center gap-2 md:justify-end">
         {items.map((p) => (
-          <Link key={p.id} to={`/products/${p.id}`} className="block size-20 overflow-hidden rounded-lg bg-muted">
+          <Link key={p.id} to={`/products/${p.id}`} className="block size-20 overflow-hidden rounded-2xl bg-muted">
             <img src={img(p.productImages[0]!, 200, 200)} alt={L(p.productName)} loading="lazy" className="size-full object-cover transition-transform duration-500 hover:scale-110" />
           </Link>
         ))}
-        <Link to={`/suppliers/${business.id}`} className="ml-2 rounded-lg border px-4 py-2 text-sm font-semibold transition hover:border-primary hover:text-primary">{t.common.contact}</Link>
+        <Link to={`/suppliers/${business.id}`} className="ml-2 rounded-full border px-4 py-2 text-sm font-semibold transition hover:border-primary hover:text-primary">{t.common.contact}</Link>
       </div>
     </article>
   )
@@ -121,7 +121,7 @@ export function EventCard({ event }: { event: EventItem }) {
   const isLive = event.eventStatus === 'ONGOING'
   return (
     <Link to={`/events/${event.id}`} className="group block">
-      <div className="relative aspect-[16/10] overflow-hidden rounded-xl bg-muted">
+      <div className="relative aspect-[16/10] overflow-hidden rounded-2xl bg-muted">
         <img src={img(event.coverImage, 800, 500)} alt="" loading="lazy" className={cn('size-full object-cover transition-transform duration-700 group-hover:scale-105', event.eventStatus === 'ENDED' && 'grayscale-[50%]')} />
         <div className="absolute left-3 top-3 flex gap-1.5">
           {isLive ? (
@@ -131,7 +131,7 @@ export function EventCard({ event }: { event: EventItem }) {
           )}
         </div>
         {isLive && event.viewers && (
-          <span className="absolute bottom-3 left-3 inline-flex items-center gap-1.5 rounded-md bg-black/55 px-2 py-1 text-xs font-semibold text-white backdrop-blur">
+          <span className="absolute bottom-3 left-3 inline-flex items-center gap-1.5 rounded-full bg-black/55 px-2.5 py-1 text-xs font-semibold text-white backdrop-blur">
             <Users className="size-3.5" /> {formatNumber(event.viewers, locale)}
           </span>
         )}

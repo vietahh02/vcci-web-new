@@ -101,7 +101,7 @@ export function FileUpload({ rule, value, onChange, compact, noHint }: { rule: R
             <p className="truncate text-sm font-medium">{value.name}</p>
             <p className="flex items-center gap-1 text-xs text-success"><Check className="size-3.5" /> {value.size ? `${formatSize(value.size)} · ` : ''}{tx('Hợp lệ', 'Valid', '유효')}</p>
           </div>
-          <button type="button" onClick={() => onChange(null)} className="rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-destructive" aria-label={tx('Xoá', 'Remove', '삭제')}><Trash2 className="size-4" /></button>
+          <button type="button" onClick={() => onChange(null)} className="rounded-full p-2 text-muted-foreground hover:bg-destructive/10 hover:text-destructive" aria-label={tx('Xoá', 'Remove', '삭제')}><Trash2 className="size-4" /></button>
         </div>
       ) : (
         <button
@@ -161,7 +161,7 @@ export function ImageUpload({ rule, value, onChange }: { rule: 'logo' | 'cover';
             <img src={fileSrc(value)} alt="" className={cn('size-full', logo ? 'object-contain p-2' : 'object-cover')} />
             <div className="absolute inset-0 flex items-center justify-center gap-2 bg-black/50 opacity-0 transition focus-within:opacity-100 group-hover:opacity-100 pointer-coarse:items-end pointer-coarse:bg-transparent pointer-coarse:bg-gradient-to-t pointer-coarse:from-black/60 pointer-coarse:to-transparent pointer-coarse:to-60% pointer-coarse:pb-2 pointer-coarse:opacity-100">
               <button type="button" onClick={() => input.current?.click()} className="rounded-lg bg-white px-3 py-1.5 text-xs font-semibold text-navy">{tx('Đổi ảnh', 'Replace', '변경')}</button>
-              <button type="button" onClick={() => onChange('')} className="rounded-lg bg-white/90 p-1.5 text-destructive" aria-label={tx('Xoá', 'Remove', '삭제')}><X className="size-4" /></button>
+              <button type="button" onClick={() => onChange('')} className="rounded-full bg-white/90 p-1.5 text-destructive" aria-label={tx('Xoá', 'Remove', '삭제')}><X className="size-4" /></button>
             </div>
           </>
         ) : (
@@ -215,7 +215,7 @@ export function GalleryUpload({ value, onChange, max = 12 }: { value: MediaItem[
             <motion.div key={m.id} layout initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} className="overflow-hidden rounded-xl border bg-card">
               <div className="group relative aspect-[4/3]">
                 <img src={fileSrc(m.url)} alt={m.caption} className="size-full object-cover" />
-                <button type="button" onClick={() => onChange(value.filter((x) => x.id !== m.id))} className="absolute right-2 top-2 rounded-md bg-black/55 p-1.5 text-white opacity-0 transition focus-visible:opacity-100 group-hover:opacity-100 pointer-coarse:p-2 pointer-coarse:opacity-100" aria-label={tx('Xoá', 'Remove', '삭제')}><Trash2 className="size-3.5" /></button>
+                <button type="button" onClick={() => onChange(value.filter((x) => x.id !== m.id))} className="absolute right-2 top-2 rounded-full bg-black/55 p-1.5 text-white opacity-0 transition-all duration-200 focus-visible:opacity-100 group-hover:opacity-100 pointer-coarse:p-2 pointer-coarse:opacity-100" aria-label={tx('Xoá', 'Remove', '삭제')}><Trash2 className="size-3.5" /></button>
                 {i === 0 && <span className="absolute left-2 top-2 rounded bg-gold-bright px-1.5 py-0.5 text-[10px] font-bold text-navy">{tx('Ảnh chính', 'Main', '대표')}</span>}
               </div>
               <div className="space-y-1.5 p-2">

@@ -15,6 +15,7 @@ import { CountUp } from '@/components/effects'
 import { LangSwitcher } from '@/components/layout/LangSwitcher'
 import { useToast } from '@/components/ui/overlay'
 import { Button, Field, Input } from '@/components/ui/primitives'
+import { DateField } from '@/components/ui/DateField'
 import { Select } from '@/components/ui/select'
 import { useI18n } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
@@ -87,7 +88,7 @@ function Captcha({ live }: { live?: ReturnType<typeof useLiveCaptcha> }) {
       <div className="relative grid h-10 w-28 select-none place-items-center overflow-hidden rounded-lg bg-[repeating-linear-gradient(45deg,var(--muted),var(--muted)_6px,var(--background)_6px,var(--background)_12px)] font-mono text-lg font-bold italic tracking-[0.25em] text-primary">
         {remote ? (live.cap?.image ? <img src={live.cap.image} alt="" className="size-full object-contain" /> : '…') : code}
       </div>
-      <button type="button" onClick={() => (remote ? live.refresh() : setCode(Math.random().toString(36).slice(2, 7).toUpperCase()))} className="grid size-10 place-items-center rounded-lg border hover:bg-muted" aria-label={t.ui.refreshCaptcha}>
+      <button type="button" onClick={() => (remote ? live.refresh() : setCode(Math.random().toString(36).slice(2, 7).toUpperCase()))} className="grid size-10 place-items-center rounded-full border hover:bg-primary-soft hover:text-primary" aria-label={t.ui.refreshCaptcha}>
         <RefreshCw className="size-4" />
       </button>
     </div>
@@ -330,7 +331,7 @@ export function Register() {
                   <Field label={tx('Ghi rõ loại hình', 'Specify legal form', '기업 형태 명시') + ' *'} htmlFor="bf-other"><Input id="bf-other" placeholder={tx('Nhập loại hình doanh nghiệp', 'Enter the legal form', '기업 형태 입력')} required maxLength={150} value={r.otherBusinessForm} onChange={(e) => set('otherBusinessForm', e.target.value)} /></Field>
                 )}
                 <Field label={tx('Số đăng ký kinh doanh', 'Business registration no.', '영업 등록 번호') + ' *'} htmlFor="brn"><Input id="brn" placeholder={tx('VD: 0123456789', 'e.g. 0123456789', '예: 0123456789')} required maxLength={50} value={r.businessRegNo} onChange={(e) => set('businessRegNo', e.target.value)} /></Field>
-                <Field label={tx('Ngày cấp', 'Date of issue', '발급일') + ' *'} htmlFor="brd"><Input id="brd" type="date" required max={today} value={r.businessRegDate} onChange={(e) => set('businessRegDate', e.target.value)} /></Field>
+                <Field label={tx('Ngày cấp', 'Date of issue', '발급일') + ' *'} htmlFor="brd"><DateField id="brd" required max={today} value={r.businessRegDate} onChange={(e) => set('businessRegDate', e.target.value)} /></Field>
                 <Field label={tx('Nơi cấp', 'Place of issue', '발급 기관') + ' *'} htmlFor="brp" className="sm:col-span-2"><Input id="brp" required maxLength={255} value={r.businessRegPlace} onChange={(e) => set('businessRegPlace', e.target.value)} placeholder={tx('VD: Sở Kế hoạch và Đầu tư TP. Hà Nội', 'e.g. Hanoi Department of Planning and Investment', '예: 하노이 기획투자국')} /></Field>
                 <Field label={tx('Loại hình hoạt động', 'Business type', '사업 유형') + ' *'} htmlFor="bt">
                   <Select id="bt" value={r.businessType} onValueChange={(v) => set('businessType', v)} options={(Object.keys(t.supplier.types) as (keyof typeof t.supplier.types)[]).map((k) => ({ value: k, label: t.supplier.types[k] }))} />
@@ -409,7 +410,7 @@ export function Register() {
                       <div key={i} className="grid gap-2 sm:grid-cols-[1fr_1.6fr_auto]">
                         <Input aria-label={tx('Tên chi nhánh', 'Branch name', '지사명')} placeholder={tx('Tên chi nhánh / VPĐD', 'Branch / office name', '지사 / 사무소명')} required maxLength={255} value={b.name} onChange={(e) => setBranch(i, { name: e.target.value })} />
                         <Input aria-label={tx('Địa chỉ chi nhánh', 'Branch address', '지사 주소')} placeholder={tx('Địa chỉ (trong hoặc ngoài nước)', 'Address (domestic or overseas)', '주소 (국내 또는 해외)')} maxLength={1000} value={b.address} onChange={(e) => setBranch(i, { address: e.target.value })} />
-                        <button type="button" onClick={() => set('branches', r.branches.filter((_, j) => j !== i))} className="rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-destructive" aria-label={tx('Xoá chi nhánh', 'Remove branch', '지사 삭제')}><Trash2 className="size-4" /></button>
+                        <button type="button" onClick={() => set('branches', r.branches.filter((_, j) => j !== i))} className="rounded-full p-2 text-muted-foreground hover:bg-destructive/10 hover:text-destructive" aria-label={tx('Xoá chi nhánh', 'Remove branch', '지사 삭제')}><Trash2 className="size-4" /></button>
                       </div>
                     ))}
                   </div>

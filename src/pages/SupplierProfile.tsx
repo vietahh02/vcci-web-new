@@ -80,12 +80,14 @@ function Storefront({ b, remote }: { b: Business; remote: PublicProfile | null }
       <div ref={coverRef} className="relative isolate overflow-hidden bg-navy text-white">
         <motion.img style={{ y: coverY }} src={pp.cover ?? img(b.coverImage, 1800, 700)} alt="" className="absolute inset-0 -z-20 size-full scale-110 object-cover" />
         <div className="absolute inset-0 -z-10 bg-gradient-to-r from-navy via-navy/80 to-navy/30" />
+        <div aria-hidden className="pointer-events-none absolute -right-24 -top-24 -z-10 size-96 animate-aurora rounded-full bg-primary/30 blur-3xl" />
+        <div aria-hidden className="pointer-events-none absolute -bottom-32 left-1/3 -z-10 size-80 animate-aurora rounded-full bg-gold-bright/20 blur-3xl [animation-delay:-6s]" />
         <div className="container-page flex min-h-72 flex-col justify-end gap-6 py-10 md:flex-row md:items-end md:justify-between">
           <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="flex items-end gap-5">
             {pp.logo ? (
-              <img src={pp.logo} alt={b.name} className="size-20 rounded-2xl bg-white object-contain p-2 ring-4 ring-white/15 md:size-24" />
+              <img src={pp.logo} alt={b.name} className="size-20 rounded-3xl bg-white object-contain p-2 shadow-2xl shadow-black/30 ring-4 ring-gold-bright/30 md:size-24" />
             ) : (
-              <CompanyMark name={b.nameEn} accent={b.accent} className="size-20 rounded-2xl text-2xl ring-4 ring-white/15 md:size-24" />
+              <CompanyMark name={b.nameEn} accent={b.accent} className="size-20 rounded-3xl text-2xl shadow-2xl shadow-black/30 ring-4 ring-gold-bright/30 md:size-24" />
             )}
             <div>
               <div className="flex flex-wrap items-center gap-2">
@@ -96,14 +98,14 @@ function Storefront({ b, remote }: { b: Business; remote: PublicProfile | null }
               <p className="text-sm text-white/65">{pp.nameEn}</p>
               <p className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-white/75">
                 <ReputationStars orgId={b.id} legacyScore={b.reputationScore} className="text-white" dark />
-                <span className="inline-flex items-center gap-1.5"><MapPin className="size-4" /> {b.province}</span>
-                <span className="inline-flex items-center gap-1.5"><Users className="size-4" /> {pp.facts.employees}</span>
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 backdrop-blur"><MapPin className="size-4 text-gold-bright" /> {b.province}</span>
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 backdrop-blur"><Users className="size-4 text-gold-bright" /> {pp.facts.employees}</span>
               </p>
             </div>
           </motion.div>
           <div className="flex flex-wrap gap-2">
-            {pp.own && <Link to="/account/profile" className="inline-flex h-10 items-center gap-2 rounded-lg bg-white/15 px-4 text-sm font-semibold hover:bg-white/25">{tx('Sửa hồ sơ', 'Edit profile', '프로필 수정')}</Link>}
-            <Button variant="ghost" className="border border-white/25 text-white hover:bg-white/10" onClick={() => {
+            {pp.own && <Link to="/account/profile" className="inline-flex h-10 items-center gap-2 rounded-full bg-white/15 px-5 text-sm font-semibold transition-all duration-200 hover:bg-white/25">{tx('Sửa hồ sơ', 'Edit profile', '프로필 수정')}</Link>}
+            <Button variant="ghost" className={cn('border backdrop-blur transition-all duration-300 hover:-translate-y-0.5', following ? 'border-gold-bright/60 bg-gold-bright text-[#2b1d00] shadow-lg shadow-gold-bright/30 hover:bg-gold-bright hover:text-[#2b1d00]' : 'border-white/30 bg-white/10 text-white hover:bg-white/20')} onClick={() => {
               const next = !following
               const done = () => { setFollowing(next); if (next) toast({ kind: 'success', title: t.supplier.follow, description: b.name }) }
               if (USE_MOCK) return done()
@@ -112,7 +114,7 @@ function Storefront({ b, remote }: { b: Business; remote: PublicProfile | null }
               {following ? <BadgeCheck /> : <Plus />} {t.supplier.follow}
             </Button>
             {!pp.own && (
-              <Button variant="ghost" className="border border-white/25 text-white hover:bg-white/10" onClick={() => openB2bChat(b.id)}>
+              <Button variant="default" className="bg-gradient-to-b from-[#2a9fd8] to-primary text-white shadow-lg shadow-primary/40 transition-all duration-300 hover:-translate-y-0.5 hover:brightness-110" onClick={() => openB2bChat(b.id)}>
                 <MessageSquare /> {tx('Nhắn tin', 'Message', '메시지')}
               </Button>
             )}
@@ -121,17 +123,17 @@ function Storefront({ b, remote }: { b: Business; remote: PublicProfile | null }
         </div>
       </div>
 
-      <div className="sticky top-[112px] z-30 border-b bg-background/95 backdrop-blur max-lg:top-[68px]">
-        <div className="container-page flex items-center gap-6">
-          <span className="hidden shrink-0 items-center gap-2 py-3 lg:flex">
-            <CompanyMark name={b.nameEn} accent={b.accent} className="size-7 rounded-md text-[10px]" />
+      <div className="sticky top-[112px] z-30 border-b bg-background/85 py-3 backdrop-blur-xl max-lg:top-[68px]">
+        <div className="container-page flex items-center gap-4">
+          <span className="hidden shrink-0 items-center gap-2 lg:flex">
+            <CompanyMark name={b.nameEn} accent={b.accent} className="size-8 rounded-full text-[10px]" />
             <span className="max-w-56 truncate text-sm font-bold">{b.name}</span>
           </span>
-          <div className="no-scrollbar flex gap-1 overflow-x-auto">
+          <div className="no-scrollbar flex gap-1 overflow-x-auto rounded-full bg-muted p-1">
             {(['overview', 'capability', 'products', 'contact'] as Tab[]).map((k) => (
-              <button key={k} onClick={() => setTab(k)} className={cn('relative shrink-0 px-3 py-4 text-sm font-semibold transition-colors', tab === k ? 'text-primary' : 'text-muted-foreground hover:text-foreground')}>
-                {t.supplier.tabs[k]}
-                {tab === k && <motion.span layoutId="store-tab" className="absolute inset-x-3 bottom-0 h-0.5 rounded-full bg-primary" />}
+              <button key={k} onClick={() => setTab(k)} className={cn('relative shrink-0 rounded-full px-4 py-2 text-sm font-semibold transition-colors duration-200', tab === k ? 'text-foreground' : 'text-muted-foreground hover:text-foreground')}>
+                {tab === k && <motion.span layoutId="store-tab" className="absolute inset-0 rounded-full bg-background shadow-md shadow-primary/10 ring-1 ring-border" transition={{ type: 'spring', bounce: 0.2, duration: 0.5 }} />}
+                <span className="relative">{t.supplier.tabs[k]}</span>
               </button>
             ))}
           </div>
@@ -155,7 +157,7 @@ function Storefront({ b, remote }: { b: Business; remote: PublicProfile | null }
                       </div>
                       <div className="mt-4 grid grid-cols-3 gap-3">
                         {pp.gallery.slice(0, 3).map((m, i) => (
-                          <button key={m.id} onClick={() => setLightbox({ slides: gallerySlides, index: i })} className="group relative aspect-[4/3] overflow-hidden rounded-xl bg-muted">
+                          <button key={m.id} onClick={() => setLightbox({ slides: gallerySlides, index: i })} className="group relative aspect-[4/3] overflow-hidden rounded-3xl bg-muted shadow-sm transition-shadow duration-300 hover:shadow-xl">
                             <img src={m.url} alt={caption(m, L)} loading="lazy" className="size-full object-cover transition-transform duration-500 group-hover:scale-105" />
                           </button>
                         ))}
@@ -455,8 +457,8 @@ function DocCard({ name, size, preview, file, onView }: { name: string; size: nu
           <p className="truncate text-sm font-semibold">{name}</p>
           {size > 0 && <p className="text-xs text-muted-foreground">{formatSize(size)}</p>}
         </div>
-        {preview && <button onClick={onView} className="rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-foreground" aria-label={tx('Xem', 'View', '보기')}><Eye className="size-4" /></button>}
-        {file && <a href={file} download={name} target="_blank" rel="noopener noreferrer" className="rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-foreground" aria-label={tx('Tải về', 'Download', '다운로드')}><Download className="size-4" /></a>}
+        {preview && <button onClick={onView} className="rounded-full p-2 text-muted-foreground hover:bg-primary-soft hover:text-primary" aria-label={tx('Xem', 'View', '보기')}><Eye className="size-4" /></button>}
+        {file && <a href={file} download={name} target="_blank" rel="noopener noreferrer" className="rounded-full p-2 text-muted-foreground hover:bg-primary-soft hover:text-primary" aria-label={tx('Tải về', 'Download', '다운로드')}><Download className="size-4" /></a>}
       </div>
     </div>
   )

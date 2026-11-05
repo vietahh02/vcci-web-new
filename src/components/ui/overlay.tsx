@@ -43,7 +43,7 @@ export function DialogContent({
               <DialogPrimitive.Description className="sr-only">{title}</DialogPrimitive.Description>
             )}
           </div>
-          <DialogPrimitive.Close className="-mr-2 rounded-md p-2 text-muted-foreground transition hover:bg-muted hover:text-foreground" aria-label={t.ui.close}>
+          <DialogPrimitive.Close className="-mr-2 rounded-full p-2 text-muted-foreground transition-all duration-200 hover:bg-primary-soft hover:text-primary" aria-label={t.ui.close}>
             <X className="size-4" />
           </DialogPrimitive.Close>
         </div>
@@ -85,7 +85,7 @@ export function SheetContent({
               {description ?? title}
             </DialogPrimitive.Description>
           </div>
-          <DialogPrimitive.Close className="-mr-2 rounded-md p-2 text-muted-foreground hover:bg-muted" aria-label={t.ui.close}>
+          <DialogPrimitive.Close className="-mr-2 rounded-full p-2 text-muted-foreground hover:bg-primary-soft hover:text-primary" aria-label={t.ui.close}>
             <X className="size-4" />
           </DialogPrimitive.Close>
         </div>
@@ -113,18 +113,18 @@ export function Tabs({
 }) {
   return (
     <TabsPrimitive.Root value={value} onValueChange={onValueChange} className="no-scrollbar max-w-full overflow-x-auto">
-      <TabsPrimitive.List className={cn('inline-flex items-center gap-1 rounded-xl bg-muted p-1', className)}>
+      <TabsPrimitive.List className={cn('inline-flex items-center gap-1 rounded-full bg-muted p-1', className)}>
         {items.map((it) => (
           <TabsPrimitive.Trigger
             key={it.value}
             value={it.value}
             className={cn(
-              'relative shrink-0 whitespace-nowrap rounded-lg font-semibold text-muted-foreground transition-colors data-[state=active]:text-foreground',
+              'relative shrink-0 whitespace-nowrap rounded-full font-semibold text-muted-foreground transition-colors duration-200 hover:text-foreground data-[state=active]:text-foreground',
               size === 'sm' ? 'px-3 py-1.5 text-[13px]' : 'px-4 py-2 text-sm',
             )}
           >
             {value === it.value && (
-              <motion.span layoutId={layoutId} className="absolute inset-0 rounded-lg bg-background shadow-sm ring-1 ring-border" transition={{ type: 'spring', bounce: 0.18, duration: 0.45 }} />
+              <motion.span layoutId={layoutId} className="absolute inset-0 rounded-full bg-background shadow-md shadow-primary/10 ring-1 ring-border" transition={{ type: 'spring', bounce: 0.18, duration: 0.45 }} />
             )}
             <span className="relative z-10 inline-flex items-center gap-1.5">{it.label}</span>
           </TabsPrimitive.Trigger>

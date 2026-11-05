@@ -48,7 +48,7 @@ export function Select<T extends string = string>({ options, value, defaultValue
       <SelectPrimitive.Trigger
         id={id}
         {...aria}
-        className={cn(fieldBase, 'group flex h-10 items-center justify-between gap-2 pr-2.5 text-left data-[placeholder]:text-muted-foreground/80 data-[state=open]:border-primary data-[state=open]:ring-4 data-[state=open]:ring-primary/12', className)}
+        className={cn(fieldBase, 'group flex h-10 items-center justify-between gap-2 rounded-full px-4 pr-3 text-left data-[placeholder]:text-muted-foreground/80 data-[state=open]:border-primary data-[state=open]:ring-4 data-[state=open]:ring-primary/12', className)}
       >
         <span className="min-w-0 flex-1 truncate"><SelectPrimitive.Value placeholder={placeholder} /></span>
         <SelectPrimitive.Icon asChild><ChevronDown className="size-4 shrink-0 text-muted-foreground transition-transform duration-200 group-data-[state=open]:rotate-180" /></SelectPrimitive.Icon>

@@ -1,6 +1,6 @@
 /** Detail page of a Show Hub event (online trade show). Rendered by EventDetail when the id is a show. */
 import { motion } from 'motion/react'
-import { Bell, BellRing, Building2, CalendarDays, CheckCircle2, Clock, Globe2, MapPin, Mic2, PlayCircle, Radio, Search, Send, Store, Ticket, Users, Video } from 'lucide-react'
+import { Bell, BellRing, Boxes, Building2, CalendarDays, CheckCircle2, Clock, Globe2, MapPin, Mic2, PlayCircle, Quote, Radio, Search, Send, Store, Ticket, Users, Video } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { CompanyMark, CountryChip } from '@/components/brand'
@@ -76,22 +76,39 @@ export function ShowEventDetail({ show }: { show: Show }) {
               <Badge variant="outline" className="border-white/30 text-white"><Globe2 /> {show.physicalVenue ? x.onlineFirst : x.online}</Badge>
               {show.industries.slice(0, 4).map((i) => <Badge key={i} variant="outline" className="border-white/20 text-white/80">{i}</Badge>)}
             </div>
-            <h1 className="mt-3 max-w-3xl text-2xl font-extrabold leading-tight tracking-tight text-balance md:text-4xl">{L(show.title)}</h1>
-            <p className="mt-2 max-w-2xl text-white/75 md:text-base">{L(show.tagline)}</p>
+            <div className="mt-4 flex items-start gap-4 md:gap-5">
+              <div className="shrink-0 rounded-full border border-gold-bright/35 bg-gradient-to-b from-gold-bright/25 to-white/5 px-3.5 py-2.5 text-center shadow-lg shadow-black/20 backdrop-blur">
+                <p className="text-[11px] font-bold uppercase tracking-widest text-gold-bright">{formatDate(show.startDate, locale, { month: 'short' })}</p>
+                <p className="mt-0.5 text-3xl font-extrabold leading-none tabular-nums">{formatDate(show.startDate, locale, { day: '2-digit' })}</p>
+              </div>
+              <div className="min-w-0">
+                <h1 className="max-w-3xl text-2xl font-extrabold leading-tight tracking-tight text-balance md:text-4xl">{L(show.title)}</h1>
+                <p className="mt-2 max-w-2xl text-white/75 md:text-base">{L(show.tagline)}</p>
+              </div>
+            </div>
             <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-sm text-white/80">
               <span className="inline-flex items-center gap-2"><CalendarDays className="size-4 text-gold-bright" /> {formatDate(show.startDate, locale, { day: '2-digit', month: 'long' })} – {formatDate(show.endDate, locale, { day: '2-digit', month: 'long', year: 'numeric' })}</span>
               <span className="inline-flex items-center gap-2"><Globe2 className="size-4 text-gold-bright" /> {L(show.virtualVenue)}</span>
               {show.physicalVenue && <span className="inline-flex items-center gap-2 text-white/60"><MapPin className="size-4" /> {x.physicalVenue}: {L(show.physicalVenue)}</span>}
               <span className="inline-flex items-center gap-2"><Building2 className="size-4 text-gold-bright" /> {L(show.organizer)}</span>
             </div>
-            <dl className="mt-5 grid max-w-xl grid-cols-4 gap-4">
-              {[[show.booths.length, x.stats.booths], [productCount, x.stats.products], [show.sessions.length, x.stats.sessions], [show.issuedBadges, x.stats.badges]].map(([n, l]) => (
-                <div key={l}><dd className="text-xl font-extrabold tabular-nums md:text-2xl">{formatNumber(Number(n), locale)}</dd><dt className="text-[11px] font-semibold uppercase tracking-wider text-white/60">{l}</dt></div>
+            <dl className="mt-6 grid max-w-xl grid-cols-2 gap-3 sm:grid-cols-4">
+              {[
+                { n: show.booths.length, l: x.stats.booths, Icon: Store },
+                { n: productCount, l: x.stats.products, Icon: Boxes },
+                { n: show.sessions.length, l: x.stats.sessions, Icon: Mic2 },
+                { n: show.issuedBadges, l: x.stats.badges, Icon: Ticket },
+              ].map(({ n, l, Icon }) => (
+                <div key={l} className="group rounded-3xl border border-white/10 bg-white/5 px-4 py-3.5 backdrop-blur transition-all duration-300 hover:-translate-y-0.5 hover:border-gold-bright/40 hover:bg-white/10">
+                  <Icon className="size-4 text-gold-bright transition group-hover:scale-110" />
+                  <dd className="mt-2 text-xl font-extrabold tabular-nums md:text-2xl">{formatNumber(Number(n), locale)}</dd>
+                  <dt className="text-[11px] font-semibold uppercase tracking-wider text-white/60">{l}</dt>
+                </div>
               ))}
             </dl>
           </Reveal>
 
-          <Reveal delay={0.15} className="glass-dark h-fit rounded-2xl p-5">
+          <Reveal delay={0.15} className="glass-dark h-fit rounded-3xl p-6 shadow-2xl shadow-black/30 ring-1 ring-gold-bright/25">
             {show.status === 'UPCOMING' && (
               <>
                 <p className="text-xs font-semibold uppercase tracking-wider text-white/60">{t.events.startsIn}</p>
@@ -159,7 +176,7 @@ function Overview({ show }: { show: Show }) {
     <div className="grid gap-10 lg:grid-cols-[1fr_380px]">
       <div className="space-y-10">
         <section>
-          <p className="max-w-3xl leading-relaxed text-muted-foreground">{L(show.introduction)}</p>
+          <div className="relative max-w-3xl overflow-hidden rounded-3xl border bg-gradient-to-br from-primary-soft/60 via-background to-gold-soft/40 p-6 md:p-8"><Quote className="absolute right-6 top-6 size-14 text-primary/10" aria-hidden /><p className="relative text-[15px] leading-relaxed text-foreground/85 md:text-base">{L(show.introduction)}</p></div>
           <p className="mt-4 inline-flex items-center gap-2 rounded-lg bg-primary-soft px-3 py-2 text-sm font-medium text-primary"><Globe2 className="size-4" /> {x.direction[show.direction]}</p>
         </section>
         <section>
@@ -168,7 +185,7 @@ function Overview({ show }: { show: Show }) {
             {show.phases.map((p) => {
               const active = p.start <= now && now <= p.end && show.status === 'ONGOING'
               return (
-                <li key={p.id} className="relative">
+                <li key={p.id} className={cn('relative rounded-2xl border bg-card p-4 transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-lg', active && 'border-live/40 bg-live/5')}>
                   <span className={cn('absolute -left-[33px] top-1.5 size-3 rounded-full border-2 border-background', active ? 'bg-live ring-4 ring-live/20' : 'bg-primary')} />
                   <div className="flex flex-wrap items-center gap-2">
                     <p className="font-bold">{L(p.name)}</p>
@@ -184,7 +201,7 @@ function Overview({ show }: { show: Show }) {
           <h2 className="text-xl font-extrabold">{x.pavTitle}</h2>
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
             {show.pavilions.map((pv) => (
-              <div key={pv.id} className="rounded-xl border bg-card p-4">
+              <div key={pv.id} className="group relative overflow-hidden rounded-2xl border bg-card p-5 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg"><span className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary to-gold-bright" aria-hidden />
                 <p className="font-bold">{L(pv.name)}</p>
                 <p className="mt-1 text-sm text-muted-foreground">{show.booths.filter((b) => b.pavilionId === pv.id).length} {x.stats.booths.toLowerCase()}</p>
               </div>

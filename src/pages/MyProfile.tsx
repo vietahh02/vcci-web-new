@@ -1,11 +1,12 @@
 /** /account/profile — "Hồ sơ doanh nghiệp của tôi": fill once after sign-up, reused for every event. */
 import { AnimatePresence, motion } from 'motion/react'
-import { ArrowLeft, ArrowRight, BadgeCheck, Check, CircleDashed, Info, Lock, Plus, ShieldCheck, Trash2 } from 'lucide-react'
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { AlertTriangle, ArrowLeft, ArrowRight, BadgeCheck, Check, Info, Lock, Plus, ShieldCheck, Trash2 } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { liveApi, USE_MOCK, useEvent } from '@/api'
 import { useToast } from '@/components/ui/overlay'
 import { Button, buttonClass, Field, Input, Textarea } from '@/components/ui/primitives'
+import { DateField } from '@/components/ui/DateField'
 import { Select } from '@/components/ui/select'
 import { useI18n } from '@/lib/i18n'
 import { completion, OPTIONS, SECTIONS, sectionDone, useProfile, type CompanyProfile, type Opt, type SectionKey, type VerifyStatus } from '@/lib/profile'
@@ -30,6 +31,15 @@ export default function MyProfile() {
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' })
+  }, [active])
+  // mobile: the section strip scrolls sideways; bring the active chip to the middle of it
+  const navRef = useRef<HTMLOListElement>(null)
+  useEffect(() => {
+    const strip = navRef.current
+    const chip = strip?.querySelector<HTMLElement>('[data-on="true"]')
+    if (!strip || !chip || strip.scrollWidth <= strip.clientWidth) return
+    const delta = chip.getBoundingClientRect().left - strip.getBoundingClientRect().left - (strip.clientWidth - chip.offsetWidth) / 2
+    strip.scrollBy({ left: delta, behavior: 'smooth' })
   }, [active])
 
   if (!session) return <SignInGate />
@@ -70,9 +80,9 @@ export default function MyProfile() {
         </div>
         {!USE_MOCK && remoteStatus && remoteStatus.orgStatus !== 'APPROVED' && (
           <div className={cn('border-t', remoteStatus.orgStatus === 'REJECTED' ? 'bg-destructive/10' : 'bg-gold-soft/60')}>
-            <div className="container-page flex flex-wrap items-center justify-between gap-3 py-3 text-sm">
-              <span className="flex items-center gap-2">
-                <Info className="size-4" />
+            <div className="container-page flex flex-wrap items-center justify-between gap-3 py-4">
+              <span className={cn('flex items-center gap-3 text-[15px] font-semibold', remoteStatus.orgStatus === 'REJECTED' ? 'text-destructive' : 'text-[#7a5600]')}>
+                <span className={cn('grid size-9 shrink-0 place-items-center rounded-full text-white shadow-md', remoteStatus.orgStatus === 'REJECTED' ? 'bg-destructive' : 'bg-gradient-to-b from-[#f2d36b] to-[#d9a62a] text-[#2b1d00]')}><AlertTriangle className="size-5" /></span>
                 {remoteStatus.orgStatus === 'REJECTED'
                   ? <>{tx('Hồ sơ doanh nghiệp bị từ chối', 'Your company registration was rejected', '기업 등록이 거절되었습니다')}{remoteStatus.statusReason ? <>: <b>{remoteStatus.statusReason}</b></> : null}</>
                   : tx('Hồ sơ đang chờ VCCI duyệt. Bạn vẫn có thể hoàn thiện hồ sơ năng lực.', 'Your registration is awaiting VCCI approval. You can keep completing your profile.', 'VCCI 승인 대기 중입니다. 프로필은 계속 작성할 수 있습니다.')}
@@ -98,19 +108,19 @@ export default function MyProfile() {
       <div className="container-page mt-8 grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[280px_minmax(0,1fr)] lg:gap-8">
         {/* section nav */}
         <nav className="min-w-0 lg:sticky lg:top-32 lg:self-start">
-          <ol className="no-scrollbar flex gap-2 overflow-x-auto lg:flex-col lg:gap-1">
+          <ol ref={navRef} className="no-scrollbar flex gap-2 overflow-x-auto lg:flex-col lg:gap-1">
             {SECTIONS.map((s, i) => {
               const done = sectionDone(profile, s.key)
               const on = s.key === active
               return (
                 <li key={s.key} className="shrink-0">
-                  <button onClick={() => go(s.key)} className={cn('relative flex w-full items-start gap-3 rounded-xl px-3 py-3 text-left transition-colors', on ? 'text-foreground' : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground')}>
-                    {on && <motion.span layoutId="profile-nav" className="absolute inset-0 rounded-xl bg-card shadow-sm ring-1 ring-border" transition={{ type: 'spring', bounce: 0.15, duration: 0.4 }} />}
-                    <span className={cn('relative mt-0.5 grid size-6 shrink-0 place-items-center rounded-full text-[11px] font-bold', done ? 'bg-success text-white' : on ? 'bg-primary text-primary-foreground' : 'bg-muted')}>
+                  <button data-on={on} onClick={() => go(s.key)} className={cn('relative flex w-full items-start gap-3 rounded-3xl px-3 text-left transition-all duration-300', on ? 'py-2 text-foreground lg:py-4' : 'py-2 text-muted-foreground hover:bg-muted/60 hover:text-foreground lg:py-3', 'max-lg:w-auto max-lg:items-center max-lg:whitespace-nowrap max-lg:px-3.5')}>
+                    {on && <motion.span layoutId="profile-nav" className="absolute inset-0 rounded-3xl border-2 border-primary/60 bg-card shadow-lg shadow-primary/10" transition={{ type: 'spring', bounce: 0.15, duration: 0.4 }} />}
+                    <span className={cn('relative mt-0.5 grid shrink-0 place-items-center rounded-full font-bold transition-all duration-300', on ? 'size-6 text-[11px] shadow-md shadow-primary/30 lg:size-9 lg:text-sm' : 'size-6 text-[11px]', done ? 'bg-success text-white' : on ? 'bg-gradient-to-b from-[#1a8cc4] to-primary text-primary-foreground' : 'bg-muted')}>
                       {done ? <Check className="size-3.5" /> : i + 1}
                     </span>
                     <span className="relative hidden min-w-0 lg:block">
-                      <span className="block text-sm font-semibold">{L(s.title)}</span>
+                      <span className={cn("block text-sm font-semibold transition-colors", on && "text-primary")}>{L(s.title)}</span>
                       <span className="block truncate text-xs text-muted-foreground">{L(s.hint)}</span>
                     </span>
                     <span className="relative text-sm font-semibold lg:hidden">{L(s.title)}</span>
@@ -129,9 +139,9 @@ export default function MyProfile() {
               <p className="mt-0.5 text-sm text-muted-foreground">{L(SECTIONS[idx]!.hint)}</p>
             </div>
             {sectionDone(profile, active) ? (
-              <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-success-soft px-2.5 py-1 text-xs font-semibold text-success"><Check className="size-3.5" /> {tx('Đã đủ', 'Complete')}</span>
+              <span className="inline-flex shrink-0 items-center gap-2 rounded-full bg-success px-4 py-2 text-sm font-bold text-white shadow-lg shadow-success/30"><Check className="size-4" /> {tx('Đã đủ thông tin', 'Complete')}</span>
             ) : (
-              <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-muted px-2.5 py-1 text-xs font-semibold text-muted-foreground"><CircleDashed className="size-3.5" /> {tx('Còn thiếu', 'Incomplete')}</span>
+              <span className="inline-flex shrink-0 animate-pulse items-center gap-2 rounded-full bg-gradient-to-b from-[#f2d36b] to-[#d9a62a] px-4 py-2 text-sm font-bold text-[#2b1d00] shadow-lg shadow-amber-500/30 [animation-duration:2.5s]"><AlertTriangle className="size-4" /> {tx('Còn thiếu thông tin', 'Incomplete')}</span>
             )}
           </div>
 
@@ -314,8 +324,8 @@ function CapabilityForm({ p, set }: FP<'capability'>) {
               <div className="grid items-center gap-2 sm:grid-cols-[1.3fr_1fr_160px_auto]">
                 <Input placeholder={tx('Tên chứng nhận', 'Certificate')} value={cert.name} onChange={(e) => { const l = [...c.certificates]; l[i] = { ...cert, name: e.target.value }; set({ ...c, certificates: l }) }} />
                 <Input placeholder={tx('Đơn vị cấp', 'Issuer')} value={cert.issuer} onChange={(e) => { const l = [...c.certificates]; l[i] = { ...cert, issuer: e.target.value }; set({ ...c, certificates: l }) }} />
-                <Input type="date" value={cert.expiry} onChange={(e) => { const l = [...c.certificates]; l[i] = { ...cert, expiry: e.target.value }; set({ ...c, certificates: l }) }} aria-label={tx('Hạn hiệu lực', 'Expiry')} />
-                <button type="button" onClick={() => set({ ...c, certificates: c.certificates.filter((_, k) => k !== i) })} className="rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-destructive" aria-label="Remove"><Trash2 className="size-4" /></button>
+                <DateField value={cert.expiry} onChange={(e) => { const l = [...c.certificates]; l[i] = { ...cert, expiry: e.target.value }; set({ ...c, certificates: l }) }} aria-label={tx('Hạn hiệu lực', 'Expiry')} />
+                <button type="button" onClick={() => set({ ...c, certificates: c.certificates.filter((_, k) => k !== i) })} className="rounded-full p-2 text-muted-foreground hover:bg-destructive/10 hover:text-destructive" aria-label="Remove"><Trash2 className="size-4" /></button>
               </div>
               <FilePick rule="certificate" compact name={cert.file} preview={cert.preview} onPick={(n, pv, fid) => { const l = [...c.certificates]; l[i] = { ...cert, file: n, preview: pv, fileId: fid }; set({ ...c, certificates: l }) }} />
             </div>
@@ -449,7 +459,7 @@ function AttendeesForm({ p, set }: FP<'attendees'>) {
               <Input placeholder={tx('Chức danh', 'Title')} value={a.title} onChange={(e) => patch(i, 'title', e.target.value)} />
               <Input placeholder="Email" type="email" value={a.email} onChange={(e) => patch(i, 'email', e.target.value)} />
               <Input placeholder={tx('Điện thoại', 'Phone')} value={a.phone} onChange={(e) => patch(i, 'phone', e.target.value)} />
-              <button type="button" onClick={() => set(list.filter((_, k) => k !== i))} className="rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-destructive" aria-label="Remove"><Trash2 className="size-4" /></button>
+              <button type="button" onClick={() => set(list.filter((_, k) => k !== i))} className="rounded-full p-2 text-muted-foreground hover:bg-destructive/10 hover:text-destructive" aria-label="Remove"><Trash2 className="size-4" /></button>
             </div>
           </motion.div>
         ))}

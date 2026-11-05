@@ -1,10 +1,11 @@
 import { AnimatePresence, motion } from 'motion/react'
-import { ArrowUp, Bot, BookOpen, Scale, Sparkles, UserRound } from 'lucide-react'
+import { ArrowUp, Bot, BookOpen, Scale, ShieldCheck, Sparkles, UserRound } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ChatError, chatConfigured, legalAiApi } from '@/api/chat'
 import { tokens } from '@/api/http'
 import { useI18n } from '@/lib/i18n'
+import { tx } from '@/lib/tx'
 import { cn } from '@/lib/utils'
 
 type Msg = { id: number; role: 'user' | 'ai'; text: string; sources?: string[]; error?: boolean }
@@ -62,87 +63,105 @@ export default function LegalAI() {
   const empty = msgs.length === 0
 
   return (
-    <div className="relative min-h-[calc(100vh-112px)] overflow-hidden">
-      <div className="pointer-events-none absolute -left-40 top-0 size-[520px] animate-aurora rounded-full bg-primary/15 blur-3xl" />
-      <div className="pointer-events-none absolute -right-40 top-40 size-[420px] animate-aurora rounded-full bg-gold-bright/15 blur-3xl [animation-delay:-8s]" />
-      <div className="container-page relative flex max-w-4xl flex-col py-10">
-        <AnimatePresence>
-          {empty && (
-            <motion.div exit={{ opacity: 0, y: -20, height: 0 }} transition={{ duration: 0.4 }} className="text-center">
-              <motion.div initial={{ scale: 0.6, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: 'spring', bounce: 0.4 }} className="mx-auto grid size-16 place-items-center rounded-2xl bg-gradient-to-br from-primary to-navy text-white shadow-xl shadow-primary/30">
-                <Scale className="size-8" />
-              </motion.div>
-              <h1 className="mt-6 text-3xl font-extrabold tracking-tight md:text-4xl">{t.legal.title}</h1>
-              <p className="mx-auto mt-3 max-w-xl text-muted-foreground">{t.legal.sub}</p>
-              <div className="mt-8 grid gap-3 text-left sm:grid-cols-2">
-                {t.legal.suggestions.map((s, i) => (
-                  <motion.button
-                    key={s}
-                    initial={{ opacity: 0, y: 14 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.2 + i * 0.07 }}
-                    whileHover={{ y: -3 }}
-                    onClick={() => ask(s)}
-                    className="group flex items-start gap-3 rounded-xl border bg-card p-4 text-left text-sm font-medium transition hover:border-primary/40 hover:shadow-lg"
-                  >
-                    <Sparkles className="mt-0.5 size-4 shrink-0 text-gold transition group-hover:rotate-12" />
-                    {s}
-                  </motion.button>
-                ))}
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+    <div className="relative flex h-[calc(100dvh-112px)] min-h-[560px] flex-col">
+      {/* decorative backdrop: clipped here so the page itself never scrolls sideways */}
+      <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="bg-dots absolute inset-0 opacity-50 [mask-image:radial-gradient(ellipse_at_top,#000,transparent_70%)]" />
+        <div className="absolute -left-40 top-0 size-[520px] animate-aurora rounded-full bg-primary/15 blur-3xl" />
+        <div className="absolute -right-40 top-40 size-[420px] animate-aurora rounded-full bg-gold-bright/15 blur-3xl [animation-delay:-8s]" />
+      </div>
 
-        <div className="flex-1 space-y-5 pb-6">
-          {msgs.map((m) => (
-            <motion.div key={m.id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className={cn('flex gap-3', m.role === 'user' && 'flex-row-reverse')}>
-              <div className={cn('grid size-9 shrink-0 place-items-center rounded-xl', m.role === 'ai' ? 'bg-gradient-to-br from-primary to-navy text-white' : 'bg-muted')}>
-                {m.role === 'ai' ? <Bot className="size-4" /> : <UserRound className="size-4" />}
+      {/* conversation: the only scrolling part */}
+      <div className="relative min-h-0 flex-1 overflow-y-auto">
+        <div className="container-page mx-auto flex max-w-4xl flex-col py-10">
+          <AnimatePresence>
+            {empty && (
+              <motion.div exit={{ opacity: 0, y: -20, height: 0 }} transition={{ duration: 0.4 }} className="text-center">
+                <motion.div initial={{ scale: 0.6, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: 'spring', bounce: 0.4 }} className="relative mx-auto grid size-20 place-items-center">
+                  <span className="absolute inset-0 animate-ping rounded-full bg-primary/15 [animation-duration:2.8s]" />
+                  <span className="relative grid size-16 place-items-center rounded-full bg-gradient-to-br from-primary to-navy text-white shadow-xl shadow-primary/30 ring-4 ring-background">
+                    <Scale className="size-8" />
+                  </span>
+                </motion.div>
+                <span className="mt-5 inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary-soft px-3 py-1 text-xs font-bold text-primary">
+                  <ShieldCheck className="size-3.5" />
+                  {tx('Trợ lý AI · Luật Việt Nam', 'AI assistant · Vietnamese law', 'AI 도우미 · 베트남 법률')}
+                </span>
+                <h1 className="mt-4 text-3xl font-extrabold tracking-tight md:text-4xl">{t.legal.title}</h1>
+                <p className="mx-auto mt-3 max-w-xl text-muted-foreground">{t.legal.sub}</p>
+                <div className="mt-8 grid gap-3 text-left sm:grid-cols-2">
+                  {t.legal.suggestions.map((s, i) => (
+                    <motion.button
+                      key={s}
+                      initial={{ opacity: 0, y: 14 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.2 + i * 0.07 }}
+                      whileHover={{ y: -3 }}
+                      onClick={() => ask(s)}
+                      className="group flex items-center gap-3 rounded-3xl border bg-card/90 p-3.5 pr-5 text-left text-sm font-medium shadow-sm backdrop-blur transition-all duration-200 hover:border-primary/40 hover:shadow-lg"
+                    >
+                      <span className="grid size-9 shrink-0 place-items-center rounded-full bg-gold-soft text-gold transition group-hover:bg-gold group-hover:text-white">
+                        <Sparkles className="size-4 transition group-hover:rotate-12" />
+                      </span>
+                      <span className="leading-snug">{s}</span>
+                    </motion.button>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <div className="flex-1 space-y-5 pb-6">
+            {msgs.map((m) => (
+              <motion.div key={m.id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className={cn('flex gap-3', m.role === 'user' && 'flex-row-reverse')}>
+                <div className={cn('grid size-9 shrink-0 place-items-center rounded-full shadow-sm', m.role === 'ai' ? 'bg-gradient-to-br from-primary to-navy text-white' : 'bg-muted')}>
+                  {m.role === 'ai' ? <Bot className="size-4" /> : <UserRound className="size-4" />}
+                </div>
+                <div className={cn('max-w-[85%] rounded-3xl px-4 py-3 text-[15px] leading-relaxed shadow-sm', m.role === 'user' ? 'rounded-tr-lg bg-primary text-primary-foreground shadow-primary/20' : 'rounded-tl-lg border bg-card')}>
+                  <span className="whitespace-pre-wrap">{m.text}</span>
+                  {m.sources && (
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-4 border-t pt-3">
+                      <p className="mb-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">{t.legal.sources}</p>
+                      <div className="flex flex-wrap gap-2">
+                        {m.sources.map((s) => (
+                          <span key={s} className="inline-flex items-center gap-1.5 rounded-full bg-primary-soft px-3 py-1.5 text-xs font-medium text-primary"><BookOpen className="size-3.5" /> {s}</span>
+                        ))}
+                      </div>
+                    </motion.div>
+                  )}
+                </div>
+              </motion.div>
+            ))}
+            {needLogin && (
+              <div className="flex items-center gap-3 rounded-3xl border bg-card p-4 text-sm shadow-sm">
+                <span className="flex-1">{MSG[lang].login}</span>
+                <button type="button" className="rounded-full bg-primary px-4 py-2 font-semibold text-primary-foreground shadow-md shadow-primary/25 transition-all duration-200 hover:bg-primary-hover" onClick={() => navigate(`/login?return=${encodeURIComponent('/legal-ai')}`)}>{MSG[lang].loginBtn}</button>
               </div>
-              <div className={cn('max-w-[85%] rounded-2xl px-4 py-3 text-[15px] leading-relaxed', m.role === 'user' ? 'bg-primary text-primary-foreground' : 'border bg-card')}>
-                <span className="whitespace-pre-wrap">{m.text}</span>
-                {m.sources && (
-                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-4 border-t pt-3">
-                    <p className="mb-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">{t.legal.sources}</p>
-                    <div className="flex flex-wrap gap-2">
-                      {m.sources.map((s) => (
-                        <span key={s} className="inline-flex items-center gap-1.5 rounded-lg bg-muted px-2.5 py-1.5 text-xs font-medium"><BookOpen className="size-3.5 text-primary" /> {s}</span>
-                      ))}
-                    </div>
-                  </motion.div>
-                )}
+            )}
+            {thinking && (
+              <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                <div className="grid size-9 place-items-center rounded-full bg-gradient-to-br from-primary to-navy text-white"><Bot className="size-4" /></div>
+                <span className="relative overflow-hidden">
+                  {t.legal.thinking}
+                  <span className="absolute inset-0 animate-shine bg-gradient-to-r from-transparent via-background/80 to-transparent" />
+                </span>
               </div>
-            </motion.div>
-          ))}
-          {needLogin && (
-            <div className="flex items-center gap-3 rounded-xl border bg-card p-4 text-sm">
-              <span className="flex-1">{MSG[lang].login}</span>
-              <button type="button" className="rounded-lg bg-primary px-3 py-1.5 font-semibold text-primary-foreground" onClick={() => navigate(`/login?return=${encodeURIComponent('/legal-ai')}`)}>{MSG[lang].loginBtn}</button>
-            </div>
-          )}
-          {thinking && (
-            <div className="flex items-center gap-3 text-sm text-muted-foreground">
-              <div className="grid size-9 place-items-center rounded-xl bg-gradient-to-br from-primary to-navy text-white"><Bot className="size-4" /></div>
-              <span className="relative overflow-hidden">
-                {t.legal.thinking}
-                <span className="absolute inset-0 animate-shine bg-gradient-to-r from-transparent via-background/80 to-transparent" />
-              </span>
-            </div>
-          )}
-          <div ref={endRef} />
+            )}
+            <div ref={endRef} />
+          </div>
         </div>
       </div>
 
-      <div className="sticky bottom-0 z-40 bg-gradient-to-t from-background via-background to-transparent pb-5 pt-10">
+      {/* input: pinned to the bottom of the screen, never scrolls away */}
+      <div className="relative shrink-0 bg-gradient-to-t from-background via-background/95 to-transparent pb-5 pt-6">
         <form
           onSubmit={(e) => {
             e.preventDefault()
             ask(text)
           }}
-          className="container-page max-w-4xl max-sm:pr-[84px] sm:max-xl:pr-[96px]"
+          className="container-page mx-auto max-w-4xl max-sm:pr-[84px] sm:max-xl:pr-[96px]"
         >
-          <div className="border-spin flex items-end gap-2 rounded-2xl border bg-card p-2 shadow-xl shadow-navy/10">
+          <div className="flex items-end gap-2 rounded-full border-2 border-primary/25 bg-card p-1.5 shadow-xl shadow-navy/10 transition-[border,box-shadow] duration-300 focus-within:border-primary focus-within:shadow-[0_0_0_5px_color-mix(in_oklab,var(--primary)_14%,transparent)]">
             <textarea
               value={text}
               onChange={(e) => setText(e.target.value)}
@@ -155,9 +174,9 @@ export default function LegalAI() {
               rows={1}
               placeholder={t.legal.placeholder}
               aria-label={t.legal.placeholder}
-              className="max-h-40 min-h-11 flex-1 resize-none bg-transparent px-3 py-2.5 text-[15px] outline-none focus-visible:outline-none"
+              className="max-h-40 min-h-11 flex-1 resize-none bg-transparent px-4 py-2.5 text-[15px] outline-none focus-visible:outline-none"
             />
-            <button type="submit" disabled={!text.trim() || thinking} className="grid size-11 place-items-center rounded-xl bg-primary text-primary-foreground transition hover:bg-primary-hover disabled:opacity-40" aria-label={t.ui.send}>
+            <button type="submit" disabled={!text.trim() || thinking} className="grid size-11 shrink-0 place-items-center rounded-full bg-gradient-to-b from-[#1a8cc4] to-primary text-primary-foreground shadow-md shadow-primary/30 transition-all duration-200 hover:shadow-lg hover:shadow-primary/40 hover:-translate-y-px disabled:opacity-40 disabled:shadow-none" aria-label={t.ui.send}>
               <ArrowUp className="size-5" />
             </button>
           </div>

@@ -1,6 +1,6 @@
 /** Visitor registration → email OTP → (receipt / approval) → e-badge. BR-SHB-20/21/28. */
 import { CheckCircle2, Clock, FileUp, Loader2, MailCheck, ShieldAlert } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { liveApi, USE_MOCK } from '@/api'
 import { Dialog, DialogContent, useToast } from '@/components/ui/overlay'
 import { Button, Field, Input } from '@/components/ui/primitives'
@@ -10,12 +10,18 @@ import { SELLER_BUYER_TYPES, VISITOR_TYPES } from '@/data/shows'
 import { useI18n } from '@/lib/i18n'
 import { newBadgeCode, type useShowVisitor, type VisitorBadge } from '@/lib/showReg'
 import { useShowT } from '@/lib/showText'
+import { useProfile } from '@/lib/profile'
+import { tx } from '@/lib/tx'
 import { formatMoney } from '@/lib/utils'
 
 type Visitor = ReturnType<typeof useShowVisitor>
 const DEMO_OTP = '123456'
 const MAX_TRIES = 5
 const emailOk = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)
+
+/** Required mark: red asterisk. Optional fields get a muted hint instead. */
+const req = (text: string): ReactNode => <>{text} <span className="text-destructive" aria-hidden>*</span></>
+const optional = (text: string): ReactNode => <>{text} <span className="text-xs font-normal text-muted-foreground">· {tx('không bắt buộc', 'optional', '선택')}</span></>
 
 export function BadgeCard({ show, badge }: { show: Show; badge: VisitorBadge }) {
   const { L } = useI18n()
@@ -42,9 +48,10 @@ export function VisitorRegistration({ show, open, onOpenChange, visitor }: { sho
   const { L, locale } = useI18n()
   const x = useShowT()
   const toast = useToast()
+  const { session, profile } = useProfile()
   const paid = show.visitorTicketFee > 0
   const [step, setStep] = useState(0)
-  const [form, setForm] = useState({ name: '', email: '', phone: '', company: '', country: 'VN', visitorType: 'BUYER', businessType: 'TRADER', share: true, consent: false, adult: false })
+  const [form, setForm] = useState({ name: '', email: '', phone: '', company: '', country: 'VN', visitorType: 'BUYER', businessType: 'TRADER', share: true, consent: false })
   const [err, setErr] = useState('')
   const [otp, setOtp] = useState('')
   const [tries, setTries] = useState(0)
@@ -56,6 +63,19 @@ export function VisitorRegistration({ show, open, onOpenChange, visitor }: { sho
   const set = (k: keyof typeof form, v: string | boolean) => setForm((f) => ({ ...f, [k]: v }))
   const locked = tries >= MAX_TRIES
 
+  // signed-in users: fill empty fields from the company profile each time the dialog opens (typed values are kept)
+  useEffect(() => {
+    if (!open || !session) return
+    const g = profile.general
+    setForm((f) => ({
+      ...f,
+      name: f.name || g.contactName || '',
+      email: f.email || g.contactEmail || '',
+      phone: f.phone || g.contactPhone || '',
+      company: f.company || g.nameVi || g.nameEn || session.companyName || '',
+    }))
+  }, [open, session, profile])
+
   useEffect(() => {
     if (cooldown <= 0) return
     const t = setTimeout(() => setCooldown((c) => c - 1), 1000)
@@ -66,7 +86,7 @@ export function VisitorRegistration({ show, open, onOpenChange, visitor }: { sho
   const view = existing ? 3 : step
 
   const toOtp = () => {
-    if (!form.name.trim() || !form.email.trim() || !form.consent || !form.adult) return setErr(x.reg.required)
+    if (!form.name.trim() || !form.email.trim() || !form.consent) return setErr(x.reg.required)
     if (!emailOk(form.email)) return setErr(x.reg.invalidEmail)
     setErr('')
     setOtp('')
@@ -144,22 +164,21 @@ export function VisitorRegistration({ show, open, onOpenChange, visitor }: { sho
           {view === 0 && (
             <>
               <div className="grid gap-4 sm:grid-cols-2">
-                <Field label={`${x.reg.name} *`} htmlFor="v-name"><Input id="v-name" value={form.name} onChange={(e) => set('name', e.target.value)} /></Field>
-                <Field label={`${x.reg.email} *`} htmlFor="v-email" hint={x.reg.one}><Input id="v-email" type="email" value={form.email} onChange={(e) => set('email', e.target.value)} /></Field>
-                <Field label={x.reg.phone} htmlFor="v-phone"><Input id="v-phone" value={form.phone} onChange={(e) => set('phone', e.target.value)} /></Field>
-                <Field label={x.reg.company} htmlFor="v-co"><Input id="v-co" value={form.company} onChange={(e) => set('company', e.target.value)} /></Field>
-                <Field label={x.reg.visitorType} htmlFor="v-type">
+                <Field label={req(x.reg.name)} htmlFor="v-name"><Input id="v-name" value={form.name} onChange={(e) => set('name', e.target.value)} /></Field>
+                <Field label={req(x.reg.email)} htmlFor="v-email" hint={x.reg.one}><Input id="v-email" type="email" value={form.email} onChange={(e) => set('email', e.target.value)} /></Field>
+                <Field label={optional(x.reg.phone)} htmlFor="v-phone"><Input id="v-phone" value={form.phone} onChange={(e) => set('phone', e.target.value)} /></Field>
+                <Field label={optional(x.reg.company)} htmlFor="v-co"><Input id="v-co" value={form.company} onChange={(e) => set('company', e.target.value)} /></Field>
+                <Field label={optional(x.reg.visitorType)} htmlFor="v-type">
                   <Select id="v-type" value={form.visitorType} onValueChange={(v) => set('visitorType', v)} options={VISITOR_TYPES.map((v) => ({ value: v, label: x.reg.visitorTypes[v] }))} />
                 </Field>
-                <Field label={x.reg.businessType} htmlFor="v-bt">
+                <Field label={optional(x.reg.businessType)} htmlFor="v-bt">
                   <Select id="v-bt" value={form.businessType} onValueChange={(v) => set('businessType', v)} options={SELLER_BUYER_TYPES.map((v) => ({ value: v, label: x.reg.businessTypes[v] }))} />
                 </Field>
               </div>
               {paid && <p className="rounded-lg bg-gold-soft p-3 text-sm text-gold">{x.fee}: <b>{formatMoney(show.visitorTicketFee, show.ticketCurrency, locale)}</b></p>}
               {show.requireVisitorApproval && <p className="rounded-lg bg-primary-soft p-3 text-sm text-primary">{x.needApproval}</p>}
               <label className="flex items-start gap-2 text-sm"><input type="checkbox" className="mt-1" checked={form.share} onChange={(e) => set('share', e.target.checked)} /> {x.reg.shareContact}</label>
-              <label className="flex items-start gap-2 text-sm"><input type="checkbox" className="mt-1" checked={form.consent} onChange={(e) => set('consent', e.target.checked)} /> {x.reg.consent} *</label>
-              <label className="flex items-start gap-2 text-sm"><input type="checkbox" className="mt-1" checked={form.adult} onChange={(e) => set('adult', e.target.checked)} /> {x.reg.ageConfirm.replace('{n}', String(show.minAge ?? 18))} *</label>
+              <label className="flex items-start gap-2 text-sm"><input type="checkbox" className="mt-1" checked={form.consent} onChange={(e) => set('consent', e.target.checked)} /> {req(x.reg.consent)}</label>
               {err && <p className="text-sm font-medium text-destructive">{err}</p>}
               <Button className="w-full" size="lg" disabled={busy} onClick={toOtp}><MailCheck /> {x.reg.sendOtp}</Button>
             </>

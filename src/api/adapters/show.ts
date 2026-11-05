@@ -32,7 +32,6 @@ export function toShow(r: Raw): Show {
     startDate: str(r.startDate), endDate: str(r.endDate), organizer: biAny(r.organizer), virtualVenue: biAny(r.virtualVenue),
     format: (['ONLINE', 'OFFLINE', 'HYBRID'].includes(str(r.format)) ? str(r.format) : undefined) as Show['format'],
     physicalVenue: r.physicalVenue ? biAny(r.physicalVenue) : undefined,
-    minAge: num(r.minAge) || undefined,
     boothCapacity: num(r.boothCapacity), visitorTicketFee: num(r.visitorTicketFee), ticketCurrency: str(r.ticketCurrency, 'VND') === 'USD' ? 'USD' : 'VND',
     requireVisitorApproval: Boolean(r.requireVisitorApproval), boothFee: num(r.boothFee), registrationDeadline: str(r.registrationDeadline),
     issuedBadges: num(r.issuedBadges), inquiries: num(r.inquiries),

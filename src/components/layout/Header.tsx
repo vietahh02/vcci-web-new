@@ -81,7 +81,7 @@ export function Header() {
       {/* main bar */}
       <div className={cn('border-b transition-[background,box-shadow] duration-300', scrolled ? 'glass shadow-[0_8px_30px_-12px_rgb(8_8_46/0.18)]' : 'bg-background')}>
         <div className="container-page flex h-[68px] items-center gap-3 sm:gap-4 lg:gap-6 xl:gap-8">
-          <button className="-ml-2 rounded-lg p-2 hover:bg-muted lg:hidden" onClick={() => setMobileOpen(true)} aria-label={t.ui.menu}>
+          <button className="-ml-2 rounded-full p-2 transition-all duration-200 hover:bg-primary-soft hover:text-primary lg:hidden" onClick={() => setMobileOpen(true)} aria-label={t.ui.menu}>
             <Menu className="size-5" />
           </button>
           <Logo className="shrink-0" />
@@ -93,14 +93,14 @@ export function Header() {
               <FilePlus2 /> {t.nav.postRequest}
             </Link>
             <Tooltip content={t.nav.messages}>
-              <Link to="/messages" className="relative hidden rounded-lg p-2.5 text-muted-foreground transition hover:bg-muted hover:text-foreground sm:block" aria-label={t.nav.messages}>
+              <Link to="/messages" className="relative hidden rounded-full p-2.5 text-muted-foreground transition-all duration-200 hover:bg-primary-soft hover:text-primary hover:shadow-sm sm:block" aria-label={t.nav.messages}>
                 <MessageSquare className="size-[18px]" />
                 {unreadShown > 0 && <span className="absolute right-1.5 top-1.5 grid size-4 place-items-center rounded-full bg-live text-[9px] font-bold text-white">{unreadShown > 9 ? '9+' : unreadShown}</span>}
               </Link>
             </Tooltip>
             <NotificationBell />
             <LangSwitcher />
-            <button onClick={toggle} className="rounded-lg p-2.5 text-muted-foreground transition hover:bg-muted hover:text-foreground" aria-label={t.ui.theme}>
+            <button onClick={toggle} className="rounded-full p-2.5 text-muted-foreground transition-all duration-200 hover:bg-primary-soft hover:text-primary hover:shadow-sm" aria-label={t.ui.theme}>
               <AnimatePresence mode="wait" initial={false}>
                 <motion.span key={theme} initial={{ rotate: -90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: 90, opacity: 0 }} transition={{ duration: 0.2 }} className="block">
                   {theme === 'dark' ? <Sun className="size-[18px]" /> : <Moon className="size-[18px]" />}
@@ -123,7 +123,7 @@ export function Header() {
               <Tooltip content={tx('Đăng xuất', 'Sign out', '로그아웃')}>
                 <button
                   onClick={() => { signOut(); navigate('/') }}
-                  className="rounded-lg p-2.5 text-muted-foreground transition hover:bg-muted hover:text-foreground"
+                  className="rounded-full p-2.5 text-muted-foreground transition-all duration-200 hover:bg-primary-soft hover:text-primary hover:shadow-sm"
                   aria-label={tx('Đăng xuất', 'Sign out', '로그아웃')}
                 >
                   <LogOut className="size-[18px]" />
@@ -144,7 +144,7 @@ export function Header() {
           <button
             onMouseEnter={() => setMegaOpen(true)}
             onClick={() => setMegaOpen((v) => !v)}
-            className={cn('mr-1 inline-flex h-9 shrink-0 items-center gap-2 whitespace-nowrap rounded-lg px-3 text-[13px] font-bold transition xl:mr-3', megaOpen ? 'bg-primary text-primary-foreground' : 'bg-primary-soft text-primary hover:bg-primary hover:text-primary-foreground')}
+            className={cn('mr-1 inline-flex h-9 shrink-0 items-center gap-2 whitespace-nowrap rounded-full px-3 text-[13px] font-bold transition xl:mr-3', megaOpen ? 'bg-primary text-primary-foreground' : 'bg-primary-soft text-primary hover:bg-primary hover:text-primary-foreground')}
             aria-expanded={megaOpen}
           >
             <LayoutGrid className="size-4" />
@@ -157,7 +157,7 @@ export function Header() {
               to={n.to}
               onMouseEnter={() => setMegaOpen(false)}
               className={({ isActive }) =>
-                cn('relative inline-flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg px-2.5 text-[13px] font-semibold transition-colors hover:bg-muted xl:px-3 xl:text-[13.5px]', isActive ? 'text-primary' : 'text-foreground/80 hover:text-foreground')
+                cn('relative inline-flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 text-[13px] font-semibold transition-colors hover:bg-muted xl:px-3 xl:text-[13.5px]', isActive ? 'text-primary' : 'text-foreground/80 hover:text-foreground')
               }
             >
               {({ isActive }) => (
@@ -194,7 +194,7 @@ function MegaMenu({ open, onClose }: { open: boolean; onClose: () => void }) {
           className="absolute inset-x-0 top-full z-40 pt-2"
         >
           <div className="container-page">
-            <div className="grid grid-cols-[280px_1fr_300px] overflow-hidden rounded-2xl border bg-popover shadow-2xl shadow-navy/15">
+            <div className="grid grid-cols-[280px_1fr_300px] overflow-hidden rounded-3xl border bg-popover shadow-2xl shadow-navy/15">
               <ul className="border-r bg-muted/50 p-2">
                 {categories.map((c) => {
                   const Icon = categoryIcons[c.icon]
@@ -204,9 +204,9 @@ function MegaMenu({ open, onClose }: { open: boolean; onClose: () => void }) {
                         to={`/search?category=${c.id}`}
                         onMouseEnter={() => setActive(c.id)}
                         onClick={onClose}
-                        className={cn('relative flex items-center gap-3 rounded-lg px-3 py-2 text-[13.5px] font-medium transition-colors', active === c.id ? 'text-primary' : 'text-foreground/80')}
+                        className={cn('relative flex items-center gap-3 rounded-full px-3 py-2 text-[13.5px] font-medium transition-colors', active === c.id ? 'text-primary' : 'text-foreground/80')}
                       >
-                        {active === c.id && <motion.span layoutId="mega-active" className="absolute inset-0 rounded-lg bg-background shadow-sm ring-1 ring-border" transition={{ type: 'spring', bounce: 0.15, duration: 0.35 }} />}
+                        {active === c.id && <motion.span layoutId="mega-active" className="absolute inset-0 rounded-full bg-background shadow-sm ring-1 ring-border" transition={{ type: 'spring', bounce: 0.15, duration: 0.35 }} />}
                         <Icon className="relative size-4" />
                         <span className="relative flex-1">{L(c.categoryName)}</span>
                         <ChevronRight className="relative size-3.5 opacity-50" />
@@ -227,7 +227,7 @@ function MegaMenu({ open, onClose }: { open: boolean; onClose: () => void }) {
                         key={s.en}
                         to={`/search?category=${cat.id}&q=${encodeURIComponent(L(s))}`}
                         onClick={onClose}
-                        className="group flex items-center justify-between rounded-lg border px-3 py-2.5 text-sm font-medium transition hover:border-primary/40 hover:bg-primary-soft hover:text-primary"
+                        className="group flex items-center justify-between rounded-full border px-3 py-2.5 text-sm font-medium transition hover:border-primary/40 hover:bg-primary-soft hover:text-primary"
                       >
                         {L(s)}
                         <ChevronRight className="size-4 -translate-x-1 opacity-0 transition group-hover:translate-x-0 group-hover:opacity-100" />
