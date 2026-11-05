@@ -215,18 +215,19 @@ export const myRegistrations = async () => listOf<Raw>(await apiFetch('/api/even
 /* ------------------------------------------------------------ show visitors */
 export interface VisitorResult { visitorId: string; status: string; badgeStatus?: string; resendAfterSeconds: number; maxOtpAttempts: number; otpRequired: boolean }
 const toVisitor = (r: Raw): VisitorResult => ({ visitorId: id(r.visitorId), status: str(r.status), badgeStatus: r.badgeStatus ? str(r.badgeStatus) : undefined, resendAfterSeconds: num(r.resendAfterSeconds, 30), maxOtpAttempts: num(r.maxOtpAttempts, 5), otpRequired: r.otpRequired !== false })
-export interface VisitorForm { name: string; email: string; phone: string; company: string; country: string; visitorType: string; businessType: string; share: boolean; consent: boolean; adult?: boolean; phaseIds?: string[] }
+export interface VisitorForm { name: string; email: string; phone: string; company: string; country: string; visitorType: string; businessType: string; share: boolean; consent: boolean; adult?: boolean; phaseIds?: string[]; captchaId?: string; captchaAnswer?: string }
 /** POST /api/public/shows/{id}/visitors (sends the OTP email) */
 export async function showRegisterVisitor(feId: string, f: VisitorForm) {
   const [firstName, ...rest] = f.name.trim().split(/\s+/)
   return toVisitor(await apiFetch<Raw>(`/api/public/shows/${beShowId(feId)}/visitors`, {
     method: 'POST',
-    json: { fullName: f.name.trim(), firstName, lastName: rest.join(' '), email: f.email, phone: f.phone, companyName: f.company, country: f.country, visitorType: f.visitorType, businessType: f.businessType, consentTerms: f.consent, consentShareExhibitors: f.share, ageConfirmed: f.adult === true, phaseIds: f.phaseIds?.map(Number) },
+    json: { fullName: f.name.trim(), firstName, lastName: rest.join(' '), email: f.email, phone: f.phone, companyName: f.company, country: f.country, visitorType: f.visitorType, businessType: f.businessType, consentTerms: f.consent, consentShareExhibitors: f.share, ageConfirmed: f.adult === true, phaseIds: f.phaseIds?.map(Number), captchaId: f.captchaId, captchaAnswer: f.captchaAnswer },
   }))
 }
 export async function showVerifyOtp(feId: string, email: string, otp: string) {
   const r = await apiFetch<Raw>(`/api/public/shows/${beShowId(feId)}/visitors/verify`, { method: 'POST', json: { email, otp } })
-  return { ...toVisitor(r), badgeCode: str(r.badgeCode || r.code) }
+  // paymentToken: only when the registration now awaits a ticket payment; lets a guest upload the receipt (not mailed)
+  return { ...toVisitor(r), badgeCode: str(r.badgeCode || r.code), paymentToken: r.paymentToken ? str(r.paymentToken) : undefined }
 }
 export const showResendOtp = async (feId: string, email: string) => toVisitor(await apiFetch<Raw>(`/api/public/shows/${beShowId(feId)}/visitors/resend-otp`, { method: 'POST', json: { email } }))
 /** POST /api/public/shows/{id}/visitors/restore (a registration made on another device: email + the code from the mail; every failure is the same error) */
@@ -245,10 +246,18 @@ export async function showBadge(code: string) {
 /** POST /api/public/shows/booths/{boothId}/inquiries (badge holder: email + badgeCode) */
 export const showInquiry = (boothId: string, b: { email: string; badgeCode: string; productId?: string; quantity?: string; message: string }) =>
   apiFetch(`/api/public/shows/booths/${boothId}/inquiries`, { method: 'POST', json: { ...b, productId: b.productId ? Number(b.productId) : undefined } })
-/** POST /api/shows/visitors/{visitorId}/payment (multipart, signed-in users only: no anonymous receipt endpoint yet) */
-export function showUploadReceipt(visitorId: string, file: File) {
+/**
+ * Ticket receipt (multipart). Signed in: POST /api/shows/visitors/{id}/payment.
+ * Guest: POST /api/public/shows/visitors/{id}/payment with the email + paymentToken returned by the OTP step.
+ */
+export function showUploadReceipt(visitorId: string, file: File, guest?: { email: string; paymentToken: string }) {
   const fd = new FormData()
   fd.set('billImage', file)
+  if (guest) {
+    fd.set('email', guest.email)
+    fd.set('paymentToken', guest.paymentToken)
+    return apiFetch(`/api/public/shows/visitors/${visitorId}/payment`, { method: 'POST', form: fd, anon: true })
+  }
   return apiFetch(`/api/shows/visitors/${visitorId}/payment`, { method: 'POST', form: fd })
 }
 /** POST/DELETE /api/public/shows/launch-slots/{id}/follow (badge holder: email + badgeCode) */

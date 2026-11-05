@@ -6,6 +6,7 @@
 import { Plus, Send, Trash2, Undo2 } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { catalogApi } from '@/api'
+import { MyInquiries } from '@/components/catalog/MyInquiries'
 import type { BoothInput, MyBooth, OnlineShow, OpenShow, ShowProductRow } from '@/api/catalogApi'
 import { fileSrc, uploadFile } from '@/api/uploads'
 import { Dialog, DialogContent, useToast } from '@/components/ui/overlay'
@@ -53,6 +54,7 @@ export function MyBooths() {
   return (
     <div className="space-y-10">
       <OnlineShowProducts />
+      <MyInquiries />
       {onSite && <section>
       <h2 className="mb-4 text-lg font-extrabold">{tx('Gian hàng ở Show trực tiếp', 'Booths at on-site shows', '오프라인 쇼 부스')}</h2>
       {error && <p className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>}

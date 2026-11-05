@@ -1,17 +1,17 @@
 /** Visitor registration → email OTP → (receipt / approval) → e-badge. BR-SHB-20/21/28. */
-import { CheckCircle2, Clock, FileUp, Loader2, LogIn, MailCheck, ShieldAlert } from 'lucide-react'
+import { CheckCircle2, Clock, FileUp, Loader2, MailCheck, ShieldAlert } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
 import { liveApi, tokens, USE_MOCK } from '@/api'
 import { Dialog, DialogContent, useToast } from '@/components/ui/overlay'
 import { useCancelRegistration } from '@/components/show/useCancelRegistration'
-import { Button, buttonClass, Field, Input } from '@/components/ui/primitives'
+import { Captcha } from '@/components/ui/captcha'
+import { useLiveCaptcha } from '@/components/ui/useLiveCaptcha'
+import { Button, Field, Input } from '@/components/ui/primitives'
 import { Select } from '@/components/ui/select'
 import type { Show } from '@/data/shows'
 import { SELLER_BUYER_TYPES, VISITOR_TYPES } from '@/data/shows'
 import { useI18n } from '@/lib/i18n'
 import { useProfile } from '@/lib/profile'
-import { tx } from '@/lib/tx'
 import { newBadgeCode, type useShowVisitor, type VisitorBadge } from '@/lib/showReg'
 import { useShowT } from '@/lib/showText'
 import { cn, formatMoney } from '@/lib/utils'
@@ -45,13 +45,15 @@ export function BadgeCard({ show, badge }: { show: Show; badge: VisitorBadge }) 
 }
 
 export function VisitorRegistration({ show, open, onOpenChange, visitor }: { show: Show; open: boolean; onOpenChange: (v: boolean) => void; visitor: Visitor }) {
-  const { L, locale } = useI18n()
+  const { L, locale, t } = useI18n()
   const x = useShowT()
   const toast = useToast()
   const paid = show.visitorTicketFee > 0
   const needAge = (show.minAge ?? 0) > 0
-  // the receipt upload needs an account (no anonymous endpoint), so a paid show asks for sign-in before the form, not at its last step
-  const needLogin = !USE_MOCK && paid && !tokens.access()
+  // public registration goes through the sso captcha (enabled=false = none); the code lives 120s, so a fresh one per opening
+  const captcha = useLiveCaptcha()
+  const showCaptcha = !USE_MOCK && captcha.cap?.enabled !== false
+  const [captchaText, setCaptchaText] = useState('')
   const { session, profile } = useProfile()
   const cancelRegistration = useCancelRegistration(visitor)
   const [step, setStep] = useState(0)
@@ -63,7 +65,7 @@ export function VisitorRegistration({ show, open, onOpenChange, visitor }: { sho
   const [receipt, setReceipt] = useState('')
   const [busy, setBusy] = useState(false)
   const [receiptFile, setReceiptFile] = useState<File | null>(null)
-  const [pending, setPending] = useState<{ code: string; visitorId: string; status: string } | null>(null)
+  const [pending, setPending] = useState<{ code: string; visitorId: string; status: string; paymentToken?: string } | null>(null)
   const set = (k: keyof typeof form, v: string | boolean) => setForm((f) => ({ ...f, [k]: v }))
   const locked = tries >= MAX_TRIES
 
@@ -73,6 +75,11 @@ export function VisitorRegistration({ show, open, onOpenChange, visitor }: { sho
     const r = profile.registration
     setForm((f) => ({ ...f, name: f.name || r.repName, email: f.email || r.repEmail || r.email, phone: f.phone || r.repPhone || r.phone, company: f.company || session.companyName || profile.general.nameVi }))
   }, [session, profile, open])
+
+  const { refresh: refreshCaptcha } = captcha
+  useEffect(() => {
+    if (open) refreshCaptcha()
+  }, [open, refreshCaptcha])
 
   useEffect(() => {
     if (cooldown <= 0) return
@@ -86,14 +93,16 @@ export function VisitorRegistration({ show, open, onOpenChange, visitor }: { sho
   const toOtp = () => {
     if (!form.name.trim() || !form.email.trim() || !form.consent || (needAge && !form.adult)) return setErr(x.reg.required)
     if (!emailOk(form.email)) return setErr(x.reg.invalidEmail)
+    if (showCaptcha && !captchaText.trim()) return setErr(x.reg.required)
     setErr('')
     setOtp('')
     if (!USE_MOCK) {
       setBusy(true)
       // The BE asks for ageConfirmed on every show, even with no minimum age; there is nothing to confirm then, so it is not asked of the visitor.
-      liveApi.showRegisterVisitor(show.id, { ...form, adult: needAge ? form.adult : true, phaseIds: show.phases.length > 1 ? show.phases.map((p) => p.id) : undefined }).then(
-        (r) => { setBusy(false); setPending({ code: '', visitorId: r.visitorId, status: r.badgeStatus ?? '' }); setCooldown(r.resendAfterSeconds); setStep(1) },
-        (e: Error) => { setBusy(false); setErr(e.message) },
+      liveApi.showRegisterVisitor(show.id, { ...form, adult: needAge ? form.adult : true, phaseIds: show.phases.length > 1 ? show.phases.map((p) => p.id) : undefined, captchaId: captcha.cap?.captchaId, captchaAnswer: captchaText.trim() }).then(
+        (r) => { setBusy(false); setCaptchaText(''); setPending({ code: '', visitorId: r.visitorId, status: r.badgeStatus ?? '' }); setCooldown(r.resendAfterSeconds); setStep(1) },
+        // a captcha is single-use even when the answer was wrong: always show a new one
+        (e: Error) => { setBusy(false); setErr(e.message); refreshCaptcha(); setCaptchaText('') },
       )
       return
     }
@@ -117,7 +126,7 @@ export function VisitorRegistration({ show, open, onOpenChange, visitor }: { sho
           setBusy(false)
           setErr('')
           const status = (r.badgeStatus ?? 'ISSUED') as VisitorBadge['status']
-          if (status === 'PENDING_PAYMENT') { setPending({ code: r.badgeCode, visitorId: r.visitorId, status }); return setStep(2) }
+          if (status === 'PENDING_PAYMENT') { setPending({ code: r.badgeCode, visitorId: r.visitorId, status, paymentToken: r.paymentToken }); return setStep(2) }
           visitor.saveBadge({ visitorId: r.visitorId, code: r.badgeCode, name: form.name, email: form.email, company: form.company, visitorType: form.visitorType, status, issuedAt: new Date().toISOString() })
           setStep(3)
         },
@@ -134,12 +143,13 @@ export function VisitorRegistration({ show, open, onOpenChange, visitor }: { sho
     if (paid) return setStep(2)
     issue()
   }
-  /** live: attach the receipt (POST /api/shows/visitors/{id}/payment needs a signed-in user; the badge stays PENDING_PAYMENT either way) */
+  /** live: attach the receipt (signed in: own registration; guest: email + paymentToken from the OTP step); the badge stays PENDING_PAYMENT either way */
   const submitReceiptLive = () => {
     if (!pending) return
     setBusy(true)
     const save = () => { visitor.saveBadge({ visitorId: pending.visitorId, code: pending.code, name: form.name, email: form.email, company: form.company, visitorType: form.visitorType, status: 'PENDING_PAYMENT', issuedAt: new Date().toISOString() }); setBusy(false); setStep(3) }
-    liveApi.showUploadReceipt(pending.visitorId, receiptFile!).then(save, (e: Error) => { toast({ title: e.message, kind: 'info' }); save() })
+    const guest = !tokens.access() && pending.paymentToken ? { email: form.email, paymentToken: pending.paymentToken } : undefined
+    liveApi.showUploadReceipt(pending.visitorId, receiptFile!, guest).then(save, (e: Error) => { toast({ title: e.message, kind: 'info' }); save() })
   }
   const issue = (receiptPicked = false) => {
     setBusy(true)
@@ -166,17 +176,9 @@ export function VisitorRegistration({ show, open, onOpenChange, visitor }: { sho
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent title={x.reg.title} description={L(show.title)}>
-        {!(needLogin && view === 0) && stepper}
+        {stepper}
         <div className="space-y-4 p-6">
-          {view === 0 && needLogin && (
-            <div className="py-4 text-center">
-              <LogIn className="mx-auto size-10 text-primary" />
-              <p className="mt-3 text-lg font-bold">{tx('Show có phí: vui lòng đăng nhập trước', 'This show is paid: please sign in first', '유료 쇼입니다. 먼저 로그인하세요')}</p>
-              <p className="mt-1 text-sm text-muted-foreground">{tx('Nộp biên lai cần tài khoản đăng nhập, nên bạn đăng nhập trước khi điền thông tin.', 'Uploading the receipt needs an account, so sign in before filling in your details.', '영수증 제출에는 계정이 필요하므로 정보를 입력하기 전에 로그인하세요.')}</p>
-              <Link to={`/login?return=${encodeURIComponent(`/events/${show.id}`)}`} className={buttonClass('default', 'lg', 'mt-5 w-full')}><LogIn /> {tx('Đăng nhập', 'Sign in', '로그인')}</Link>
-            </div>
-          )}
-          {view === 0 && !needLogin && (
+          {view === 0 && (
             <>
               <div className="grid gap-4 sm:grid-cols-2">
                 <Field label={`${x.reg.name} *`} htmlFor="v-name"><Input id="v-name" value={form.name} onChange={(e) => set('name', e.target.value)} /></Field>
@@ -195,6 +197,7 @@ export function VisitorRegistration({ show, open, onOpenChange, visitor }: { sho
               <label className="flex items-start gap-2 text-sm"><input type="checkbox" className="mt-1" checked={form.share} onChange={(e) => set('share', e.target.checked)} /> {x.reg.shareContact}</label>
               <label className="flex items-start gap-2 text-sm"><input type="checkbox" className="mt-1" checked={form.consent} onChange={(e) => set('consent', e.target.checked)} /> {x.reg.consent} *</label>
               {needAge && <label className="flex items-start gap-2 text-sm"><input type="checkbox" className="mt-1" checked={form.adult} onChange={(e) => set('adult', e.target.checked)} /> {x.reg.ageConfirm.replace('{n}', String(show.minAge))} *</label>}
+              {showCaptcha && <Field label={`${t.auth.captcha} *`} htmlFor="captcha"><Captcha live={captcha} value={captchaText} onChange={setCaptchaText} /></Field>}
               {err && <p className="text-sm font-medium text-destructive">{err}</p>}
               <Button className="w-full" size="lg" disabled={busy} onClick={toOtp}><MailCheck /> {x.reg.sendOtp}</Button>
             </>

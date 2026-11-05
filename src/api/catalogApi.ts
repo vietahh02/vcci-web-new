@@ -168,6 +168,16 @@ export async function openShows(): Promise<OpenShow[]> {
   }))
 }
 export const myBooths = async () => (await apiFetch<Raw[]>('/api/shows/my/booths')).map(toBooth)
+/* ------------------------------------------------- price inquiries received by my booths */
+export interface BoothInquiry { id: string; productName?: string; quantity?: string; fromName: string; fromEmail: string; message: string; status: string; reply?: string; repliedAt?: string; createdAt?: string }
+const toInquiry = (r: Raw): BoothInquiry => ({
+  id: String(r.id), productName: r.productName ?? undefined, quantity: r.quantity ?? undefined, fromName: r.fromName ?? '', fromEmail: r.fromEmail ?? '',
+  message: r.message ?? '', status: r.status ?? 'NEW', reply: r.reply ?? undefined, repliedAt: r.repliedAt ?? undefined, createdAt: r.createdDate ?? undefined,
+})
+/** GET /api/shows/booths/{boothId}/inquiries (own booth only, newest first) */
+export const boothInquiries = async (boothId: string) => (await apiFetch<Raw[]>(`/api/shows/booths/${encodeURIComponent(boothId)}/inquiries`)).map(toInquiry)
+/** POST /api/shows/inquiries/{id}/reply: only a NEW inquiry; the visitor gets the reply by email */
+export const replyInquiry = async (id: string, reply: string) => toInquiry(await apiFetch<Raw>(`/api/shows/inquiries/${encodeURIComponent(id)}/reply`, { method: 'POST', json: { reply } }))
 /**
  * My booths at OFFLINE/HYBRID shows. An ONLINE show keeps one internal booth per organisation to hold its products (CR-2026-008 §4.6);
  * that record is not a booth to the user. A show whose format cannot be read stays listed.

@@ -1,9 +1,10 @@
 import { AnimatePresence, motion } from 'motion/react'
-import { ArrowLeft, ArrowRight, Check, Eye, EyeOff, Quote, RefreshCw } from 'lucide-react'
-import { useCallback, useEffect, useState, type ReactNode } from 'react'
+import { ArrowLeft, ArrowRight, Check, Eye, EyeOff, Quote } from 'lucide-react'
+import { useState, type ReactNode } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { authApi, liveApi, USE_MOCK, useHomeStats } from '@/api'
-import type { Captcha as CaptchaChallenge } from '@/api/auth'
+import { Captcha } from '@/components/ui/captcha'
+import { useLiveCaptcha } from '@/components/ui/useLiveCaptcha'
 import { BUSINESS_FORMS, emptyLeaders, emptyProfile, useProfile, type DocFile, type Registration } from '@/lib/profile'
 import { BranchesFields, LeadersFields, type PersonField } from '@/components/profile/KeyLeadersFields'
 import { ImageUpload, MultiFileUpload, UploadGuide } from '@/components/upload/Upload'
@@ -62,34 +63,6 @@ function PasswordInput({ id, placeholder, name }: { id: string; placeholder?: st
       <Input id={id} name={name} type={show ? 'text' : 'password'} required minLength={8} placeholder={placeholder} className="pr-10" />
       <button type="button" onClick={() => setShow((v) => !v)} className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1.5 text-muted-foreground hover:text-foreground" aria-label={t.ui.togglePassword}>
         {show ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-      </button>
-    </div>
-  )
-}
-
-/** Live: GET /api/auth/captcha (image data-URI + captchaId). `enabled=false` means login needs no captcha. */
-function useLiveCaptcha() {
-  const [cap, setCap] = useState<CaptchaChallenge | null>(null)
-  const refresh = useCallback(() => {
-    if (USE_MOCK) return
-    authApi.getCaptcha().then(setCap, () => setCap({ enabled: false }))
-  }, [])
-  useEffect(() => { refresh() }, [refresh])
-  return { cap, refresh }
-}
-
-function Captcha({ live }: { live?: ReturnType<typeof useLiveCaptcha> }) {
-  const { t } = useI18n()
-  const [code, setCode] = useState(() => Math.random().toString(36).slice(2, 7).toUpperCase())
-  const remote = !USE_MOCK && live
-  return (
-    <div className="flex gap-2">
-      <Input id="captcha" name="captcha" required placeholder="•••••" className="flex-1 uppercase tracking-[0.3em]" />
-      <div className="relative grid h-10 w-28 select-none place-items-center overflow-hidden rounded-lg bg-[repeating-linear-gradient(45deg,var(--muted),var(--muted)_6px,var(--background)_6px,var(--background)_12px)] font-mono text-lg font-bold italic tracking-[0.25em] text-primary">
-        {remote ? (live.cap?.image ? <img src={live.cap.image} alt="" className="size-full object-contain" /> : '…') : code}
-      </div>
-      <button type="button" onClick={() => (remote ? live.refresh() : setCode(Math.random().toString(36).slice(2, 7).toUpperCase()))} className="grid size-10 place-items-center rounded-lg border hover:bg-muted" aria-label={t.ui.refreshCaptcha}>
-        <RefreshCw className="size-4" />
       </button>
     </div>
   )
