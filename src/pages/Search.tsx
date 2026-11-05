@@ -4,6 +4,7 @@ import { Infinity as InfinityIcon, SearchX, SlidersHorizontal, X } from 'lucide-
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { catalogApi, searchProductsPage, USE_MOCK, type ProductQuery } from '@/api'
+import { ErrorBlock } from '@/components/ui/StateViews'
 import { categories, products, type Product } from '@/data/mock'
 import { categoryIcons } from '@/components/brand'
 import { ProductCard } from '@/components/cards'
@@ -26,6 +27,8 @@ export default function SearchPage() {
   const [certs, setCerts] = useState<string[]>([])
   const [sort, setSort] = useState<NonNullable<ProductQuery['sort']>>('popular')
   const [results, setResults] = useState<Product[] | null>(null)
+  const [loadError, setLoadError] = useState<Error>()
+  const [attempt, setAttempt] = useState(0)
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(0)
   const [loadingMore, setLoadingMore] = useState(false)
@@ -39,12 +42,13 @@ export default function SearchPage() {
     let alive = true
     setResults(null)
     setPage(0)
-    searchProductsPage(query(0)).then((r) => { if (alive) { setResults(r.items); setTotal(r.total) } }, () => alive && setResults([]))
+    setLoadError(undefined)
+    searchProductsPage(query(0)).then((r) => { if (alive) { setResults(r.items); setTotal(r.total) } }, (e: Error) => { if (alive) { setLoadError(e); setResults([]) } })
     return () => {
       alive = false
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [keyword, categoryId, maxMoq, certs, sort, lang])
+  }, [keyword, categoryId, maxMoq, certs, sort, lang, attempt])
 
   useEffect(() => {
     if (!USE_MOCK) catalogApi.popularCertificates(12).then(setFacetCerts, () => undefined)
@@ -138,7 +142,7 @@ export default function SearchPage() {
           <motion.h1 key={keyword + categoryId} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-2 text-3xl font-extrabold tracking-tight md:text-4xl">
             {keyword ? `“${keyword}”` : cat ? L(cat.categoryName) : t.nav.products}
           </motion.h1>
-          <p className="mt-1 text-sm text-white/70">{results ? `${results.length} ${t.searchPage.results}` : t.common.loading}</p>
+          <p className="mt-1 text-sm text-white/70">{loadError ? '' : results ? `${results.length} ${t.searchPage.results}` : t.common.loading}</p>
         </div>
       </section>
 
@@ -178,6 +182,8 @@ export default function SearchPage() {
             <div className="grid grid-cols-2 gap-4 md:grid-cols-3 md:gap-5 xl:grid-cols-4">
               {Array.from({ length: 8 }).map((_, i) => <div key={i} className="overflow-hidden rounded-2xl border bg-card"><Skeleton className="aspect-square rounded-none" /><div className="p-3.5"><Skeleton className="h-4" /><Skeleton className="mt-2 h-5 w-1/2" /></div></div>)}
             </div>
+          ) : loadError ? (
+            <ErrorBlock error={loadError} onRetry={() => setAttempt((n) => n + 1)} />
           ) : results.length === 0 ? (
             <div className="grid place-items-center py-20 text-center">
               <SearchX className="size-10 text-muted-foreground" />

@@ -7,6 +7,7 @@ import { searchEvents } from '@/api'
 import type { EventItem } from '@/data/mock'
 import { EventExplorer, formatLabel } from '@/components/event/EventExplorer'
 import { LiveDot, useCountdown } from '@/components/effects'
+import { ErrorBlock } from '@/components/ui/StateViews'
 import { buttonClass, Skeleton } from '@/components/ui/primitives'
 import { eventTimeRange, isOnAir } from '@/lib/eventStatus'
 import { useI18n } from '@/lib/i18n'
@@ -15,11 +16,15 @@ import { formatDate, img } from '@/lib/utils'
 export default function Events() {
   const { lang } = useI18n()
   const [list, setList] = useState<EventItem[] | null>(null)
+  const [error, setError] = useState<Error>()
+  const [attempt, setAttempt] = useState(0)
 
   useEffect(() => {
-    searchEvents().then(setList, () => setList([]))
-  }, [lang])
+    searchEvents().then((r) => { setError(undefined); setList(r) }, (e: Error) => setError(e))
+  }, [lang, attempt])
 
+  // the API failing is not the same as nothing matching
+  if (error) return <ErrorBlock error={error} onRetry={() => { setError(undefined); setList(null); setAttempt((n) => n + 1) }} />
   if (!list) return <div className="container-page py-10"><Skeleton className="h-[480px] rounded-3xl" /></div>
 
   const live = list.find((e) => e.eventStatus === 'ONGOING' && e.eventType === 'LIVESTREAM') ?? list.find((e) => e.eventStatus === 'ONGOING' && e.eventType === 'SHOW')
