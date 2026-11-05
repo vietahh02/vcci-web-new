@@ -6,6 +6,7 @@ import type { RestoredVisitor } from '@/lib/showReg'
 import type { Business, Category, EventItem, ImportRequest, Product, SponsorTier } from '@/data/mock'
 import type { PublicProfile } from '@/data/capability'
 import type { Show } from '@/data/shows'
+import { currentLang } from '@/lib/i18n'
 import { showToEvent } from '@/lib/showEvent'
 import type { CompanyProfile, SectionKey } from '@/lib/profile'
 import { initials } from '@/lib/utils'
@@ -18,6 +19,7 @@ import { toProduct } from './adapters/product'
 import { fromImportRequestInput, toImportRequest, type ImportRequestInput } from './adapters/request'
 import { beShowId, isShowId, toShow, toShowLabel } from './adapters/show'
 import { mockFallback } from './config'
+import { cached, DAY } from './swr'
 import { registerUploadToken, fileIdOf } from './uploads'
 import { ApiError, apiFetch, apiUnavailable, toPage, type Page } from './http'
 import * as mock from './mockApi'
@@ -49,7 +51,17 @@ const listOf = <T>(r: unknown) => (Array.isArray(r) ? (r as T[]) : toPage<T>(r).
 /* ------------------------------------------------------------- categories */
 /** Category id -> BE IndustryEnum, needed by POST /api/business/register (industry[]). */
 export const categoryIndustry = new Map<string, string>()
+/** Category list changes rarely: cached for a day (kept in localStorage, so a reload is instant), refreshed quietly when stale. */
 export async function loadCategories(): Promise<Category[]> {
+  const v = await cached('categories', { ttl: DAY, persist: true }, async () => ({
+    cats: await fetchCategories(),
+    industry: [...categoryIndustry],
+  }))
+  v.industry.forEach(([k, x]) => categoryIndustry.set(k, x))
+  return v.cats
+}
+
+async function fetchCategories(): Promise<Category[]> {
   // /api/categories/options carries the IndustryEnum needed by business registration. It needs a JWT on the portal (403 for
   // guests), so it must not block the public category list: guests register with industryIds (the BE maps them to IndustryEnum).
   await apiFetch('/api/categories/options').then(
@@ -66,11 +78,15 @@ export async function loadCategories(): Promise<Category[]> {
 /* --------------------------------------------------------------- products */
 /** GET /api/products/search: keyword, categoryId, maxMoq, certificates, sort and page/size are all applied by the BE (paged in the DB). */
 export async function searchProductsPage(q: ProductQuery = {}): Promise<Page<Product>> {
-  const size = q.size ?? 24
-  const page = toPage<Raw>(await apiFetch('/api/products/search', {
-    query: { keyword: q.keyword, categoryId: q.categoryId, maxMoq: q.maxMoq, certificates: q.certificates, sort: q.sort, page: q.page ?? 0, size },
-  }), size)
-  return { ...page, items: page.items.map(toProduct) }
+  // same search again (back button, re-typing) is answered from a 5-minute cache; keys include the UI language
+  const key = 'search:' + currentLang() + ':' + JSON.stringify(q)
+  return cached(key, { ttl: 5 * 60 * 1000 }, async () => {
+    const size = q.size ?? 24
+    const page = toPage<Raw>(await apiFetch('/api/products/search', {
+      query: { keyword: q.keyword, categoryId: q.categoryId, maxMoq: q.maxMoq, certificates: q.certificates, sort: q.sort, page: q.page ?? 0, size },
+    }), size)
+    return { ...page, items: page.items.map(toProduct) }
+  })
 }
 export async function searchProducts(q: ProductQuery = {}): Promise<Product[]> {
   return (await searchProductsPage(q)).items
@@ -215,13 +231,13 @@ export const myRegistrations = async () => listOf<Raw>(await apiFetch('/api/even
 /* ------------------------------------------------------------ show visitors */
 export interface VisitorResult { visitorId: string; status: string; badgeStatus?: string; resendAfterSeconds: number; maxOtpAttempts: number; otpRequired: boolean }
 const toVisitor = (r: Raw): VisitorResult => ({ visitorId: id(r.visitorId), status: str(r.status), badgeStatus: r.badgeStatus ? str(r.badgeStatus) : undefined, resendAfterSeconds: num(r.resendAfterSeconds, 30), maxOtpAttempts: num(r.maxOtpAttempts, 5), otpRequired: r.otpRequired !== false })
-export interface VisitorForm { name: string; email: string; phone: string; company: string; country: string; visitorType: string; businessType: string; share: boolean; consent: boolean; adult?: boolean; phaseIds?: string[]; captchaId?: string; captchaAnswer?: string }
+export interface VisitorForm { name: string; email: string; phone: string; company: string; country: string; visitorType: string; businessType: string; share: boolean; consent: boolean; phaseIds?: string[]; captchaId?: string; captchaAnswer?: string }
 /** POST /api/public/shows/{id}/visitors (sends the OTP email) */
 export async function showRegisterVisitor(feId: string, f: VisitorForm) {
   const [firstName, ...rest] = f.name.trim().split(/\s+/)
   return toVisitor(await apiFetch<Raw>(`/api/public/shows/${beShowId(feId)}/visitors`, {
     method: 'POST',
-    json: { fullName: f.name.trim(), firstName, lastName: rest.join(' '), email: f.email, phone: f.phone, companyName: f.company, country: f.country, visitorType: f.visitorType, businessType: f.businessType, consentTerms: f.consent, consentShareExhibitors: f.share, ageConfirmed: f.adult === true, phaseIds: f.phaseIds?.map(Number), captchaId: f.captchaId, captchaAnswer: f.captchaAnswer },
+    json: { fullName: f.name.trim(), firstName, lastName: rest.join(' '), email: f.email, phone: f.phone, companyName: f.company, country: f.country, visitorType: f.visitorType, businessType: f.businessType, consentTerms: f.consent, consentShareExhibitors: f.share, phaseIds: f.phaseIds?.map(Number), captchaId: f.captchaId, captchaAnswer: f.captchaAnswer },
   }))
 }
 export async function showVerifyOtp(feId: string, email: string, otp: string) {

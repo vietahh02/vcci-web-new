@@ -62,10 +62,17 @@ export default function LegalAI() {
   const empty = msgs.length === 0
 
   return (
-    <div className="relative min-h-[calc(100vh-112px)] overflow-hidden">
-      <div className="pointer-events-none absolute -left-40 top-0 size-[520px] animate-aurora rounded-full bg-primary/15 blur-3xl" />
-      <div className="pointer-events-none absolute -right-40 top-40 size-[420px] animate-aurora rounded-full bg-gold-bright/15 blur-3xl [animation-delay:-8s]" />
-      <div className="container-page relative flex max-w-4xl flex-col py-10">
+    <div className="relative flex h-[calc(100dvh-112px)] min-h-[560px] flex-col">
+      {/* decorative backdrop: clipped here so the page itself never scrolls sideways */}
+      <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="bg-dots absolute inset-0 opacity-50 [mask-image:radial-gradient(ellipse_at_top,#000,transparent_70%)]" />
+        <div className="absolute -left-40 top-0 size-[520px] animate-aurora rounded-full bg-primary/15 blur-3xl" />
+        <div className="absolute -right-40 top-40 size-[420px] animate-aurora rounded-full bg-gold-bright/15 blur-3xl [animation-delay:-8s]" />
+      </div>
+
+      {/* conversation: the only scrolling part */}
+      <div className="relative min-h-0 flex-1 overflow-y-auto">
+        <div className="container-page mx-auto flex max-w-4xl flex-col py-10">
         <AnimatePresence>
           {empty && (
             <motion.div exit={{ opacity: 0, y: -20, height: 0 }} transition={{ duration: 0.4 }} className="text-center">
@@ -132,15 +139,17 @@ export default function LegalAI() {
         </div>
       </div>
 
-      <div className="sticky bottom-0 z-40 bg-gradient-to-t from-background via-background to-transparent pb-5 pt-10">
+      </div>
+      {/* input: pinned to the bottom of the screen, never scrolls away */}
+      <div className="relative shrink-0 bg-gradient-to-t from-background via-background/95 to-transparent pb-5 pt-6">
         <form
           onSubmit={(e) => {
             e.preventDefault()
             ask(text)
           }}
-          className="container-page max-w-4xl max-sm:pr-[84px] sm:max-xl:pr-[96px]"
+          className="container-page mx-auto max-w-4xl max-sm:pr-[84px] sm:max-xl:pr-[96px]"
         >
-          <div className="border-spin flex items-end gap-2 rounded-2xl border bg-card p-2 shadow-xl shadow-navy/10">
+          <div className="flex items-end gap-2 rounded-full border-2 border-primary/25 bg-card p-1.5 shadow-xl shadow-navy/10 transition-[border,box-shadow] duration-300 focus-within:border-primary focus-within:shadow-[0_0_0_5px_color-mix(in_oklab,var(--primary)_14%,transparent)]">
             <textarea
               value={text}
               onChange={(e) => setText(e.target.value)}
@@ -153,9 +162,9 @@ export default function LegalAI() {
               rows={1}
               placeholder={t.legal.placeholder}
               aria-label={t.legal.placeholder}
-              className="max-h-40 min-h-11 flex-1 resize-none bg-transparent px-3 py-2.5 text-[15px] outline-none focus-visible:outline-none"
+              className="max-h-40 min-h-11 flex-1 resize-none bg-transparent px-4 py-2.5 text-[15px] outline-none focus-visible:outline-none"
             />
-            <button type="submit" disabled={!text.trim() || thinking} className="grid size-11 place-items-center rounded-xl bg-primary text-primary-foreground transition hover:bg-primary-hover disabled:opacity-40" aria-label={t.ui.send}>
+            <button type="submit" disabled={!text.trim() || thinking} className="grid size-11 shrink-0 place-items-center rounded-full bg-gradient-to-b from-[#1a8cc4] to-primary text-primary-foreground shadow-md shadow-primary/30 transition-all duration-200 hover:shadow-lg hover:shadow-primary/40 hover:-translate-y-px disabled:opacity-40 disabled:shadow-none" aria-label={t.ui.send}>
               <ArrowUp className="size-5" />
             </button>
           </div>

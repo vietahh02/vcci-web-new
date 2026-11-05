@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
 import { myProducts, type MyProduct } from '@/api/catalogApi'
 import type { Payload } from '@/api/chat'
 import { Button, Field, Input, Textarea } from '@/components/ui/primitives'
+import { DateField, DateTimeField } from '@/components/ui/DateField'
 import { Dialog, DialogContent } from '@/components/ui/overlay'
 import { tx } from '@/lib/tx'
 
@@ -47,7 +48,7 @@ export function RfqDialog({ open, onOpenChange, onSend }: Base & { onSend: (p: P
             <Field label={tx('Số lượng', 'Quantity', '수량')} htmlFor="rfq-qty"><Input id="rfq-qty" required value={f.quantity} onChange={set('quantity')} maxLength={60} /></Field>
             <Field label="Incoterm" htmlFor="rfq-inc"><Input id="rfq-inc" value={f.incoterm} onChange={set('incoterm')} maxLength={20} /></Field>
           </div>
-          <Field label={tx('Hạn trả lời', 'Reply by', '회신 기한')} htmlFor="rfq-dl"><Input id="rfq-dl" type="date" value={f.deadline} onChange={set('deadline')} /></Field>
+          <Field label={tx('Hạn trả lời', 'Reply by', '회신 기한')} htmlFor="rfq-dl"><DateField id="rfq-dl" value={f.deadline} onChange={set('deadline')} /></Field>
           <Field label={tx('Ghi chú', 'Note', '메모')} htmlFor="rfq-note"><Textarea id="rfq-note" value={f.note} onChange={set('note')} maxLength={1000} /></Field>
         </FormBody>
       </DialogContent>
@@ -79,8 +80,8 @@ export function AppointmentDialog({ open, onOpenChange, onSend }: Base & { onSen
         <FormBody onSubmit={submit} busy={busy} submit={tx('Gửi lịch hẹn', 'Send appointment', '약속 보내기')}>
           <Field label={tx('Nội dung', 'Title', '제목')} htmlFor="ap-title"><Input id="ap-title" required value={f.title} onChange={set('title')} maxLength={200} /></Field>
           <div className="grid grid-cols-2 gap-3">
-            <Field label={tx('Bắt đầu', 'Starts', '시작')} htmlFor="ap-start"><Input id="ap-start" type="datetime-local" required value={f.start} onChange={set('start')} /></Field>
-            <Field label={tx('Kết thúc', 'Ends', '종료')} htmlFor="ap-end"><Input id="ap-end" type="datetime-local" value={f.end} min={f.start} onChange={set('end')} /></Field>
+            <Field label={tx('Bắt đầu', 'Starts', '시작')} htmlFor="ap-start"><DateTimeField id="ap-start" required value={f.start} onChange={set('start')} /></Field>
+            <Field label={tx('Kết thúc', 'Ends', '종료')} htmlFor="ap-end"><DateTimeField id="ap-end" value={f.end} min={f.start} onChange={set('end')} /></Field>
           </div>
           <Field label={tx('Địa điểm / liên kết họp', 'Location / meeting link', '장소 / 회의 링크')} htmlFor="ap-loc"><Input id="ap-loc" value={f.location} onChange={set('location')} maxLength={300} /></Field>
         </FormBody>

@@ -84,7 +84,7 @@ export function SearchBar({ size = 'md', className, autoFocusKey }: { size?: 'md
           submit()
         }}
         className={cn(
-          'flex items-center rounded-2xl border-2 bg-background transition-[border,box-shadow] duration-300',
+          'flex items-center rounded-full border-2 bg-background transition-[border,box-shadow] duration-300',
           open ? 'border-primary shadow-[0_0_0_5px_color-mix(in_oklab,var(--primary)_14%,transparent)]' : 'border-primary/80',
           lg ? 'h-[60px] p-1.5 shadow-2xl shadow-black/25' : 'h-12 p-1',
         )}
@@ -96,19 +96,19 @@ export function SearchBar({ size = 'md', className, autoFocusKey }: { size?: 'md
             onValueChange={setScope}
             aria-label={t.ui.scope}
             options={scopes.map((s) => ({ value: s, label: t.search.scopes[s] }))}
-            className="mr-1 hidden h-full w-auto shrink-0 gap-1.5 rounded-xl border-0 bg-muted pl-3 pr-2 text-xs font-semibold shadow-none hover:bg-muted/70 focus:ring-0 focus-visible:ring-2 focus-visible:ring-primary/30 data-[state=open]:ring-0 xl:flex"
+            className="mr-1 hidden h-full w-auto shrink-0 gap-1.5 rounded-full border-0 bg-muted pl-3 pr-2 text-xs font-semibold shadow-none hover:bg-muted/70 focus:ring-0 focus-visible:ring-2 focus-visible:ring-primary/30 data-[state=open]:ring-0 xl:flex"
             contentClassName="min-w-36"
           />
         )}
-        <div className={cn('hidden shrink-0 items-center rounded-xl bg-muted p-0.5', lg && 'mr-2 md:flex')}>
+        <div className={cn('hidden shrink-0 items-center rounded-full bg-muted p-0.5', lg && 'mr-2 md:flex')}>
           {scopes.map((s) => (
             <button
               key={s}
               type="button"
               onClick={() => setScope(s)}
-              className={cn('relative rounded-[10px] px-3 font-semibold transition-colors', lg ? 'py-2 text-[13px]' : 'py-1.5 text-xs', scope === s ? 'text-primary-foreground' : 'text-muted-foreground hover:text-foreground')}
+              className={cn('relative rounded-full px-3.5 font-semibold transition-colors', lg ? 'py-2 text-[13px]' : 'py-1.5 text-xs', scope === s ? 'text-primary-foreground' : 'text-muted-foreground hover:text-foreground')}
             >
-              {scope === s && <motion.span layoutId={`scope-pill-${size}`} className="absolute inset-0 rounded-[10px] bg-primary" transition={{ type: 'spring', bounce: 0.2, duration: 0.45 }} />}
+              {scope === s && <motion.span layoutId={`scope-pill-${size}`} className="absolute inset-0 rounded-full bg-primary" transition={{ type: 'spring', bounce: 0.2, duration: 0.45 }} />}
               <span className="relative">{t.search.scopes[s]}</span>
             </button>
           ))}
@@ -145,7 +145,7 @@ export function SearchBar({ size = 'md', className, autoFocusKey }: { size?: 'md
         <button
           type="submit"
           className={cn(
-            'inline-flex shrink-0 items-center gap-2 rounded-xl bg-primary font-bold text-primary-foreground transition hover:bg-primary-hover active:scale-[0.97]',
+            'inline-flex shrink-0 items-center gap-2 rounded-full bg-primary font-bold text-primary-foreground transition hover:bg-primary-hover active:scale-[0.97]',
             lg ? 'h-full px-6 text-[15px]' : 'h-full px-4 text-sm',
           )}
         >

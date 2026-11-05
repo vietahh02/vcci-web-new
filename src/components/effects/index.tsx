@@ -192,7 +192,7 @@ export function Countdown({ target, labels, className, dark }: { target: string;
   return (
     <div className={cn('flex gap-1.5', className)}>
       {parts.map((v, i) => (
-        <div key={i} className={cn('min-w-11 rounded-lg px-1.5 py-1 text-center', dark ? 'bg-white/10 text-white ring-1 ring-white/15' : 'bg-muted')}>
+        <div key={i} className={cn('min-w-11 rounded-2xl px-1.5 py-1 text-center', dark ? 'bg-white/10 text-white ring-1 ring-white/15' : 'bg-muted')}>
           <div className="relative h-5 overflow-hidden text-[15px] font-bold tabular-nums leading-5">
             <motion.div key={v} initial={{ y: -14, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ duration: 0.3 }}>
               {String(v).padStart(2, '0')}

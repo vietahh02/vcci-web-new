@@ -486,6 +486,8 @@ export interface ImportRequest {
   description: Bilingual
   productType: string
   categoryId: string
+  /** Doanh nghiệp mua (chat B2B báo giá). */
+  organizationId?: string
   organizationName: string
   organizationEmail: string
   organizationPhone: string

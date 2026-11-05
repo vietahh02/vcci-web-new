@@ -214,7 +214,7 @@ export default function SearchPage() {
             <motion.div className="fixed inset-x-0 bottom-0 z-[81] max-h-[85dvh] overflow-y-auto rounded-t-3xl bg-popover p-5" initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} transition={{ type: 'spring', bounce: 0.1, duration: 0.45 }}>
               <div className="mb-4 flex items-center justify-between">
                 <p className="font-extrabold">{t.searchPage.filters}</p>
-                <button onClick={() => setFiltersOpen(false)} className="rounded-md p-1.5 hover:bg-muted" aria-label={t.ui.close}><X className="size-4" /></button>
+                <button onClick={() => setFiltersOpen(false)} className="rounded-full p-1.5 hover:bg-primary-soft hover:text-primary" aria-label={t.ui.close}><X className="size-4" /></button>
               </div>
               {filters}
             </motion.div>

@@ -286,9 +286,9 @@ function CalendarView({ list, types }: { list: EventItem[]; types: EventType[] }
         <div className="mb-3 flex items-center justify-between">
           <p className="text-lg font-extrabold capitalize">{formatDate(month.toISOString(), locale, { month: 'long', year: 'numeric' })}</p>
           <div className="flex gap-1">
-            <button type="button" aria-label="prev" onClick={() => shift(-1)} className="grid size-9 place-items-center rounded-lg border hover:bg-muted"><ChevronLeft className="size-4" /></button>
+            <button type="button" aria-label="prev" onClick={() => shift(-1)} className="grid size-9 place-items-center rounded-full border hover:bg-primary-soft hover:text-primary"><ChevronLeft className="size-4" /></button>
             <button type="button" onClick={() => { const d = new Date(); setMonth(new Date(d.getFullYear(), d.getMonth(), 1)); setSelected(d.toDateString()) }} className="rounded-lg border px-3 text-sm font-semibold hover:bg-muted">{tx('Hôm nay', 'Today', '오늘')}</button>
-            <button type="button" aria-label="next" onClick={() => shift(1)} className="grid size-9 place-items-center rounded-lg border hover:bg-muted"><ChevronRight className="size-4" /></button>
+            <button type="button" aria-label="next" onClick={() => shift(1)} className="grid size-9 place-items-center rounded-full border hover:bg-primary-soft hover:text-primary"><ChevronRight className="size-4" /></button>
           </div>
         </div>
         <div className="grid grid-cols-7 overflow-hidden rounded-xl border text-xs">

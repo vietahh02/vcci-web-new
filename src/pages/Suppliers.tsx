@@ -84,7 +84,7 @@ export default function Suppliers() {
             <p className="text-sm text-muted-foreground">{list ? `${list.length} ${t.searchPage.results}` : t.common.loading}</p>
             <div className="flex rounded-lg border p-0.5">
               {(['grid', 'list'] as const).map((v) => (
-                <button key={v} onClick={() => setView(v)} className={cn('relative rounded-md p-1.5 transition-colors', view === v ? 'text-foreground' : 'text-muted-foreground hover:text-foreground')} aria-label={v} aria-pressed={view === v}>
+                <button key={v} onClick={() => setView(v)} className={cn('relative rounded-full p-1.5 transition-colors', view === v ? 'text-foreground' : 'text-muted-foreground hover:text-foreground')} aria-label={v} aria-pressed={view === v}>
                   {view === v && <motion.span layoutId="sup-view" className="absolute inset-0 rounded-md bg-muted" />}
                   {v === 'grid' ? <LayoutGrid className="relative size-4" /> : <List className="relative size-4" />}
                 </button>

@@ -21,6 +21,7 @@ import LiveRoom from '@/pages/LiveRoom'
 import { LegacyRoomRedirect } from '@/components/live/LegacyRoomRedirect'
 import Messages from '@/pages/Messages'
 import MyCatalog from '@/pages/MyCatalog'
+import ProductEditPage from '@/pages/ProductEdit'
 import NotFound from '@/pages/NotFound'
 import ProductDetail from '@/pages/ProductDetail'
 import RequestDetail from '@/pages/RequestDetail'
@@ -80,6 +81,8 @@ export default function App() {
                     <Route path="/register" element={<Register />} />
                     <Route path="/account/profile" element={<MyProfile />} />
                     <Route path="/account/catalog" element={<MyCatalog />} />
+                    <Route path="/account/catalog/products/new" element={<ProductEditPage />} />
+                    <Route path="/account/catalog/products/:id" element={<ProductEditPage />} />
                     <Route path="/messages" element={<Messages />} />
                     <Route path="*" element={<NotFound />} />
                   </Routes>

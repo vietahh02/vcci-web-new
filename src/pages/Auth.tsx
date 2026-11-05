@@ -17,6 +17,7 @@ import { CountUp } from '@/components/effects'
 import { LangSwitcher } from '@/components/layout/LangSwitcher'
 import { useToast } from '@/components/ui/overlay'
 import { Button, Field, Input } from '@/components/ui/primitives'
+import { DateField } from '@/components/ui/DateField'
 import { Select } from '@/components/ui/select'
 import { useI18n } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
@@ -266,7 +267,7 @@ export function Register() {
                   <Field label={tx('Ghi rõ loại hình', 'Specify legal form', '기업 형태 명시') + ' *'} htmlFor="bf-other"><Input id="bf-other" placeholder={tx('Nhập loại hình doanh nghiệp', 'Enter the legal form', '기업 형태 입력')} required maxLength={150} value={r.otherBusinessForm} onChange={(e) => set('otherBusinessForm', e.target.value)} /></Field>
                 )}
                 <Field label={tx('Số đăng ký kinh doanh', 'Business registration no.', '영업 등록 번호') + ' *'} htmlFor="brn"><Input id="brn" placeholder={tx('VD: 0123456789', 'e.g. 0123456789', '예: 0123456789')} required maxLength={50} value={r.businessRegNo} onChange={(e) => set('businessRegNo', e.target.value)} /></Field>
-                <Field label={tx('Ngày cấp', 'Date of issue', '발급일') + ' *'} htmlFor="brd"><Input id="brd" type="date" required max={today} value={r.businessRegDate} onChange={(e) => set('businessRegDate', e.target.value)} /></Field>
+                <Field label={tx('Ngày cấp', 'Date of issue', '발급일') + ' *'} htmlFor="brd"><DateField id="brd" required max={today} value={r.businessRegDate} onChange={(e) => set('businessRegDate', e.target.value)} /></Field>
                 <Field label={tx('Nơi cấp', 'Place of issue', '발급 기관') + ' *'} htmlFor="brp" className="sm:col-span-2"><Input id="brp" required maxLength={255} value={r.businessRegPlace} onChange={(e) => set('businessRegPlace', e.target.value)} placeholder={tx('VD: Sở Kế hoạch và Đầu tư TP. Hà Nội', 'e.g. Hanoi Department of Planning and Investment', '예: 하노이 기획투자국')} /></Field>
                 <Field label={tx('Loại hình hoạt động', 'Business type', '사업 유형') + ' *'} htmlFor="bt">
                   <Select id="bt" value={r.businessType} onValueChange={(v) => set('businessType', v)} options={(Object.keys(t.supplier.types) as (keyof typeof t.supplier.types)[]).map((k) => ({ value: k, label: t.supplier.types[k] }))} />

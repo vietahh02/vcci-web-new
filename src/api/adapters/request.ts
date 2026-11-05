@@ -11,6 +11,7 @@ export function toImportRequest(r: Raw): ImportRequest {
     description: bi(r.description),
     productType: str(r.productType),
     categoryId: id(r.categoryId),
+    organizationId: str(r.organizationId),
     organizationName: str(r.organizationName),
     organizationEmail: str(r.organizationEmail),
     organizationPhone: str(r.organizationPhone),

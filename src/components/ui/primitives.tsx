@@ -11,19 +11,19 @@ type ButtonVariant = 'default' | 'secondary' | 'outline' | 'ghost' | 'gold' | 'l
 type ButtonSize = 'sm' | 'md' | 'lg' | 'icon'
 
 const buttonVariants: Record<ButtonVariant, string> = {
-  default: 'bg-primary text-primary-foreground shadow-sm hover:bg-primary-hover shadow-primary/20',
-  secondary: 'bg-secondary text-secondary-foreground hover:bg-muted',
-  outline: 'border border-input bg-background hover:bg-muted hover:border-foreground/20',
-  ghost: 'hover:bg-muted',
-  gold: 'bg-gradient-to-b from-[#e6c357] to-[#c99a22] text-[#2b1d00] shadow-sm shadow-amber-900/20 hover:brightness-105',
+  default: 'bg-gradient-to-b from-[#1a8cc4] to-primary text-primary-foreground shadow-md shadow-primary/30 hover:from-[#2a9fd8] hover:to-[#0b78b0] hover:shadow-lg hover:shadow-primary/40 hover:-translate-y-px',
+  secondary: 'bg-primary-soft text-primary hover:bg-primary/15 hover:-translate-y-px',
+  outline: 'border border-input bg-background/80 shadow-sm hover:border-primary/40 hover:bg-primary-soft hover:text-primary hover:shadow-md hover:-translate-y-px',
+  ghost: 'hover:bg-primary-soft hover:text-primary',
+  gold: 'bg-gradient-to-b from-[#f2d36b] to-[#d9a62a] text-[#2b1d00] shadow-md shadow-amber-500/30 hover:brightness-105 hover:shadow-lg hover:-translate-y-px',
   link: 'text-primary underline-offset-4 hover:underline px-0 h-auto',
-  white: 'bg-white text-navy hover:bg-white/90 shadow-sm',
+  white: 'bg-white text-navy shadow-md shadow-black/10 hover:bg-white hover:shadow-lg hover:-translate-y-px',
 }
 const buttonSizes: Record<ButtonSize, string> = {
-  sm: 'h-8 px-3 text-[13px] gap-1.5 rounded-md',
-  md: 'h-10 px-4 text-sm gap-2 rounded-lg',
-  lg: 'h-12 px-6 text-[15px] gap-2 rounded-xl',
-  icon: 'h-10 w-10 rounded-lg',
+  sm: 'h-8 px-3.5 text-[13px] gap-1.5 rounded-full',
+  md: 'h-10 px-5 text-sm gap-2 rounded-full',
+  lg: 'h-12 px-7 text-[15px] gap-2 rounded-full',
+  icon: 'h-10 w-10 rounded-full',
 }
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -40,7 +40,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       ref={ref}
       type={type}
       className={cn(
-        'relative inline-flex shrink-0 select-none items-center justify-center whitespace-nowrap font-semibold transition-[background,color,box-shadow,transform,filter] duration-200 active:scale-[0.97] disabled:pointer-events-none disabled:opacity-50 [&_svg]:size-4 [&_svg]:shrink-0',
+        'relative inline-flex shrink-0 select-none items-center justify-center whitespace-nowrap font-semibold transition-[background,color,box-shadow,transform,filter] duration-200 active:scale-[0.97] disabled:pointer-events-none disabled:opacity-50 [&_svg]:size-[18px] [&_svg]:shrink-0',
         buttonVariants[variant],
         buttonSizes[size],
         className,
@@ -52,7 +52,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
 
 export function buttonClass(variant: ButtonVariant = 'default', size: ButtonSize = 'md', className?: string) {
   return cn(
-    'relative inline-flex shrink-0 select-none items-center justify-center whitespace-nowrap font-semibold transition-[background,color,box-shadow,transform] duration-200 active:scale-[0.97] [&_svg]:size-4 [&_svg]:shrink-0',
+    'relative inline-flex shrink-0 select-none items-center justify-center whitespace-nowrap font-semibold transition-[background,color,box-shadow,transform] duration-200 active:scale-[0.97] [&_svg]:size-[18px] [&_svg]:shrink-0',
     buttonVariants[variant],
     buttonSizes[size],
     className,
@@ -75,7 +75,7 @@ export function Badge({ className, variant = 'secondary', ...props }: HTMLAttrib
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-1 whitespace-nowrap rounded-md border px-2 py-0.5 text-[11.5px] font-semibold leading-5 [&_svg]:size-3.5',
+        'inline-flex items-center gap-1 whitespace-nowrap rounded-full border px-2.5 py-0.5 text-[11.5px] font-semibold leading-5 [&_svg]:size-3.5',
         badgeVariants[variant],
         className,
       )}
@@ -106,18 +106,18 @@ export function CardFooter({ className, ...props }: HTMLAttributes<HTMLDivElemen
 
 /* ---------------------------------------------------------------- Form fields */
 export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement>>(function Input({ className, ...props }, ref) {
-  return <input ref={ref} className={cn(fieldBase, 'h-10', className)} {...props} />
+  return <input ref={ref} className={cn(fieldBase, 'h-10 rounded-full px-4', className)} {...props} />
 })
 
 export const Textarea = forwardRef<HTMLTextAreaElement, TextareaHTMLAttributes<HTMLTextAreaElement>>(function Textarea({ className, ...props }, ref) {
-  return <textarea ref={ref} className={cn(fieldBase, 'min-h-24 py-2.5 leading-relaxed', className)} {...props} />
+  return <textarea ref={ref} className={cn(fieldBase, 'min-h-24 rounded-2xl py-2.5 leading-relaxed', className)} {...props} />
 })
 
 export function Label({ className, ...props }: LabelHTMLAttributes<HTMLLabelElement>) {
   return <label className={cn('mb-1.5 block text-[13px] font-semibold text-foreground', className)} {...props} />
 }
 
-export function Field({ label, htmlFor, hint, children, className }: { label: string; htmlFor?: string; hint?: string; children: ReactNode; className?: string }) {
+export function Field({ label, htmlFor, hint, children, className }: { label: ReactNode; htmlFor?: string; hint?: string; children: ReactNode; className?: string }) {
   return (
     <div className={className}>
       <Label htmlFor={htmlFor}>{label}</Label>

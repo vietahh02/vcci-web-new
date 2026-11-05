@@ -83,6 +83,18 @@ export function MessageCard({ chat, m, onReply }: { chat: BizChat; m: WidgetMsg;
               {answered ? tx('Đã báo giá', 'Answered', '답변됨') : tx('Chờ báo giá', 'Pending', '대기')}
             </span>
           </div>
+          {str(p.requestCode) && (
+            <p className="mt-1 text-[11px] text-muted-foreground">{tx('Cho yêu cầu', 'For request', '요청')} <b className="text-foreground">{str(p.requestCode)}</b>{str(p.requestName) ? ` · ${str(p.requestName)}` : ''}</p>
+          )}
+          {str(p.productName) && (
+            <div className="mt-2 flex items-center gap-2.5 rounded-xl bg-muted/60 p-2">
+              {str(p.imageUrl) && <img src={str(p.imageUrl)} alt="" className="size-10 shrink-0 rounded-lg object-cover" />}
+              <div className="min-w-0 text-xs">
+                <p className="truncate font-semibold">{str(p.productName)}</p>
+                {p.priceFob != null && <p className="text-muted-foreground">FOB {String(p.priceFob)}{str(p.unit) ? ` / ${str(p.unit)}` : ''}</p>}
+              </div>
+            </div>
+          )}
           <dl className="space-y-0.5 text-xs">
             {['item', 'quantity', 'incoterm', 'deadline'].filter((k) => str(p[k])).map((k) => (
               <div key={k} className="flex justify-between gap-3"><dt className="text-muted-foreground">{rfqLabel(k)}</dt><dd className="text-right font-medium">{str(p[k])}</dd></div>
