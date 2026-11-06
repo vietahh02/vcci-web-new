@@ -210,6 +210,7 @@ function Overview({ show }: { show: Show }) {
           <p className="mt-4 inline-flex items-center gap-2 rounded-lg bg-primary-soft px-3 py-2 text-sm font-medium text-primary"><Globe2 className="size-4" /> {x.direction[show.direction]}</p>
         </section>
         <HomeBlocks show={show} />
+        <ProductLaunches show={show} />
         {!online && show.phases.length > 0 && <section>
           <h2 className="text-xl font-extrabold">{x.phasesTitle}</h2>
           <ol className="relative mt-5 space-y-4 border-l-2 border-dashed border-border pl-6">
@@ -325,6 +326,34 @@ function HomeBlocks({ show }: { show: Show }) {
         </section>
       )}
     </>
+  )
+}
+
+/** New-product launch calendar from approved participation applications (V85) - date/time marker only, no stage or stream. */
+function ProductLaunches({ show }: { show: Show }) {
+  const { locale } = useI18n()
+  const rows = show.productLaunches ?? []
+  if (!rows.length) return null
+  return (
+    <section>
+      <h2 className="text-xl font-extrabold">{tx('Sản phẩm mới ra mắt', 'New product launches', '신제품 출시')}</h2>
+      <ul className="mt-4 grid gap-3 sm:grid-cols-2">
+        {rows.map((p, i) => (
+          <li key={`${p.productId}-${i}`} className="flex items-center gap-3 rounded-2xl border bg-card p-3">
+            {p.productImage ? (
+              <img src={img(p.productImage, 160, 160)} alt="" loading="lazy" className="size-14 shrink-0 rounded-xl object-cover" />
+            ) : (
+              <div className="flex size-14 shrink-0 items-center justify-center rounded-xl bg-muted"><Store className="size-5 text-muted-foreground" aria-hidden /></div>
+            )}
+            <div className="min-w-0">
+              <p className="truncate font-bold">{p.productName}</p>
+              {p.organizationName && <p className="truncate text-sm text-muted-foreground">{p.organizationName}</p>}
+              <p className="mt-0.5 flex items-center gap-1 text-xs font-semibold text-primary"><CalendarDays className="size-3.5" aria-hidden /> {formatDate(p.launchDate, locale, { day: '2-digit', month: '2-digit' })} · {p.startTime}–{p.endTime}</p>
+            </div>
+          </li>
+        ))}
+      </ul>
+    </section>
   )
 }
 

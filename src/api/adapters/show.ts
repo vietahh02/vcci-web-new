@@ -1,6 +1,6 @@
 /** GET /api/public/shows/{idOrSlug}/full -> FE Show (data/shows.ts). BE sends Bilingual {vi,en,ko} for content fields. */
 import { IMG } from '@/data/mock'
-import type { Show, ShowBooth, ShowFaq, ShowHighlight, ShowLabel, ShowLaunch, ShowSession, ShowSpeaker, ShowStat, ShowWhyAttend } from '@/data/shows'
+import type { Show, ShowBooth, ShowFaq, ShowHighlight, ShowLabel, ShowLaunch, ShowProductLaunch, ShowSession, ShowSpeaker, ShowStat, ShowWhyAttend } from '@/data/shows'
 import type { Bilingual } from '@/lib/i18n'
 import { arr, biAny, id, num, str, url, type Raw } from './common'
 
@@ -55,6 +55,10 @@ export function toShow(r: Raw): Show {
   const topics: Bilingual[] = arr(r.topics).map((x) => biAny(typeof x === 'string' ? x : x?.title)).filter(filled)
   const highlights: ShowHighlight[] = arr(r.highlights).map((x) => ({ title: biAny(x.title), text: biAny(x.text), image: optUrl(x.image), video: optUrl(x.video), link: safeLink(x.link), hero: x.kind === 'hero' })).filter((x) => filled(x.title))
   const faq: ShowFaq[] = arr(r.faq).map((x) => ({ q: biAny(x.q), a: biAny(x.a) })).filter((x) => filled(x.q) && filled(x.a))
+  const productLaunches: ShowProductLaunch[] = arr(r.productLaunches).map((x) => ({
+    productId: id(x.productId), productName: str(x.productName), productImage: optUrl(x.productImage),
+    organizationName: x.organizationName ? str(x.organizationName) : undefined, launchDate: str(x.launchDate), startTime: str(x.startTime), endTime: str(x.endTime),
+  }))
   return {
     id: showKey(r.id),
     title: biAny(r.title), tagline: biAny(r.tagline), introduction: biAny(r.introduction), cover: url(r.cover, IMG.handshake),
@@ -75,6 +79,6 @@ export function toShow(r: Raw): Show {
     contact: { name: str(r.contact?.name), email: str(r.contact?.email), phone: str(r.contact?.phone) },
     rules: arr(r.rules).map(biAny),
     heroTitle: optText(r.heroTitle), heroBadge: optText(r.heroBadge), banner: optUrl(r.banner ?? r.bannerImage),
-    stats, whyAttend, topics, highlights, faq,
+    stats, whyAttend, topics, highlights, faq, productLaunches,
   }
 }

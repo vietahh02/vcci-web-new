@@ -136,6 +136,20 @@ export interface Show {
   topics?: Bilingual[]
   highlights?: ShowHighlight[]
   faq?: ShowFaq[]
+  /** New-product launch moments from approved participation applications (V85) - show calendar, no streaming. */
+  productLaunches?: ShowProductLaunch[]
+}
+
+export interface ShowProductLaunch {
+  productId: string
+  productName: string
+  productImage?: string
+  organizationName?: string
+  /** yyyy-MM-dd */
+  launchDate: string
+  /** HH:mm */
+  startTime: string
+  endTime: string
 }
 
 /* ------------------------------------------------------------ show 1: ongoing export expo */
