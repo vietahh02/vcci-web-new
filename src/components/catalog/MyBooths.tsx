@@ -7,11 +7,12 @@ import { Plus, Send, Trash2, Undo2 } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { catalogApi } from '@/api'
 import { MyInquiries } from '@/components/catalog/MyInquiries'
-import type { BoothInput, MyBooth, OnlineShow, OpenShow, ShowProductRow } from '@/api/catalogApi'
+import type { BoothInput, MyBooth, MyParticipation, OnlineShow, OpenShow, ParticipationLaunchInput, ShowProductRow } from '@/api/catalogApi'
 import { fileSrc, uploadFile } from '@/api/uploads'
 import { Dialog, DialogContent, useToast } from '@/components/ui/overlay'
 import { Badge, Button, Field, Input, Skeleton, Textarea } from '@/components/ui/primitives'
 import { Select } from '@/components/ui/select'
+import { categories } from '@/data/mock'
 import { useI18n } from '@/lib/i18n'
 import { tx } from '@/lib/tx'
 import { formatDate } from '@/lib/utils'
@@ -54,6 +55,7 @@ export function MyBooths() {
   return (
     <div className="space-y-10">
       <OnlineShowProducts />
+      <ShowParticipations />
       <MyInquiries />
       {onSite && <section>
       <h2 className="mb-4 text-lg font-extrabold">{tx('Gian hàng ở Show trực tiếp', 'Booths at on-site shows', '오프라인 쇼 부스')}</h2>
@@ -179,6 +181,158 @@ function OnlineShowProducts() {
         onClose={(saved) => { setPicker(null); if (saved && shows) void loadPlaced(shows) }}
       />}
     </section>
+  )
+}
+
+/** Đơn đăng ký tham gia hội chợ kèm sản phẩm mới ra mắt (Leader chốt 05/11/2026): một đơn/show, gửi lại được khi PENDING/REJECTED. */
+function ShowParticipations() {
+  useI18n() // đăng ký đổi ngôn ngữ để tx() tính lại
+  const [shows, setShows] = useState<OnlineShow[] | null>(null)
+  const [mine, setMine] = useState<Record<string, MyParticipation | null>>({})
+  const [form, setForm] = useState<OnlineShow | null>(null)
+
+  const load = useCallback(() => {
+    catalogApi.participableShows().then(async (list) => {
+      setShows(list)
+      const rows = await Promise.all(list.map((s) => catalogApi.myParticipation(s.id).then((r) => [s.id, r] as const, () => [s.id, null] as const)))
+      setMine(Object.fromEntries(rows))
+    }, () => setShows([]))
+  }, [])
+  useEffect(load, [load])
+
+  const STATUS = (): Record<string, string> => ({
+    PENDING: tx('Chờ duyệt', 'Pending review', '검토 대기'), APPROVED: tx('Đã duyệt', 'Approved', '승인됨'), REJECTED: tx('Bị từ chối', 'Rejected', '거절됨'),
+  })
+
+  return (
+    <section>
+      <h2 className="mb-4 text-lg font-extrabold">{tx('Đăng ký tham gia hội chợ', 'Show participation', '쇼 참가 신청')}</h2>
+      {!shows ? <Skeleton className="h-24" /> : shows.length === 0 ? (
+        <p className="rounded-xl border border-dashed p-10 text-center text-sm text-muted-foreground">{tx('Hiện không có hội chợ nào đang nhận đơn.', 'No show is taking applications right now.', '현재 신청을 받는 쇼가 없습니다.')}</p>
+      ) : (
+        <ul className="space-y-4">
+          {shows.map((s) => {
+            const p = mine[s.id]
+            const editable = !p || p.status !== 'APPROVED'
+            return (
+              <li key={s.id} className="rounded-xl border p-5" data-testid="my-participation">
+                <div className="flex flex-wrap items-center gap-3">
+                  <p className="font-bold">{s.name}</p>
+                  {p && <Badge variant="secondary">{STATUS()[p.status] ?? p.status}</Badge>}
+                  <div className="ml-auto">
+                    {editable && <Button size="sm" variant="outline" onClick={() => setForm(s)}>{p ? tx('Sửa đơn', 'Edit application', '신청서 수정') : tx('Đăng ký tham gia', 'Apply', '참가 신청')}</Button>}
+                  </div>
+                </div>
+                {p?.status === 'REJECTED' && p.rejectReason && <p className="mt-2 text-sm text-red-600">{tx('Lý do từ chối', 'Reason', '거절 사유')}: {p.rejectReason}</p>}
+                {!!p?.launches.length && (
+                  <div className="mt-4">
+                    <p className="mb-2 text-sm font-semibold">{tx('Sản phẩm mới ra mắt', 'New product launches', '신제품 출시')} ({p.launches.length})</p>
+                    <ul className="flex flex-wrap gap-2">
+                      {p.launches.map((l) => (
+                        <li key={l.productId} className="flex items-center gap-2 rounded-full border py-1 px-3 text-xs">
+                          {l.productName} <span className="text-muted-foreground">{l.launchDate} {l.startTime}-{l.endTime}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </li>
+            )
+          })}
+        </ul>
+      )}
+      {form && <ParticipationDialog show={form} existing={mine[form.id] ?? null} onClose={(saved) => { setForm(null); if (saved) void load() }} />}
+    </section>
+  )
+}
+
+type LaunchForm = { productName: string; categoryId: string; shortDescription: string; launchDate: string; startTime: string; endTime: string; image: File | null }
+const emptyLaunch = (): LaunchForm => ({ productName: '', categoryId: '', shortDescription: '', launchDate: '', startTime: '', endTime: '', image: null })
+
+function ParticipationDialog({ show, existing, onClose }: { show: OnlineShow; existing: MyParticipation | null; onClose: (saved: boolean) => void }) {
+  const { locale } = useI18n()
+  const toast = useToast()
+  const [contactName, setContactName] = useState(existing?.contactName ?? '')
+  const [contactPhone, setContactPhone] = useState(existing?.contactPhone ?? '')
+  const [note, setNote] = useState(existing?.note ?? '')
+  const [launches, setLaunches] = useState<LaunchForm[]>(
+    (existing?.launches ?? []).map((l) => ({ productName: l.productName ?? '', categoryId: '', shortDescription: l.shortDescription ?? '', launchDate: l.launchDate, startTime: l.startTime, endTime: l.endTime, image: null }))
+  )
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState('')
+
+  const setLaunch = (i: number, patch: Partial<LaunchForm>) => setLaunches((ls) => ls.map((l, idx) => (idx === i ? { ...l, ...patch } : l)))
+  const addLaunch = () => setLaunches((ls) => (ls.length >= 10 ? ls : [...ls, emptyLaunch()]))
+  const removeLaunch = (i: number) => setLaunches((ls) => ls.filter((_, idx) => idx !== i))
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!contactName.trim() || !contactPhone.trim()) { setErr(tx('Cần nhập người liên hệ và số điện thoại', 'Contact name and phone are required', '담당자명과 전화번호가 필요합니다')); return }
+    if (launches.some((l) => !l.image)) { setErr(tx('Mỗi sản phẩm mới ra mắt cần một ảnh (chụp lại dù đã nộp trước đó)', 'Each new launch product needs one image (re-attach even if submitted before)', '각 신제품에는 이미지가 필요합니다 (이전에 제출했어도 다시 첨부)')); return }
+    if (launches.some((l) => !l.productName.trim() || !l.categoryId || !l.launchDate || !l.startTime || !l.endTime)) { setErr(tx('Điền đủ thông tin các sản phẩm mới ra mắt', 'Fill in all new launch product fields', '신제품 정보를 모두 입력하세요')); return }
+    setBusy(true)
+    setErr('')
+    const launchInputs: ParticipationLaunchInput[] = launches.map((l) => ({
+      productName: l.productName.trim(), categoryId: Number(l.categoryId), shortDescription: l.shortDescription.trim() || undefined,
+      launchDate: l.launchDate, startTime: l.startTime, endTime: l.endTime,
+    }))
+    catalogApi.submitParticipation(show.id, { contactName: contactName.trim(), contactPhone: contactPhone.trim(), note: note.trim() || undefined, launches: launchInputs }, launches.map((l) => l.image as File)).then(
+      () => { toast({ kind: 'success', title: tx('Đã gửi đơn đăng ký', 'Application submitted', '신청서가 제출되었습니다') }); onClose(true) },
+      (er: Error) => { setErr(er.message); setBusy(false) },
+    )
+  }
+
+  return (
+    <Dialog open onOpenChange={(v) => { if (!v) onClose(false) }}>
+      <DialogContent
+        title={`${tx('Đăng ký tham gia', 'Participation application', '참가 신청')} - ${show.name}`}
+        description={tx('Có thể kèm tối đa 10 sản phẩm mới ra mắt; mỗi sản phẩm cần một ảnh và một mốc giờ trong thời gian hội chợ.', 'You may include up to 10 new product launches; each needs one image and a time slot within the show dates.', '최대 10개의 신제품을 포함할 수 있으며, 각 제품에는 이미지와 쇼 기간 내 시간대가 필요합니다.')}
+      >
+        <form onSubmit={submit} className="max-h-[75dvh] space-y-4 overflow-y-auto p-6">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label={tx('Người phụ trách', 'Contact name', '담당자')} htmlFor="pt-cn"><Input id="pt-cn" value={contactName} maxLength={255} onChange={(e) => setContactName(e.target.value)} /></Field>
+            <Field label={tx('Điện thoại', 'Phone', '전화')} htmlFor="pt-cp"><Input id="pt-cp" value={contactPhone} maxLength={30} onChange={(e) => setContactPhone(e.target.value)} /></Field>
+          </div>
+          <Field label={tx('Ghi chú', 'Note', '비고')} htmlFor="pt-note"><Textarea id="pt-note" rows={3} maxLength={2000} value={note} onChange={(e) => setNote(e.target.value)} /></Field>
+          <div>
+            <div className="mb-2 flex items-center justify-between">
+              <p className="text-sm font-semibold">{tx('Sản phẩm mới ra mắt', 'New product launches', '신제품 출시')} ({launches.length}/10)</p>
+              {launches.length < 10 && <Button type="button" size="sm" variant="outline" onClick={addLaunch}><Plus /> {tx('Thêm sản phẩm', 'Add product', '제품 추가')}</Button>}
+            </div>
+            <div className="space-y-4">
+              {launches.map((l, i) => (
+                <fieldset key={i} className="space-y-3 rounded-xl border p-4">
+                  <div className="flex items-center justify-between">
+                    <legend className="px-1 text-xs font-bold uppercase">{tx('Sản phẩm', 'Product', '제품')} {i + 1}</legend>
+                    <button type="button" aria-label="remove" className="rounded-full p-1 hover:bg-muted" onClick={() => removeLaunch(i)}><Trash2 className="size-4" /></button>
+                  </div>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <Field label={tx('Tên sản phẩm', 'Product name', '제품명')} htmlFor={`pt-pn-${i}`}><Input id={`pt-pn-${i}`} value={l.productName} maxLength={500} onChange={(e) => setLaunch(i, { productName: e.target.value })} /></Field>
+                    <Field label={tx('Danh mục', 'Category', '카테고리')} htmlFor={`pt-pc-${i}`}>
+                      <Select id={`pt-pc-${i}`} value={l.categoryId} onValueChange={(v) => setLaunch(i, { categoryId: v })} placeholder="—" options={categories.map((c) => ({ value: c.id, label: c.categoryName[locale] ?? c.categoryName.vi }))} />
+                    </Field>
+                  </div>
+                  <Field label={tx('Mô tả ngắn', 'Short description', '간단 설명')} htmlFor={`pt-pd-${i}`}><Textarea id={`pt-pd-${i}`} rows={2} maxLength={1000} value={l.shortDescription} onChange={(e) => setLaunch(i, { shortDescription: e.target.value })} /></Field>
+                  <div className="grid gap-4 sm:grid-cols-3">
+                    <Field label={tx('Ngày ra mắt', 'Launch date', '출시일')} htmlFor={`pt-pld-${i}`}><Input id={`pt-pld-${i}`} type="date" min={show.startDate?.slice(0, 10)} max={show.endDate?.slice(0, 10)} value={l.launchDate} onChange={(e) => setLaunch(i, { launchDate: e.target.value })} /></Field>
+                    <Field label={tx('Giờ bắt đầu', 'Start time', '시작 시간')} htmlFor={`pt-pst-${i}`}><Input id={`pt-pst-${i}`} type="time" value={l.startTime} onChange={(e) => setLaunch(i, { startTime: e.target.value })} /></Field>
+                    <Field label={tx('Giờ kết thúc', 'End time', '종료 시간')} htmlFor={`pt-pet-${i}`}><Input id={`pt-pet-${i}`} type="time" value={l.endTime} onChange={(e) => setLaunch(i, { endTime: e.target.value })} /></Field>
+                  </div>
+                  <Field label={tx('Ảnh sản phẩm', 'Product image', '제품 이미지')} htmlFor={`pt-pi-${i}`}>
+                    <Input id={`pt-pi-${i}`} type="file" accept="image/*" onChange={(e) => setLaunch(i, { image: e.target.files?.[0] ?? null })} />
+                  </Field>
+                </fieldset>
+              ))}
+            </div>
+          </div>
+          {err && <p role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{err}</p>}
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="ghost" onClick={() => onClose(false)}>{tx('Huỷ', 'Cancel', '취소')}</Button>
+            <Button type="submit" disabled={busy}>{busy ? '…' : tx('Gửi đơn', 'Submit', '제출')}</Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
   )
 }
 

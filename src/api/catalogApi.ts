@@ -219,6 +219,42 @@ export const addShowProducts = (showId: string, productIds: string[], consentPub
 /** DELETE /api/shows/{id}/my-products/{productId} */
 export const removeShowProduct = (showId: string, productId: string) => apiFetch(`/api/shows/${encodeURIComponent(showId)}/my-products/${encodeURIComponent(productId)}`, { method: 'DELETE' })
 
+/* ------------------------------------------- show participation application (kèm sản phẩm mới ra mắt) */
+export interface ParticipationLaunchInput { productName: string; categoryId: number; shortDescription?: string; launchDate: string; startTime: string; endTime: string }
+export interface ParticipationLaunch { productId: string; productName?: string; productImage?: string; categoryName?: string; shortDescription?: string; productModerationStatus?: string; launchDate: string; startTime: string; endTime: string }
+export interface MyParticipation {
+  id: string; showId: string; status: string; rejectReason?: string; submittedAt?: string; reviewedAt?: string
+  contactName: string; contactPhone: string; note: string; launches: ParticipationLaunch[]
+}
+const toParticipation = (r: Raw): MyParticipation => ({
+  id: String(r.id), showId: String(r.showId), status: r.status ?? 'PENDING', rejectReason: r.rejectReason ?? undefined,
+  submittedAt: r.submittedAt ?? undefined, reviewedAt: r.reviewedAt ?? undefined,
+  contactName: r.contactName ?? '', contactPhone: r.contactPhone ?? '', note: r.note ?? '',
+  launches: (Array.isArray(r.launches) ? r.launches : []).map((l: Raw) => ({
+    productId: String(l.productId), productName: l.productName ?? undefined, productImage: l.productImage ?? undefined,
+    categoryName: l.categoryName ?? undefined, shortDescription: l.shortDescription ?? undefined, productModerationStatus: l.productModerationStatus ?? undefined,
+    launchDate: l.launchDate ?? '', startTime: l.startTime ?? '', endTime: l.endTime ?? '',
+  })),
+})
+/** Shows currently taking participation applications: UPCOMING or ONGOING, any format. */
+export async function participableShows(): Promise<OnlineShow[]> {
+  const byStatus = (status: string) => apiFetch('/api/public/shows', { query: { status, page: 0, size: 50 }, anon: true }).then((r) => toPage<Raw>(r, 50).items)
+  const [ongoing, upcoming] = await Promise.all([byStatus('ONGOING'), byStatus('UPCOMING')])
+  return [...ongoing, ...upcoming].map((s) => ({ id: String(s.id), name: s.name ?? '', status: s.status ?? '', startDate: s.startDate ?? '', endDate: s.endDate ?? '' }))
+}
+/** GET /api/shows/{id}/participation -> null when my organisation has not applied */
+export const myParticipation = async (showId: string) => {
+  const r = await apiFetch<Raw | null>(`/api/shows/${encodeURIComponent(showId)}/participation`)
+  return r ? toParticipation(r) : null
+}
+/** POST /api/shows/{id}/participation: multipart `data` (JSON) + `images[i]` is the image of `launches[i]` */
+export async function submitParticipation(showId: string, data: { contactName: string; contactPhone: string; note?: string; launches: ParticipationLaunchInput[] }, images: File[]) {
+  const fd = new FormData()
+  fd.append('data', new Blob([JSON.stringify(data)], { type: 'application/json' }))
+  images.forEach((f) => fd.append('images', f))
+  return toParticipation(await apiFetch<Raw>(`/api/shows/${encodeURIComponent(showId)}/participation`, { method: 'POST', form: fd }))
+}
+
 /** Active products of my organisation that can still be put on a booth or into an ONLINE show. */
 export const boothPickableProducts = async (keyword = '') =>
   (await apiFetch<Raw[]>('/api/shows/my/products', { query: { keyword } })).map((p) => ({ id: String(p.id), name: String(p.name ?? ''), image: p.image as string | undefined }))
