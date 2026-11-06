@@ -109,7 +109,7 @@ export const categories: Category[] = [
 
 /* ------------------------------------------------------------ businesses */
 export type BusinessType =
-  | 'VN_EXPORTER' | 'FOREIGN_IMPORTER' | 'FOREIGN_INVESTOR' | 'DISTRIBUTION_COMPANY' | 'INVESTMENT_CONSULTING' | 'LAW_FIRM'
+  | 'VN_EXPORTER' | 'FOREIGN_IMPORTER' | 'FOREIGN_INVESTOR' | 'DISTRIBUTION_COMPANY' | 'INVESTMENT_CONSULTING' | 'LAW_FIRM' | 'FOREIGN_DISTRIBUTOR_FINDER' | 'NGO'
 
 export interface DocumentItem { id: string; type: string; name: string; url: string; uploadedAt: string }
 

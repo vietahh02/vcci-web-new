@@ -9,7 +9,7 @@ import { Button, buttonClass, Field, Input, Textarea } from '@/components/ui/pri
 import { DateField } from '@/components/ui/DateField'
 import { Select } from '@/components/ui/select'
 import { useI18n } from '@/lib/i18n'
-import { BUSINESS_FORMS, completion, OPTIONS, PROFILE_TABS, sectionDone, tabDone, tabSection, useProfile, type CompanyProfile, type Opt, type ProfileTab, type SectionKey, type VerifyStatus } from '@/lib/profile'
+import { BUSINESS_FORMS, completion, OPTIONS, profileKind, profileTabs, sectionDone, tabDone, tabSection, useProfile, type CompanyProfile, type Opt, type ProfileTab, type SectionKey, type VerifyStatus } from '@/lib/profile'
 import { cn } from '@/lib/utils'
 import { tx, withKo } from '@/lib/tx'
 import { FileUpload, GalleryUpload, ImageUpload, UploadGuide } from '@/components/upload/Upload'
@@ -26,11 +26,13 @@ export default function MyProfile() {
   // chốt tab mặc định một lần (khi đã có hồ sơ): tính lại theo profile thì form nhảy tab ngay khi đang gõ
   const defaultTab = useRef<ProfileTab | null>(null)
   if (session && !defaultTab.current) defaultTab.current = firstIncomplete(profile)
-  const active = (params.get('section') as ProfileTab) || defaultTab.current || 'general'
+  const tabs = profileTabs(profile)
+  // section lạ hoặc tab bị ẩn theo loại hình (link cũ) thì về tab mặc định
+  const active = ([params.get('section'), defaultTab.current].find((k) => tabs.some((s) => s.key === k)) ?? 'general') as ProfileTab
   const returnTo = params.get('return')
   const returnEvent = useEvent(returnTo?.startsWith('/events/') ? (returnTo.split('/')[2] ?? '') : '').data ?? null
   const pct = completion(profile)
-  const idx = PROFILE_TABS.findIndex((s) => s.key === active)
+  const idx = tabs.findIndex((s) => s.key === active)
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
@@ -54,8 +56,8 @@ export default function MyProfile() {
     setParams(next, { replace: true })
   }
   const proceed = () => {
-    toast({ kind: 'success', title: tx('Đã lưu', 'Saved'), description: L(PROFILE_TABS[idx]!.title) })
-    if (idx < PROFILE_TABS.length - 1) go(PROFILE_TABS[idx + 1]!.key)
+    toast({ kind: 'success', title: tx('Đã lưu', 'Saved'), description: L(tabs[idx]!.title) })
+    if (idx < tabs.length - 1) go(tabs[idx + 1]!.key)
     else if (returnTo) navigate(returnTo)
   }
   // live: PUT /api/me/profile/{section}; the BE accepts incomplete data (BR-PRF-01) and computes completion
@@ -115,7 +117,7 @@ export default function MyProfile() {
         <nav className="min-w-0 lg:sticky lg:top-32 lg:self-start">
           {/* overflow-x cắt cả viền và shadow của mục đang chọn: mobile chừa p-1, desktop không cuộn nên tắt hẳn */}
           <ol className="no-scrollbar -m-1 flex gap-2 overflow-x-auto p-1 lg:m-0 lg:flex-col lg:gap-1 lg:overflow-visible lg:p-0">
-            {PROFILE_TABS.map((s, i) => {
+            {tabs.map((s, i) => {
               const done = tabDone(profile, s.key)
               const on = s.key === active
               return (
@@ -141,8 +143,8 @@ export default function MyProfile() {
         <div className="min-w-0 rounded-2xl border bg-card">
           <div className="flex items-start justify-between gap-4 border-b px-4 py-4 sm:px-6 sm:py-5 md:px-8">
             <div className="min-w-0">
-              <h2 className="text-xl font-bold">{L(PROFILE_TABS[idx]!.title)}</h2>
-              <p className="mt-0.5 text-sm text-muted-foreground">{L(PROFILE_TABS[idx]!.hint)}</p>
+              <h2 className="text-xl font-bold">{L(tabs[idx]!.title)}</h2>
+              <p className="mt-0.5 text-sm text-muted-foreground">{L(tabs[idx]!.hint)}</p>
             </div>
             {tabDone(profile, active) ? (
               <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-success-soft px-2.5 py-1 text-xs font-semibold text-success"><Check className="size-3.5" /> {tx('Đã đủ', 'Complete')}</span>
@@ -166,9 +168,9 @@ export default function MyProfile() {
           </AnimatePresence>
 
           <div className="flex flex-wrap items-center justify-between gap-3 border-t px-4 py-4 sm:px-6 md:px-8">
-            <Button variant="ghost" disabled={idx === 0} onClick={() => go(PROFILE_TABS[idx - 1]!.key)}><ArrowLeft /> {tx('Phần trước', 'Previous')}</Button>
+            <Button variant="ghost" disabled={idx === 0} onClick={() => go(tabs[idx - 1]!.key)}><ArrowLeft /> {tx('Phần trước', 'Previous')}</Button>
             <Button onClick={saveAndNext} disabled={saving}>
-              {idx < PROFILE_TABS.length - 1 ? (tx('Lưu & tiếp tục', 'Save & continue')) : returnTo ? (tx('Lưu & quay lại đăng ký', 'Save & back to registration')) : (tx('Lưu', 'Save'))} <ArrowRight />
+              {idx < tabs.length - 1 ? (tx('Lưu & tiếp tục', 'Save & continue')) : returnTo ? (tx('Lưu & quay lại đăng ký', 'Save & back to registration')) : (tx('Lưu', 'Save'))} <ArrowRight />
             </Button>
           </div>
         </div>
@@ -177,7 +179,7 @@ export default function MyProfile() {
   )
 }
 
-const firstIncomplete = (p: CompanyProfile): ProfileTab => PROFILE_TABS.find((s) => !tabDone(p, s.key))?.key ?? 'general'
+const firstIncomplete = (p: CompanyProfile): ProfileTab => profileTabs(p).find((s) => !tabDone(p, s.key))?.key ?? 'general'
 
 /* ================================================================ building blocks */
 function ProgressRing({ value, label }: { value: number; label: string }) {
@@ -304,7 +306,7 @@ function GeneralForm({ p, set }: FP<'general'>) {
       </div>
       <Q label={tx('Loại hình sở hữu', 'Ownership')} required><Choice cols={3} options={OPTIONS.ownership} value={g.ownership} onChange={(v) => set({ ...g, ownership: v })} /></Q>
       <Field label={tx('Các kênh online (website, fanpage, LinkedIn…)', 'Online channels (website, fanpage, LinkedIn…)')} htmlFor="g-ch"><Input id="g-ch" placeholder={tx('VD: https://company.vn, facebook.com/company', 'e.g. https://company.vn, facebook.com/company', '예: https://company.vn, facebook.com/company')} value={g.channels} onChange={f('channels')} /></Field>
-      <Field label={tx('Địa chỉ nhà máy (nếu khác trụ sở)', 'Factory address (if different)')} htmlFor="g-fac"><Input id="g-fac" placeholder={tx('VD: Lô A1, KCN ABC, tỉnh Bắc Ninh', 'e.g. Lot A1, ABC Industrial Park, Bac Ninh', '예: Lot A1, ABC Industrial Park, Bac Ninh')} value={g.factoryAddress} onChange={f('factoryAddress')} /></Field>
+      {profileKind(p) === 'SELLER' && <Field label={tx('Địa chỉ nhà máy (nếu khác trụ sở)', 'Factory address (if different)')} htmlFor="g-fac"><Input id="g-fac" placeholder={tx('VD: Lô A1, KCN ABC, tỉnh Bắc Ninh', 'e.g. Lot A1, ABC Industrial Park, Bac Ninh', '예: Lot A1, ABC Industrial Park, Bac Ninh')} value={g.factoryAddress} onChange={f('factoryAddress')} /></Field>}
       <Q label={tx('Doanh nghiệp do nữ làm chủ?', 'Women-owned business?')} hint={tx('≥51% vốn điều lệ thuộc nữ, hoặc nữ trực tiếp điều hành, hoặc >50% lao động là nữ', '≥51% female-owned, female-led, or >50% female workforce')}>
         <Choice cols={3} options={[withKo({ value: 'YES', vi: 'Có', en: 'Yes' }), withKo({ value: 'NO', vi: 'Không', en: 'No' })]} value={g.womenOwned} onChange={(v) => set({ ...g, womenOwned: v as 'YES' | 'NO' })} />
       </Q>
@@ -342,6 +344,7 @@ function CapabilityForm({ p, set }: FP<'capability'>) {
   useI18n()
   const c = p.capability
   const { fromReg, businessType, businessForm, industries } = useRegistrationLabels(p)
+  const manufacturer = profileKind(p) === 'SELLER' // nhà phân phối không khai OEM, công suất, nhà xưởng
   return (
     <div className="space-y-7">
       <div className="grid gap-4 sm:grid-cols-2">
@@ -357,16 +360,16 @@ function CapabilityForm({ p, set }: FP<'capability'>) {
         </div>
       </Q>
       <Q label={tx('Năng lực cung ứng hiện tại', 'Current supply capacity')} required><Choice options={OPTIONS.supplyCapacity} value={c.supplyCapacity} onChange={(v) => set({ ...c, supplyCapacity: v })} /></Q>
-      <Q label={tx('Sản xuất theo thiết kế / thông số của khách hàng (OEM/ODM)?', 'Produce to customer design (OEM/ODM)?')} required><Choice options={OPTIONS.oem} value={c.oem} onChange={(v) => set({ ...c, oem: v })} /></Q>
+      {manufacturer && <Q label={tx('Sản xuất theo thiết kế / thông số của khách hàng (OEM/ODM)?', 'Produce to customer design (OEM/ODM)?')} required><Choice options={OPTIONS.oem} value={c.oem} onChange={(v) => set({ ...c, oem: v })} /></Q>}
       <div className="grid gap-4 sm:grid-cols-3">
-        <Field label={tx('Công suất / tháng', 'Monthly capacity')} htmlFor="c-cap" hint={tx('Số lượng + đơn vị', 'Quantity + unit')}><Input id="c-cap" placeholder={tx('VD: 20.000 sản phẩm', 'e.g. 20,000 units', '예: 20,000개')} value={c.monthlyCapacity} onChange={(e) => set({ ...c, monthlyCapacity: e.target.value })} /></Field>
+        {manufacturer && <Field label={tx('Công suất / tháng', 'Monthly capacity')} htmlFor="c-cap" hint={tx('Số lượng + đơn vị', 'Quantity + unit')}><Input id="c-cap" placeholder={tx('VD: 20.000 sản phẩm', 'e.g. 20,000 units', '예: 20,000개')} value={c.monthlyCapacity} onChange={(e) => set({ ...c, monthlyCapacity: e.target.value })} /></Field>}
         <Field label={tx('% dành cho xuất khẩu', '% for export')} htmlFor="c-pct"><Input id="c-pct" placeholder={tx('VD: 60', 'e.g. 60', '예: 60')} inputMode="numeric" value={c.exportCapacityPct} onChange={(e) => set({ ...c, exportCapacityPct: e.target.value })} /></Field>
         <Field label={(tx('Đơn hàng tối thiểu (MOQ)', 'Minimum order (MOQ)')) + ' *'} htmlFor="c-moq"><Input id="c-moq" placeholder={tx('VD: 500 sản phẩm', 'e.g. 500 units', '예: 500개')} value={c.moq} onChange={(e) => set({ ...c, moq: e.target.value })} /></Field>
       </div>
-      <div className="grid gap-4 sm:grid-cols-2">
+      {manufacturer && <div className="grid gap-4 sm:grid-cols-2">
         <Field label={tx('Diện tích nhà xưởng (m²)', 'Factory area (m²)', '공장 면적 (m²)')} htmlFor="c-area"><Input id="c-area" placeholder={tx('VD: 5000', 'e.g. 5000', '예: 5000')} inputMode="numeric" value={c.factoryArea} onChange={(e) => set({ ...c, factoryArea: e.target.value })} /></Field>
         <Field label={tx('Số dây chuyền sản xuất', 'Production lines', '생산 라인 수')} htmlFor="c-lines"><Input id="c-lines" placeholder={tx('VD: 3', 'e.g. 3', '예: 3')} inputMode="numeric" value={c.productionLines} onChange={(e) => set({ ...c, productionLines: e.target.value })} /></Field>
-      </div>
+      </div>}
       <Field label={tx('Quy trình kiểm soát chất lượng', 'Quality control process', '품질 관리 절차')} htmlFor="c-qc" hint={tx('Mô tả ngắn: kiểm tra đầu vào, trong chuyền, thành phẩm, tiêu chuẩn AQL…', 'Short description: incoming, in-line and final inspection, AQL standard…', '간단히: 입고·공정·출하 검사, AQL 기준 등')}>
         <Textarea id="c-qc" placeholder={tx('VD: Kiểm tra nguyên liệu đầu vào, kiểm tra trong chuyền, kiểm tra thành phẩm theo AQL 2.5', 'e.g. Incoming material checks, in-line inspection, final inspection to AQL 2.5', '예: 입고 자재 검사, 공정 검사, AQL 2.5 기준 출하 검사')} className="min-h-20" value={c.qcProcess} onChange={(e) => set({ ...c, qcProcess: e.target.value })} />
       </Field>
@@ -393,16 +396,17 @@ function CapabilityForm({ p, set }: FP<'capability'>) {
 function ExportsForm({ p, set }: FP<'exports'>) {
   useI18n()
   const x = p.exports
+  const exporter = profileKind(p) === 'SELLER' // nhà phân phối chỉ khai thị trường và hình thức
   return (
     <div className="space-y-7">
-      <Q label={tx('Tỷ trọng doanh thu xuất khẩu hiện nay', 'Export share of revenue')} required><Choice cols={3} options={OPTIONS.exportShare} value={x.exportShare} onChange={(v) => set({ ...x, exportShare: v })} /></Q>
+      {exporter && <Q label={tx('Tỷ trọng doanh thu xuất khẩu hiện nay', 'Export share of revenue')} required><Choice cols={3} options={OPTIONS.exportShare} value={x.exportShare} onChange={(v) => set({ ...x, exportShare: v })} /></Q>}
       <Q label={tx('Đã xuất khẩu đến những thị trường nào?', 'Markets exported to')}><Chips options={OPTIONS.markets} value={x.markets} onChange={(v) => set({ ...x, markets: v })} /></Q>
       <Q label={tx('Hình thức xuất khẩu đã / đang thực hiện', 'Export modes')} required><Chips options={OPTIONS.exportModes} value={x.modes} onChange={(v) => set({ ...x, modes: v })} /></Q>
-      <Q label={tx('Khả năng truy xuất nguồn gốc dòng sản phẩm xuất khẩu', 'Traceability of export products')} required><Choice cols={1} options={OPTIONS.traceability} value={x.traceability} onChange={(v) => set({ ...x, traceability: v })} /></Q>
+      {exporter && <><Q label={tx('Khả năng truy xuất nguồn gốc dòng sản phẩm xuất khẩu', 'Traceability of export products')} required><Choice cols={1} options={OPTIONS.traceability} value={x.traceability} onChange={(v) => set({ ...x, traceability: v })} /></Q>
       <Q label={tx('Đã từng làm việc với doanh nghiệp Đức / châu Âu?', 'Worked with German / EU companies?')} required><Choice cols={3} options={OPTIONS.euExperience} value={x.euExperience} onChange={(v) => set({ ...x, euExperience: v })} /></Q>
       <Q label={tx('Bằng chứng xuất khẩu (không bắt buộc)', 'Export evidence (optional)')} hint={tx('Tờ khai hải quan, hợp đồng + invoice, B/L. VCCI có thể đối chiếu với dữ liệu C/O do VCCI cấp.', 'Customs declarations, contract + invoice, B/L. VCCI can cross-check against C/O it has issued.')}>
         <FilePick rule="evidence" name={x.evidence} onPick={(n, _pv, fid) => set({ ...x, evidence: n, evidenceFileId: fid })} />
-      </Q>
+      </Q></>}
     </div>
   )
 }
@@ -482,13 +486,14 @@ function FinanceForm({ p, set }: FP<'finance'>) {
 function NeedsForm({ p, set }: FP<'needs'>) {
   useI18n()
   const n = p.needs
+  const exporter = profileKind(p) !== 'LIMITED' // hai câu sẵn sàng xuất khẩu, rào cản không hợp với Bên mua và Dịch vụ
   return (
     <div className="space-y-7">
       <Q label={tx('Loại đối tác muốn tìm', 'Partner types sought')} required><Chips max={3} options={OPTIONS.partnerTypes} value={n.partnerTypes} onChange={(v) => set({ ...n, partnerTypes: v })} /></Q>
       <Q label={tx('Cơ hội hợp tác quan tâm', 'Opportunities of interest')} required><Chips max={3} options={OPTIONS.opportunities} value={n.opportunities} onChange={(v) => set({ ...n, opportunities: v })} /></Q>
       <Q label={tx('Thị trường mục tiêu', 'Target markets')}><Chips options={OPTIONS.markets} value={n.targetMarkets} onChange={(v) => set({ ...n, targetMarkets: v })} /></Q>
-      <Q label={tx('Mức độ sẵn sàng xuất khẩu', 'Export readiness')} required><Choice cols={1} options={OPTIONS.readiness} value={n.readiness} onChange={(v) => set({ ...n, readiness: v })} /></Q>
-      <Q label={tx('Rào cản lớn nhất cần giải quyết', 'Biggest barriers')}><Chips options={OPTIONS.barriers} value={n.barriers} onChange={(v) => set({ ...n, barriers: v })} /></Q>
+      {exporter && <><Q label={tx('Mức độ sẵn sàng xuất khẩu', 'Export readiness')} required><Choice cols={1} options={OPTIONS.readiness} value={n.readiness} onChange={(v) => set({ ...n, readiness: v })} /></Q>
+      <Q label={tx('Rào cản lớn nhất cần giải quyết', 'Biggest barriers')}><Chips options={OPTIONS.barriers} value={n.barriers} onChange={(v) => set({ ...n, barriers: v })} /></Q></>}
       <Q label={tx('Tài liệu doanh nghiệp đã có', 'Documents you already have')} hint={tx('Dùng để đánh giá mức sẵn sàng khi VCCI chắp mối đối tác', 'Used to assess readiness for matchmaking')}>
         <Chips options={OPTIONS.documents} value={n.documents} onChange={(v) => set({ ...n, documents: v })} />
       </Q>
@@ -568,6 +573,7 @@ function FilePick({ name, preview, onPick, rule, compact }: { name: string; prev
 function MediaForm({ p, set }: FP<'media'>) {
   useI18n()
   const m = p.media
+  const kind = profileKind(p)
   return (
     <div className="space-y-8">
       <div className="grid gap-6 md:grid-cols-[160px_minmax(0,1fr)]">
@@ -578,7 +584,11 @@ function MediaForm({ p, set }: FP<'media'>) {
           <ImageUpload rule="cover" value={m.cover} onChange={(v) => set({ ...m, cover: v })} />
         </Q>
       </div>
-      <Q label={tx('Ảnh nhà xưởng, dây chuyền, kho, phòng QC', 'Factory, production line, warehouse & QC photos', '공장·생산 라인·창고·QC 사진')} required hint={tx('Tối thiểu 3 ảnh. Ảnh đầu tiên là ảnh chính trên hồ sơ năng lực.', 'At least 3 photos. The first one is the main capability photo.', '최소 3장. 첫 번째 사진이 대표 사진입니다.')}>
+      <Q
+        label={kind === 'LIMITED' ? tx('Ảnh doanh nghiệp, văn phòng, hoạt động', 'Company, office & activity photos', '기업·사무실·활동 사진') : tx('Ảnh nhà xưởng, dây chuyền, kho, phòng QC', 'Factory, production line, warehouse & QC photos', '공장·생산 라인·창고·QC 사진')}
+        required={kind === 'SELLER'}
+        hint={kind === 'SELLER' ? tx('Tối thiểu 3 ảnh. Ảnh đầu tiên là ảnh chính trên hồ sơ năng lực.', 'At least 3 photos. The first one is the main capability photo.', '최소 3장. 첫 번째 사진이 대표 사진입니다.') : tx('Không bắt buộc. Ảnh đầu tiên là ảnh chính trên hồ sơ năng lực.', 'Optional. The first one is the main capability photo.', '선택 사항. 첫 번째 사진이 대표 사진입니다.')}
+      >
         <GalleryUpload value={m.gallery} onChange={(v) => set({ ...m, gallery: v })} />
       </Q>
       <Field label={tx('Video giới thiệu (YouTube / Vimeo)', 'Intro video (YouTube / Vimeo)', '소개 영상 (YouTube / Vimeo)')} htmlFor="m-video" hint={tx('Dán đường link, khuyến nghị 1–3 phút, có phụ đề tiếng Anh', 'Paste the link; 1–3 minutes with English subtitles recommended', '링크를 붙여넣으세요. 1–3분, 영어 자막 권장')}>
@@ -592,7 +602,7 @@ function MediaForm({ p, set }: FP<'media'>) {
           {m.documents.length < 4 && <FileUpload rule="brochure" value={null} onChange={(v) => v && set({ ...m, documents: [...m.documents, v] })} />}
         </div>
       </Q>
-      <UploadGuide keys={['logo', 'cover', 'gallery', 'brochure', 'certificate']} />
+      <UploadGuide keys={kind === 'LIMITED' ? ['logo', 'cover', 'brochure'] : ['logo', 'cover', 'gallery', 'brochure', 'certificate']} />
     </div>
   )
 }

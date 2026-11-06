@@ -11,7 +11,7 @@ import { Link } from 'react-router-dom'
 import type { EventItem } from '@/data/mock'
 import { Button, buttonClass, Textarea } from '@/components/ui/primitives'
 import { useI18n } from '@/lib/i18n'
-import { completion, missingTab, SECTIONS, sectionDone, useProfile, type SectionKey } from '@/lib/profile'
+import { completion, missingTab, SECTIONS, sectionApplies, sectionDone, useProfile, type SectionKey } from '@/lib/profile'
 import { cn, formatDate } from '@/lib/utils'
 import { tx } from '@/lib/tx'
 
@@ -20,7 +20,7 @@ const DEFAULT_REQUIRED: SectionKey[] = ['general', 'attendees', 'consent']
 export function ProfileRegistration({ ev, onDone }: { ev: EventItem; onDone: (info: { answers: Record<string, string>; attendeeIds: string[] }) => void }) {
   const { L, locale } = useI18n()
   const { session, profile, registrations, register } = useProfile()
-  const required = ev.requiredSections ?? DEFAULT_REQUIRED
+  const required = (ev.requiredSections ?? DEFAULT_REQUIRED).filter((k) => sectionApplies(profile, k))
   const missing = required.filter((k) => !sectionDone(profile, k))
   const needsAttendees = ev.eventType !== 'MATCHMAKING'
   const [picked, setPicked] = useState<string[]>(() => profile.attendees.slice(0, 1).map((a) => a.id))

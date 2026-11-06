@@ -149,24 +149,47 @@ const SECTIONS_RAW: { key: SectionKey; title: Bilingual; hint: Bilingual }[] = [
 ]
 export const SECTIONS = SECTIONS_RAW.map((x) => ({ ...x, title: withKo(x.title), hint: withKo(x.hint) }))
 
+/**
+ * Nhóm hiển thị hồ sơ theo loại hình hoạt động (CR-2026-010). Phải khớp ProfileCompletionCalculator ở BE.
+ * Loại hình rỗng/lạ tính như SELLER: hiện đủ tab còn hơn giấu mất mục doanh nghiệp cần khai.
+ */
+export type ProfileKind = 'SELLER' | 'DISTRIBUTOR' | 'LIMITED'
+const LIMITED_TYPES = ['FOREIGN_IMPORTER', 'FOREIGN_INVESTOR', 'FOREIGN_DISTRIBUTOR_FINDER', 'INVESTMENT_CONSULTING', 'LAW_FIRM', 'NGO']
+export const profileKind = (p: CompanyProfile): ProfileKind => {
+  const t = p.registration.businessType
+  return t === 'DISTRIBUTION_COMPANY' ? 'DISTRIBUTOR' : LIMITED_TYPES.includes(t) ? 'LIMITED' : 'SELLER'
+}
+/** Mục không áp dụng bị ẩn, không tính tiến độ và được bỏ qua khi sự kiện yêu cầu; dữ liệu cũ vẫn giữ nguyên. */
+export const sectionApplies = (p: CompanyProfile, key: SectionKey) => profileKind(p) !== 'LIMITED' || !['capability', 'exports', 'finance'].includes(key)
+
 /** Section is "done" when these checks pass — events declare which sections they need. */
 export function sectionDone(p: CompanyProfile, key: SectionKey): boolean {
+  const kind = profileKind(p)
   switch (key) {
     case 'general': return tabDone(p, 'general') && tabDone(p, 'members')
-    case 'capability': return p.capability.mainProducts.filter(Boolean).length > 0 && !!p.capability.supplyCapacity && !!p.capability.oem && !!p.capability.moq
-    case 'exports': return !!p.exports.exportShare && p.exports.modes.length > 0 && !!p.exports.traceability && !!p.exports.euExperience
+    case 'capability': return p.capability.mainProducts.filter(Boolean).length > 0 && !!p.capability.supplyCapacity && (kind === 'DISTRIBUTOR' || !!p.capability.oem) && !!p.capability.moq
+    case 'exports': return p.exports.modes.length > 0 && (kind === 'DISTRIBUTOR' || (!!p.exports.exportShare && !!p.exports.traceability && !!p.exports.euExperience))
     case 'finance': return p.finance.revenues.some((r) => r.band)
-    case 'needs': return p.needs.partnerTypes.length > 0 && p.needs.opportunities.length > 0 && !!p.needs.readiness
+    case 'needs': return p.needs.partnerTypes.length > 0 && p.needs.opportunities.length > 0 && (kind === 'LIMITED' || !!p.needs.readiness)
     case 'attendees': return p.attendees.some((a) => a.name && a.email)
     case 'consent': return p.consent.dataUse
-    case 'media': return !!p.media.logo && p.media.gallery.length >= 3
+    case 'media': return !!p.media.logo && (kind !== 'SELLER' || p.media.gallery.length >= 3)
   }
 }
 
 /** Tab "Thành viên" chỉ là cách hiển thị: dữ liệu nằm trong `general`, BE và % hoàn thiện vẫn tính 8 mục. */
 export type ProfileTab = SectionKey | 'members'
 const MEMBERS_TAB = { key: 'members' as ProfileTab, title: withKo({ vi: 'Thành viên công ty', en: 'Company members' }), hint: withKo({ vi: 'Người liên hệ, lãnh đạo chủ chốt', en: 'Contacts, key leaders' }) }
-export const PROFILE_TABS: { key: ProfileTab; title: (typeof SECTIONS)[number]['title']; hint: (typeof SECTIONS)[number]['hint'] }[] = [SECTIONS[0]!, MEMBERS_TAB, ...SECTIONS.slice(1)]
+const PROFILE_TABS: { key: ProfileTab; title: (typeof SECTIONS)[number]['title']; hint: (typeof SECTIONS)[number]['hint'] }[] = [SECTIONS[0]!, MEMBERS_TAB, ...SECTIONS.slice(1)]
+const LIMITED_HINTS: Partial<Record<ProfileTab, (typeof SECTIONS)[number]['hint']>> = {
+  media: { vi: 'Logo, ảnh bìa, video, hồ sơ năng lực PDF', en: 'Logo, cover, video, brochure PDF', ko: '로고, 커버, 영상, 회사 소개서 PDF' },
+  needs: { vi: 'Đối tác cần tìm, cơ hội hợp tác', en: 'Partners sought, opportunities', ko: '찾는 파트너, 협력 기회' },
+}
+/** Các tab doanh nghiệp này được thấy, theo đúng thứ tự. */
+export function profileTabs(p: CompanyProfile) {
+  const limited = profileKind(p) === 'LIMITED'
+  return PROFILE_TABS.filter((s) => sectionApplies(p, tabSection(s.key))).map((s) => (limited && LIMITED_HINTS[s.key] ? { ...s, hint: LIMITED_HINTS[s.key]! } : s))
+}
 export const tabSection = (t: ProfileTab): SectionKey => (t === 'members' ? 'general' : t)
 export function tabDone(p: CompanyProfile, t: ProfileTab): boolean {
   if (t === 'general') return !!(p.general.nameVi && p.general.nameEn && p.general.ownership)
@@ -176,7 +199,10 @@ export function tabDone(p: CompanyProfile, t: ProfileTab): boolean {
 /** Tab cần mở để bổ sung một mục còn thiếu: general thiếu người liên hệ thì sang tab Thành viên. */
 export const missingTab = (p: CompanyProfile, k: SectionKey): ProfileTab => (k === 'general' && tabDone(p, 'general') ? 'members' : k)
 
-export const completion = (p: CompanyProfile) => Math.round((SECTIONS.filter((s) => sectionDone(p, s.key)).length / SECTIONS.length) * 100)
+export const completion = (p: CompanyProfile) => {
+  const applicable = SECTIONS.filter((s) => sectionApplies(p, s.key))
+  return Math.round((applicable.filter((s) => sectionDone(p, s.key)).length / applicable.length) * 100)
+}
 
 const emptyPerson = (): LeaderPerson => ({ fullName: '', gender: '', landline: '', mobile: '', email: '' })
 export const emptyLeaders = (): KeyLeaders => ({ chairman: emptyPerson(), ceo: emptyPerson(), chiefOfOffice: emptyPerson(), contact1: emptyPerson(), contact2: emptyPerson() })
