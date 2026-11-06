@@ -250,7 +250,7 @@ type LaunchForm = { productName: string; categoryId: string; shortDescription: s
 const emptyLaunch = (): LaunchForm => ({ productName: '', categoryId: '', shortDescription: '', launchDate: '', startTime: '', endTime: '', image: null })
 
 function ParticipationDialog({ show, existing, onClose }: { show: OnlineShow; existing: MyParticipation | null; onClose: (saved: boolean) => void }) {
-  const { locale } = useI18n()
+  const { L } = useI18n()
   const toast = useToast()
   const [contactName, setContactName] = useState(existing?.contactName ?? '')
   const [contactPhone, setContactPhone] = useState(existing?.contactPhone ?? '')
@@ -309,7 +309,7 @@ function ParticipationDialog({ show, existing, onClose }: { show: OnlineShow; ex
                   <div className="grid gap-4 sm:grid-cols-2">
                     <Field label={tx('Tên sản phẩm', 'Product name', '제품명')} htmlFor={`pt-pn-${i}`}><Input id={`pt-pn-${i}`} value={l.productName} maxLength={500} onChange={(e) => setLaunch(i, { productName: e.target.value })} /></Field>
                     <Field label={tx('Danh mục', 'Category', '카테고리')} htmlFor={`pt-pc-${i}`}>
-                      <Select id={`pt-pc-${i}`} value={l.categoryId} onValueChange={(v) => setLaunch(i, { categoryId: v })} placeholder="—" options={categories.map((c) => ({ value: c.id, label: c.categoryName[locale] ?? c.categoryName.vi }))} />
+                      <Select id={`pt-pc-${i}`} value={l.categoryId} onValueChange={(v) => setLaunch(i, { categoryId: v })} placeholder="—" options={categories.map((c) => ({ value: c.id, label: L(c.categoryName) }))} />
                     </Field>
                   </div>
                   <Field label={tx('Mô tả ngắn', 'Short description', '간단 설명')} htmlFor={`pt-pd-${i}`}><Textarea id={`pt-pd-${i}`} rows={2} maxLength={1000} value={l.shortDescription} onChange={(e) => setLaunch(i, { shortDescription: e.target.value })} /></Field>
