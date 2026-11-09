@@ -4,10 +4,10 @@
  * OFFLINE/HYBRID: apply for a booth, fill the booth profile, add products, submit for review and pay the fee. This part only exists while such a show is open or the business already has a booth in one.
  */
 import { Plus, Send, Trash2, Undo2 } from 'lucide-react'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { catalogApi } from '@/api'
 import { MyInquiries } from '@/components/catalog/MyInquiries'
-import type { BoothInput, MyBooth, MyParticipation, OnlineShow, OpenShow, ParticipationLaunchInput, ShowProductRow } from '@/api/catalogApi'
+import type { BoothInput, MyBooth, MyParticipation, OnlineShow, OpenShow, ParticipationLaunchInput, ParticipationOptions, ShowKind, ShowProductRow } from '@/api/catalogApi'
 import { fileSrc, uploadFile } from '@/api/uploads'
 import { Dialog, DialogContent, useToast } from '@/components/ui/overlay'
 import { Badge, Button, Field, Input, Skeleton, Textarea } from '@/components/ui/primitives'
@@ -184,11 +184,38 @@ function OnlineShowProducts() {
   )
 }
 
-/** Đơn đăng ký tham gia hội chợ kèm sản phẩm mới ra mắt (Leader chốt 05/11/2026): một đơn/show, gửi lại được khi PENDING/REJECTED. */
+const money = (v?: number, cur?: string) => (v == null ? '' : `${Number(v).toLocaleString('vi-VN')} ${cur ?? 'VND'}`)
+const dayLabel = (iso: string) => iso.slice(8, 10) + '/' + iso.slice(5, 7)
+/** Các ngày yyyy-MM-dd từ ngày bắt đầu tới ngày kết thúc của Show (tối đa 60 ngày). */
+const showDays = (start: string, end: string): string[] => {
+  const out: string[] = []
+  if (!start || !end) return out
+  const d = new Date(`${start.slice(0, 10)}T00:00:00Z`)
+  const last = new Date(`${end.slice(0, 10)}T00:00:00Z`)
+  while (d <= last && out.length < 60) { out.push(d.toISOString().slice(0, 10)); d.setUTCDate(d.getUTCDate() + 1) }
+  return out
+}
+const KIND = (k: ShowKind): string => ({
+  VCCI: tx('VCCI tổ chức', 'Organised by VCCI', 'VCCI 주최'),
+  ORGANIZATION: tx('Doanh nghiệp tổ chức', 'Organised by a business', '기업 주최'),
+  HOSTED: tx('Sân chơi · đồng tổ chức', 'Open platform · co-organise', '공동 주최 플랫폼'),
+}[k])
+const PAYMENT = (): Record<string, string> => ({
+  PENDING: tx('Chờ nộp phí', 'Awaiting payment', '결제 대기'), SUBMITTED: tx('Đã nộp biên lai', 'Receipt submitted', '영수증 제출됨'),
+  VERIFIED: tx('Đã thanh toán', 'Paid', '결제 완료'), EXPIRED: tx('Quá hạn nộp phí', 'Payment expired', '결제 기한 초과'), REJECTED: tx('Biên lai bị từ chối', 'Receipt rejected', '영수증 거절됨'),
+})
+/** Đơn được gửi lại: chưa duyệt, bị từ chối, hoặc đã duyệt nhưng quá hạn nộp phí (trả suất). Cùng quy tắc backend. */
+const resubmittable = (p: MyParticipation | null) => !p || p.status !== 'APPROVED' || p.paymentStatus === 'EXPIRED'
+const feeText = (o: ParticipationOptions) =>
+  o.showType === 'HOSTED' ? `${tx('Phí đồng tổ chức', 'Co-organiser fee', '공동 주최 비용')}: ${money(o.feePerDay, o.currency)} / ${tx('ngày', 'day', '일')}`
+    : o.feeAmount ? `${tx('Phí tham gia', 'Participation fee', '참가비')}: ${money(o.feeAmount, o.currency)}` : tx('Miễn phí', 'Free', '무료')
+
+/** Đơn đăng ký tham gia hội chợ kèm sản phẩm mới ra mắt (Leader chốt 05/11/2026), theo 3 loại hội chợ (09/11/2026): một đơn/show. */
 function ShowParticipations() {
   useI18n() // đăng ký đổi ngôn ngữ để tx() tính lại
   const [shows, setShows] = useState<OnlineShow[] | null>(null)
   const [mine, setMine] = useState<Record<string, MyParticipation | null>>({})
+  const [opts, setOpts] = useState<Record<string, ParticipationOptions>>({})
   const [form, setForm] = useState<OnlineShow | null>(null)
 
   const load = useCallback(() => {
@@ -196,6 +223,8 @@ function ShowParticipations() {
       setShows(list)
       const rows = await Promise.all(list.map((s) => catalogApi.myParticipation(s.id).then((r) => [s.id, r] as const, () => [s.id, null] as const)))
       setMine(Object.fromEntries(rows))
+      const o = await Promise.all(list.map((s) => catalogApi.participationOptions(s.id).then((r) => [s.id, r] as const, () => null)))
+      setOpts(Object.fromEntries(o.filter((x): x is readonly [string, ParticipationOptions] => !!x)))
     }, () => setShows([]))
   }, [])
   useEffect(load, [load])
@@ -212,18 +241,40 @@ function ShowParticipations() {
       ) : (
         <ul className="space-y-4">
           {shows.map((s) => {
-            const p = mine[s.id]
-            const editable = !p || p.status !== 'APPROVED'
+            const p = mine[s.id] ?? null
+            const o = opts[s.id]
+            const hosted = o?.showType === 'HOSTED'
+            const editable = resubmittable(p) && (!!p || !o || o.open)
+            const owesFee = p?.status === 'APPROVED' && (p.feeAmount ?? 0) > 0 && (p.paymentStatus === 'PENDING' || p.paymentStatus === 'REJECTED' || p.paymentStatus === 'SUBMITTED')
             return (
               <li key={s.id} className="rounded-xl border p-5" data-testid="my-participation">
                 <div className="flex flex-wrap items-center gap-3">
                   <p className="font-bold">{s.name}</p>
-                  {p && <Badge variant="secondary">{STATUS()[p.status] ?? p.status}</Badge>}
+                  {o && <Badge variant="secondary">{KIND(o.showType)}</Badge>}
+                  {p && <Badge variant="muted">{STATUS()[p.status] ?? p.status}</Badge>}
+                  {p?.paymentStatus && <Badge variant={p.paymentStatus === 'VERIFIED' ? 'success' : 'gold'}>{PAYMENT()[p.paymentStatus]}</Badge>}
                   <div className="ml-auto">
-                    {editable && <Button size="sm" variant="outline" onClick={() => setForm(s)}>{p ? tx('Sửa đơn', 'Edit application', '신청서 수정') : tx('Đăng ký tham gia', 'Apply', '참가 신청')}</Button>}
+                    {editable ? (
+                      <Button size="sm" variant="outline" onClick={() => setForm(s)}>
+                        {p ? tx('Sửa đơn', 'Edit application', '신청서 수정') : hosted ? tx('Đăng ký đồng tổ chức', 'Apply to co-organise', '공동 주최 신청') : tx('Đăng ký tham gia', 'Apply', '참가 신청')}
+                      </Button>
+                    ) : !p && o && !o.open ? (
+                      <Button size="sm" variant="outline" disabled>{hosted && o.coorganizerLimit != null && o.seatsTaken >= o.coorganizerLimit ? tx('Đã hết suất', 'No seats left', '자리 없음') : tx('Đã đóng đăng ký', 'Applications closed', '신청 마감')}</Button>
+                    ) : null}
                   </div>
                 </div>
+                {o && (
+                  <p className="mt-2 flex flex-wrap gap-x-5 gap-y-1 text-[13px] text-muted-foreground">
+                    <span>{formatDate(s.startDate)} – {formatDate(s.endDate)}</span>
+                    <span>{feeText(o)}</span>
+                    {hosted && o.coorganizerLimit != null && <span>{tx('Còn', 'Seats left', '남은 자리')} {Math.max(0, o.coorganizerLimit - o.seatsTaken)}/{o.coorganizerLimit}</span>}
+                    {hosted && o.applicationCloseAt && <span>{tx('Hạn đăng ký', 'Applications close', '신청 마감')} {new Date(o.applicationCloseAt).toLocaleString()}</span>}
+                  </p>
+                )}
                 {p?.status === 'REJECTED' && p.rejectReason && <p className="mt-2 text-sm text-red-600">{tx('Lý do từ chối', 'Reason', '거절 사유')}: {p.rejectReason}</p>}
+                {p?.paymentStatus === 'EXPIRED' && <p className="mt-2 text-sm text-red-600">{tx('Đơn đã quá hạn nộp phí và trả lại suất. Bạn có thể gửi lại đơn.', 'The payment deadline passed and the seat was released. You can apply again.', '결제 기한이 지나 자리가 반환되었습니다. 다시 신청할 수 있습니다.')}</p>}
+                {!!p?.days.length && <p className="mt-2 text-sm">{tx('Ngày đồng tổ chức', 'Co-organising days', '공동 주최일')}: <b>{p.days.map(dayLabel).join(', ')}</b></p>}
+                {owesFee && p && <ParticipationPaymentBox showId={s.id} p={p} onDone={load} />}
                 {!!p?.launches.length && (
                   <div className="mt-4">
                     <p className="mb-2 text-sm font-semibold">{tx('Sản phẩm mới ra mắt', 'New product launches', '신제품 출시')} ({p.launches.length})</p>
@@ -231,6 +282,7 @@ function ShowParticipations() {
                       {p.launches.map((l) => (
                         <li key={l.productId} className="flex items-center gap-2 rounded-full border py-1 px-3 text-xs">
                           {l.productName} <span className="text-muted-foreground">{l.launchDate} {l.startTime}-{l.endTime}</span>
+                          {l.productModerationStatus === 'APPROVED' && <span className="font-semibold text-success">{tx('Đã duyệt', 'Approved', '승인됨')}</span>}
                         </li>
                       ))}
                     </ul>
@@ -241,90 +293,179 @@ function ShowParticipations() {
           })}
         </ul>
       )}
-      {form && <ParticipationDialog show={form} existing={mine[form.id] ?? null} onClose={(saved) => { setForm(null); if (saved) void load() }} />}
+      {form && <ParticipationDialog show={form} options={opts[form.id]} existing={mine[form.id] ?? null} onClose={(saved) => { setForm(null); if (saved) void load() }} />}
     </section>
+  )
+}
+
+/** Nộp biên lai phí của đơn đã duyệt (Show VCCI có phí / đồng tổ chức). */
+function ParticipationPaymentBox({ showId, p, onDone }: { showId: string; p: MyParticipation; onDone: () => void }) {
+  const toast = useToast()
+  const [file, setFile] = useState<File | null>(null)
+  const [code, setCode] = useState('')
+  const [busy, setBusy] = useState(false)
+  const submit = () => {
+    if (!file) return
+    setBusy(true)
+    catalogApi.submitParticipationPayment(showId, file, code.trim() || undefined).then(
+      () => { toast({ kind: 'success', title: tx('Đã nộp biên lai', 'Receipt submitted', '영수증 제출됨') }); onDone() },
+      (e: Error) => { setBusy(false); toast({ kind: 'info', title: e.message }) },
+    )
+  }
+  return (
+    <div className="mt-3 rounded-lg bg-gold-soft p-4 text-sm">
+      <p className="font-semibold">
+        {tx('Cần thanh toán', 'Amount due', '결제 금액')}: {money(p.feeAmount, p.feeCurrency)}
+        {p.paymentDueAt && <span className="font-normal text-muted-foreground"> · {tx('hạn', 'due', '기한')} {new Date(p.paymentDueAt).toLocaleString()}</span>}
+      </p>
+      <p className="mt-1 text-[13px] text-muted-foreground">{tx('Quá hạn chưa nộp biên lai thì đơn bị huỷ và trả lại suất.', 'If no receipt arrives before the deadline the application is cancelled and the seat released.', '기한 내 영수증이 없으면 신청이 취소되고 자리가 반환됩니다.')}</p>
+      {p.paymentStatus === 'REJECTED' && <p className="mt-1 text-red-600">{tx('Biên lai bị từ chối', 'Receipt rejected', '영수증 거절됨')}{p.paymentRejectReason ? `: ${p.paymentRejectReason}` : ''} — {tx('vui lòng nộp lại', 'please resubmit', '다시 제출하세요')}</p>}
+      {p.paymentStatus === 'SUBMITTED' ? <p className="mt-1 text-muted-foreground">{tx('Đã nộp biên lai, chờ VCCI xác nhận.', 'Receipt submitted, awaiting VCCI confirmation.', '영수증 제출됨, VCCI 확인 대기 중.')}</p> : (
+        <div className="mt-2 flex flex-wrap items-end gap-3">
+          <Input type="file" accept="image/*,application/pdf" onChange={(e) => setFile(e.target.files?.[0] ?? null)} className="max-w-xs" aria-label={tx('Biên lai', 'Receipt', '영수증')} />
+          <Input value={code} onChange={(e) => setCode(e.target.value)} placeholder={tx('Mã giao dịch', 'Transaction code', '거래 코드')} className="max-w-48" maxLength={100} aria-label={tx('Mã giao dịch', 'Transaction code', '거래 코드')} />
+          <Button size="sm" disabled={!file || busy} onClick={submit}>{tx('Nộp biên lai', 'Submit receipt', '영수증 제출')}</Button>
+        </div>
+      )}
+    </div>
   )
 }
 
 type LaunchForm = { productName: string; categoryId: string; shortDescription: string; launchDate: string; startTime: string; endTime: string; image: File | null }
 const emptyLaunch = (): LaunchForm => ({ productName: '', categoryId: '', shortDescription: '', launchDate: '', startTime: '', endTime: '', image: null })
 
-function ParticipationDialog({ show, existing, onClose }: { show: OnlineShow; existing: MyParticipation | null; onClose: (saved: boolean) => void }) {
+function ParticipationDialog({ show, options, existing, onClose }: { show: OnlineShow; options?: ParticipationOptions; existing: MyParticipation | null; onClose: (saved: boolean) => void }) {
   const { L } = useI18n()
   const toast = useToast()
+  const hosted = options?.showType === 'HOSTED'
+  // Không có cấu hình (API cũ) thì giữ hành vi trước V87: cho kèm sản phẩm.
+  const launchAllowed = options ? options.launchEnabled : true
+  const allDays = useMemo(() => showDays(show.startDate, show.endDate), [show.startDate, show.endDate])
+  const [days, setDays] = useState<string[]>(existing?.days.length ? existing.days : hosted ? allDays : [])
   const [contactName, setContactName] = useState(existing?.contactName ?? '')
   const [contactPhone, setContactPhone] = useState(existing?.contactPhone ?? '')
   const [note, setNote] = useState(existing?.note ?? '')
   const [launches, setLaunches] = useState<LaunchForm[]>(
-    (existing?.launches ?? []).map((l) => ({ productName: l.productName ?? '', categoryId: '', shortDescription: l.shortDescription ?? '', launchDate: l.launchDate, startTime: l.startTime, endTime: l.endTime, image: null }))
+    launchAllowed ? (existing?.launches ?? []).map((l) => ({ productName: l.productName ?? '', categoryId: '', shortDescription: l.shortDescription ?? '', launchDate: l.launchDate, startTime: l.startTime, endTime: l.endTime, image: null })) : []
   )
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
 
   const setLaunch = (i: number, patch: Partial<LaunchForm>) => setLaunches((ls) => ls.map((l, idx) => (idx === i ? { ...l, ...patch } : l)))
-  const addLaunch = () => setLaunches((ls) => (ls.length >= 10 ? ls : [...ls, emptyLaunch()]))
+  const addLaunch = () => setLaunches((ls) => (ls.length >= 10 ? ls : [...ls, { ...emptyLaunch(), launchDate: hosted ? days[0] ?? '' : '' }]))
   const removeLaunch = (i: number) => setLaunches((ls) => ls.filter((_, idx) => idx !== i))
+  const toggleDay = (d: string) => setDays((cur) => (cur.includes(d) ? cur.filter((x) => x !== d) : [...cur, d].sort()))
+  const total = hosted && options?.feePerDay ? options.feePerDay * days.length : undefined
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!contactName.trim() || !contactPhone.trim()) { setErr(tx('Cần nhập người liên hệ và số điện thoại', 'Contact name and phone are required', '담당자명과 전화번호가 필요합니다')); return }
+    if (hosted && days.length === 0) { setErr(tx('Chọn ít nhất một ngày đồng tổ chức', 'Choose at least one co-organising day', '공동 주최일을 하루 이상 선택하세요')); return }
     if (launches.some((l) => !l.image)) { setErr(tx('Mỗi sản phẩm mới ra mắt cần một ảnh (chụp lại dù đã nộp trước đó)', 'Each new launch product needs one image (re-attach even if submitted before)', '각 신제품에는 이미지가 필요합니다 (이전에 제출했어도 다시 첨부)')); return }
     if (launches.some((l) => !l.productName.trim() || !l.categoryId || !l.launchDate || !l.startTime || !l.endTime)) { setErr(tx('Điền đủ thông tin các sản phẩm mới ra mắt', 'Fill in all new launch product fields', '신제품 정보를 모두 입력하세요')); return }
+    if (hosted && launches.some((l) => !days.includes(l.launchDate))) { setErr(tx('Ngày ra mắt phải là một trong các ngày đồng tổ chức đã chọn', 'The launch date must be one of your co-organising days', '출시일은 선택한 공동 주최일 중 하루여야 합니다')); return }
     setBusy(true)
     setErr('')
     const launchInputs: ParticipationLaunchInput[] = launches.map((l) => ({
       productName: l.productName.trim(), categoryId: Number(l.categoryId), shortDescription: l.shortDescription.trim() || undefined,
       launchDate: l.launchDate, startTime: l.startTime, endTime: l.endTime,
     }))
-    catalogApi.submitParticipation(show.id, { contactName: contactName.trim(), contactPhone: contactPhone.trim(), note: note.trim() || undefined, launches: launchInputs }, launches.map((l) => l.image as File)).then(
+    catalogApi.submitParticipation(show.id, { contactName: contactName.trim(), contactPhone: contactPhone.trim(), note: note.trim() || undefined, launches: launchInputs, days: hosted ? days : undefined }, launches.map((l) => l.image as File)).then(
       () => { toast({ kind: 'success', title: tx('Đã gửi đơn đăng ký', 'Application submitted', '신청서가 제출되었습니다') }); onClose(true) },
       (er: Error) => { setErr(er.message); setBusy(false) },
     )
   }
 
+  const title = hosted ? tx('Đăng ký đồng tổ chức', 'Apply to co-organise', '공동 주최 신청') : tx('Đăng ký tham gia', 'Participation application', '참가 신청')
+  const description = hosted
+    ? `${options?.coorganizerLimit != null ? `${tx('Còn', 'Seats left', '남은 자리')} ${Math.max(0, options.coorganizerLimit - options.seatsTaken)}/${options.coorganizerLimit}` : ''}${options?.applicationCloseAt ? ` · ${tx('Hạn đăng ký', 'Applications close', '신청 마감')} ${new Date(options.applicationCloseAt).toLocaleString()}` : ''}`
+    : launchAllowed ? tx('Có thể kèm tối đa 10 sản phẩm mới ra mắt; mỗi sản phẩm cần một ảnh và một mốc giờ trong thời gian hội chợ.', 'You may include up to 10 new product launches; each needs one image and a time slot within the show dates.', '최대 10개의 신제품을 포함할 수 있으며, 각 제품에는 이미지와 쇼 기간 내 시간대가 필요합니다.')
+      : tx('Doanh nghiệp tham gia với tư cách người tham gia; VCCI duyệt từng đơn.', 'You take part as a participant; VCCI reviews each application.', '참가자로 참여하며 VCCI가 각 신청을 검토합니다.')
+
   return (
     <Dialog open onOpenChange={(v) => { if (!v) onClose(false) }}>
-      <DialogContent
-        title={`${tx('Đăng ký tham gia', 'Participation application', '참가 신청')} - ${show.name}`}
-        description={tx('Có thể kèm tối đa 10 sản phẩm mới ra mắt; mỗi sản phẩm cần một ảnh và một mốc giờ trong thời gian hội chợ.', 'You may include up to 10 new product launches; each needs one image and a time slot within the show dates.', '최대 10개의 신제품을 포함할 수 있으며, 각 제품에는 이미지와 쇼 기간 내 시간대가 필요합니다.')}
-      >
+      <DialogContent title={`${title} - ${show.name}`} description={description}>
         <form onSubmit={submit} className="max-h-[75dvh] space-y-4 overflow-y-auto p-6">
+          {hosted && (
+            <fieldset>
+              <legend className="mb-1.5 block text-[13px] font-semibold">{tx('Ngày đồng tổ chức', 'Co-organising days', '공동 주최일')} *</legend>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {allDays.map((d) => (
+                  <label key={d} className={`flex min-h-11 cursor-pointer items-center gap-2.5 rounded-xl border px-3.5 py-2 text-sm ${days.includes(d) ? 'border-primary bg-primary-soft' : ''}`}>
+                    <input type="checkbox" className="size-4 accent-[var(--primary)]" checked={days.includes(d)} onChange={() => toggleDay(d)} />
+                    <span className="font-semibold">{formatDate(d)}</span>
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+          )}
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label={tx('Người phụ trách', 'Contact name', '담당자')} htmlFor="pt-cn"><Input id="pt-cn" value={contactName} maxLength={255} onChange={(e) => setContactName(e.target.value)} /></Field>
             <Field label={tx('Điện thoại', 'Phone', '전화')} htmlFor="pt-cp"><Input id="pt-cp" value={contactPhone} maxLength={30} onChange={(e) => setContactPhone(e.target.value)} /></Field>
           </div>
           <Field label={tx('Ghi chú', 'Note', '비고')} htmlFor="pt-note"><Textarea id="pt-note" rows={3} maxLength={2000} value={note} onChange={(e) => setNote(e.target.value)} /></Field>
-          <div>
-            <div className="mb-2 flex items-center justify-between">
-              <p className="text-sm font-semibold">{tx('Sản phẩm mới ra mắt', 'New product launches', '신제품 출시')} ({launches.length}/10)</p>
-              {launches.length < 10 && <Button type="button" size="sm" variant="outline" onClick={addLaunch}><Plus /> {tx('Thêm sản phẩm', 'Add product', '제품 추가')}</Button>}
-            </div>
-            <div className="space-y-4">
-              {launches.map((l, i) => (
-                <fieldset key={i} className="space-y-3 rounded-xl border p-4">
-                  <div className="flex items-center justify-between">
-                    <legend className="px-1 text-xs font-bold uppercase">{tx('Sản phẩm', 'Product', '제품')} {i + 1}</legend>
-                    <button type="button" aria-label="remove" className="rounded-full p-1 hover:bg-muted" onClick={() => removeLaunch(i)}><Trash2 className="size-4" /></button>
-                  </div>
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <Field label={tx('Tên sản phẩm', 'Product name', '제품명')} htmlFor={`pt-pn-${i}`}><Input id={`pt-pn-${i}`} value={l.productName} maxLength={500} onChange={(e) => setLaunch(i, { productName: e.target.value })} /></Field>
-                    <Field label={tx('Danh mục', 'Category', '카테고리')} htmlFor={`pt-pc-${i}`}>
-                      <Select id={`pt-pc-${i}`} value={l.categoryId} onValueChange={(v) => setLaunch(i, { categoryId: v })} placeholder="—" options={categories.map((c) => ({ value: c.id, label: L(c.categoryName) }))} />
+          {launchAllowed && (
+            <div>
+              <div className="mb-2 flex items-center justify-between">
+                <p className="text-sm font-semibold">{tx('Sản phẩm mới ra mắt', 'New product launches', '신제품 출시')} ({launches.length}/10)</p>
+                {launches.length < 10 && <Button type="button" size="sm" variant="outline" onClick={addLaunch}><Plus /> {tx('Thêm sản phẩm', 'Add product', '제품 추가')}</Button>}
+              </div>
+              <p className="mb-3 text-xs text-muted-foreground">{tx('Không bắt buộc. Tạo sản phẩm muốn ra mắt ngay trong đơn; VCCI duyệt đơn thì sản phẩm được duyệt luôn.', 'Optional. Create the products you want to launch right here; when VCCI approves the application the products are approved too.', '선택 사항. 출시할 제품을 신청서에서 바로 만드세요. VCCI가 신청을 승인하면 제품도 승인됩니다.')}</p>
+              <div className="space-y-4">
+                {launches.map((l, i) => (
+                  <fieldset key={i} className="space-y-3 rounded-xl border p-4">
+                    <div className="flex items-center justify-between">
+                      <legend className="px-1 text-xs font-bold uppercase">{tx('Sản phẩm', 'Product', '제품')} {i + 1}</legend>
+                      <button type="button" aria-label={tx('Xoá sản phẩm', 'Remove product', '제품 삭제')} className="rounded-full p-1 hover:bg-muted" onClick={() => removeLaunch(i)}><Trash2 className="size-4" /></button>
+                    </div>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <Field label={tx('Tên sản phẩm', 'Product name', '제품명')} htmlFor={`pt-pn-${i}`}><Input id={`pt-pn-${i}`} value={l.productName} maxLength={500} onChange={(e) => setLaunch(i, { productName: e.target.value })} /></Field>
+                      <Field label={tx('Danh mục', 'Category', '카테고리')} htmlFor={`pt-pc-${i}`}>
+                        <Select id={`pt-pc-${i}`} value={l.categoryId} onValueChange={(v) => setLaunch(i, { categoryId: v })} placeholder="—" options={categories.map((c) => ({ value: c.id, label: L(c.categoryName) }))} />
+                      </Field>
+                    </div>
+                    <Field label={tx('Mô tả ngắn', 'Short description', '간단 설명')} htmlFor={`pt-pd-${i}`}><Textarea id={`pt-pd-${i}`} rows={2} maxLength={1000} value={l.shortDescription} onChange={(e) => setLaunch(i, { shortDescription: e.target.value })} /></Field>
+                    <div className="grid gap-4 sm:grid-cols-3">
+                      <Field label={tx('Ngày ra mắt', 'Launch date', '출시일')} htmlFor={`pt-pld-${i}`} hint={hosted ? tx('Trong các ngày đồng tổ chức đã chọn', 'Within your co-organising days', '선택한 공동 주최일 중') : undefined}>
+                        {hosted ? (
+                          <Select id={`pt-pld-${i}`} value={l.launchDate} onValueChange={(v) => setLaunch(i, { launchDate: v })} placeholder="—" options={days.map((d) => ({ value: d, label: formatDate(d) }))} />
+                        ) : (
+                          <Input id={`pt-pld-${i}`} type="date" min={show.startDate?.slice(0, 10)} max={show.endDate?.slice(0, 10)} value={l.launchDate} onChange={(e) => setLaunch(i, { launchDate: e.target.value })} />
+                        )}
+                      </Field>
+                      <Field label={tx('Giờ bắt đầu', 'Start time', '시작 시간')} htmlFor={`pt-pst-${i}`}><Input id={`pt-pst-${i}`} type="time" value={l.startTime} onChange={(e) => setLaunch(i, { startTime: e.target.value })} /></Field>
+                      <Field label={tx('Giờ kết thúc', 'End time', '종료 시간')} htmlFor={`pt-pet-${i}`}><Input id={`pt-pet-${i}`} type="time" value={l.endTime} onChange={(e) => setLaunch(i, { endTime: e.target.value })} /></Field>
+                    </div>
+                    <Field label={tx('Ảnh sản phẩm', 'Product image', '제품 이미지')} htmlFor={`pt-pi-${i}`}>
+                      <Input id={`pt-pi-${i}`} type="file" accept="image/*" onChange={(e) => setLaunch(i, { image: e.target.files?.[0] ?? null })} />
                     </Field>
-                  </div>
-                  <Field label={tx('Mô tả ngắn', 'Short description', '간단 설명')} htmlFor={`pt-pd-${i}`}><Textarea id={`pt-pd-${i}`} rows={2} maxLength={1000} value={l.shortDescription} onChange={(e) => setLaunch(i, { shortDescription: e.target.value })} /></Field>
-                  <div className="grid gap-4 sm:grid-cols-3">
-                    <Field label={tx('Ngày ra mắt', 'Launch date', '출시일')} htmlFor={`pt-pld-${i}`}><Input id={`pt-pld-${i}`} type="date" min={show.startDate?.slice(0, 10)} max={show.endDate?.slice(0, 10)} value={l.launchDate} onChange={(e) => setLaunch(i, { launchDate: e.target.value })} /></Field>
-                    <Field label={tx('Giờ bắt đầu', 'Start time', '시작 시간')} htmlFor={`pt-pst-${i}`}><Input id={`pt-pst-${i}`} type="time" value={l.startTime} onChange={(e) => setLaunch(i, { startTime: e.target.value })} /></Field>
-                    <Field label={tx('Giờ kết thúc', 'End time', '종료 시간')} htmlFor={`pt-pet-${i}`}><Input id={`pt-pet-${i}`} type="time" value={l.endTime} onChange={(e) => setLaunch(i, { endTime: e.target.value })} /></Field>
-                  </div>
-                  <Field label={tx('Ảnh sản phẩm', 'Product image', '제품 이미지')} htmlFor={`pt-pi-${i}`}>
-                    <Input id={`pt-pi-${i}`} type="file" accept="image/*" onChange={(e) => setLaunch(i, { image: e.target.files?.[0] ?? null })} />
-                  </Field>
-                </fieldset>
-              ))}
+                  </fieldset>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
+          {options && (
+            <div className={`rounded-xl p-3.5 text-sm ${(hosted || options.feeAmount) ? 'bg-gold-soft text-gold' : 'bg-success-soft text-success'}`}>
+              {hosted ? (
+                <>
+                  <div className="flex justify-between gap-3"><span>{tx('Đơn giá / ngày', 'Price per day', '일일 단가')}</span><span>{money(options.feePerDay, options.currency)}</span></div>
+                  <div className="flex justify-between gap-3"><span>{tx('Số ngày đã chọn', 'Days chosen', '선택 일수')}</span><span>{days.length}</span></div>
+                  <div className="mt-1.5 flex justify-between gap-3 border-t border-gold/25 pt-1.5 font-bold"><span>{tx('Phí đồng tổ chức (bắt buộc)', 'Co-organiser fee (required)', '공동 주최 비용(필수)')}</span><span>{total != null ? money(total, options.currency) : '—'}</span></div>
+                  <p className="mt-1 text-xs">{tx('Nộp biên lai sau khi VCCI duyệt.', 'Upload the receipt after VCCI approves.', 'VCCI 승인 후 영수증을 제출하세요.')}</p>
+                </>
+              ) : (
+                <div className="flex flex-wrap justify-between gap-2">
+                  <span className="font-semibold">{tx('Phí tham gia', 'Participation fee', '참가비')}</span>
+                  <span className="font-extrabold">{options.feeAmount ? money(options.feeAmount, options.currency) : tx('Miễn phí', 'Free', '무료')}</span>
+                  <span className="basis-full text-xs">
+                    {options.showType === 'ORGANIZATION' ? tx('Hội chợ do doanh nghiệp tổ chức luôn miễn phí cho người tham gia.', 'Business-organised shows are always free for participants.', '기업 주최 박람회는 참가자에게 항상 무료입니다.')
+                      : options.feeAmount ? tx('Mức chung; số tiền chính xác được chốt khi VCCI duyệt. Nộp biên lai sau khi được duyệt.', 'Standard rate; the exact amount is set when VCCI approves. Upload the receipt after approval.', '기본 요금이며 정확한 금액은 VCCI 승인 시 확정됩니다. 승인 후 영수증을 제출하세요.')
+                        : tx('VCCI không thu phí tham gia hội chợ này.', 'VCCI charges no participation fee for this show.', 'VCCI는 이 박람회에 참가비를 받지 않습니다.')}
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
           {err && <p role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{err}</p>}
           <div className="flex justify-end gap-2">
             <Button type="button" variant="ghost" onClick={() => onClose(false)}>{tx('Huỷ', 'Cancel', '취소')}</Button>

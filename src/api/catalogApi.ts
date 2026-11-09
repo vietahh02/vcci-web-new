@@ -225,6 +225,17 @@ export interface ParticipationLaunch { productId: string; productName?: string; 
 export interface MyParticipation {
   id: string; showId: string; status: string; rejectReason?: string; submittedAt?: string; reviewedAt?: string
   contactName: string; contactPhone: string; note: string; launches: ParticipationLaunch[]
+  /** V87: ngày đồng tổ chức (Show HOSTED), phí và thanh toán (null/0 = miễn phí) */
+  days: string[]; feeAmount?: number; feeCurrency?: string
+  paymentStatus?: 'PENDING' | 'SUBMITTED' | 'VERIFIED' | 'EXPIRED' | 'REJECTED'; paymentDueAt?: string
+  transactionCode?: string; paymentSubmittedAt?: string; paymentRejectReason?: string
+}
+export type ShowKind = 'VCCI' | 'ORGANIZATION' | 'HOSTED'
+/** Cấu hình form đăng ký của một Show: loại, phí, suất đồng tổ chức, có cho kèm sản phẩm ra mắt không. */
+export interface ParticipationOptions {
+  showId: string; showType: ShowKind; launchEnabled: boolean; startDate: string; endDate: string
+  feeAmount?: number; feePerDay?: number; currency: string
+  coorganizerLimit?: number; seatsTaken: number; applicationCloseAt?: string; open: boolean
 }
 const toParticipation = (r: Raw): MyParticipation => ({
   id: String(r.id), showId: String(r.showId), status: r.status ?? 'PENDING', rejectReason: r.rejectReason ?? undefined,
@@ -235,7 +246,29 @@ const toParticipation = (r: Raw): MyParticipation => ({
     categoryName: l.categoryName ?? undefined, shortDescription: l.shortDescription ?? undefined, productModerationStatus: l.productModerationStatus ?? undefined,
     launchDate: l.launchDate ?? '', startTime: l.startTime ?? '', endTime: l.endTime ?? '',
   })),
+  days: Array.isArray(r.days) ? r.days.map(String) : [],
+  feeAmount: r.feeAmount == null ? undefined : Number(r.feeAmount), feeCurrency: r.feeCurrency ?? undefined,
+  paymentStatus: r.paymentStatus ?? undefined, paymentDueAt: r.paymentDueAt ?? undefined,
+  transactionCode: r.transactionCode ?? undefined, paymentSubmittedAt: r.paymentSubmittedAt ?? undefined,
+  paymentRejectReason: r.paymentRejectReason ?? undefined,
 })
+/** GET /api/shows/{id}/participation/options */
+export const participationOptions = async (showId: string): Promise<ParticipationOptions> => {
+  const r = await apiFetch<Raw>(`/api/shows/${encodeURIComponent(showId)}/participation/options`)
+  const n = (v: unknown) => (v == null ? undefined : Number(v))
+  return {
+    showId: String(r.showId ?? showId), showType: (r.showType ?? 'VCCI') as ShowKind, launchEnabled: !!r.launchEnabled,
+    startDate: r.startDate ?? '', endDate: r.endDate ?? '', feeAmount: n(r.feeAmount), feePerDay: n(r.feePerDay), currency: r.currency ?? 'VND',
+    coorganizerLimit: n(r.coorganizerLimit), seatsTaken: Number(r.seatsTaken ?? 0), applicationCloseAt: r.applicationCloseAt ?? undefined, open: r.open !== false,
+  }
+}
+/** POST /api/shows/{id}/participation/payment: multipart billImage + transactionCode */
+export async function submitParticipationPayment(showId: string, billImage: File, transactionCode?: string) {
+  const fd = new FormData()
+  fd.append('billImage', billImage)
+  if (transactionCode) fd.append('transactionCode', transactionCode)
+  return toParticipation(await apiFetch<Raw>(`/api/shows/${encodeURIComponent(showId)}/participation/payment`, { method: 'POST', form: fd }))
+}
 /** Shows currently taking participation applications: UPCOMING or ONGOING, any format. */
 export async function participableShows(): Promise<OnlineShow[]> {
   const byStatus = (status: string) => apiFetch('/api/public/shows', { query: { status, page: 0, size: 50 }, anon: true }).then((r) => toPage<Raw>(r, 50).items)
@@ -248,7 +281,7 @@ export const myParticipation = async (showId: string) => {
   return r ? toParticipation(r) : null
 }
 /** POST /api/shows/{id}/participation: multipart `data` (JSON) + `images[i]` is the image of `launches[i]` */
-export async function submitParticipation(showId: string, data: { contactName: string; contactPhone: string; note?: string; launches: ParticipationLaunchInput[] }, images: File[]) {
+export async function submitParticipation(showId: string, data: { contactName: string; contactPhone: string; note?: string; launches: ParticipationLaunchInput[]; days?: string[] }, images: File[]) {
   const fd = new FormData()
   fd.append('data', new Blob([JSON.stringify(data)], { type: 'application/json' }))
   images.forEach((f) => fd.append('images', f))
