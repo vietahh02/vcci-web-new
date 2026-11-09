@@ -14,7 +14,7 @@ import { Badge, Button, Field, Input, Skeleton, Textarea } from '@/components/ui
 import { Select } from '@/components/ui/select'
 import { categories } from '@/data/mock'
 import { useI18n } from '@/lib/i18n'
-import { tx } from '@/lib/tx'
+import { dateTime, tx } from '@/lib/tx'
 import { formatDate } from '@/lib/utils'
 
 const GOALS = ['SELL', 'EXPORT', 'SEEK_DISTRIBUTOR', 'SEEK_INVESTOR', 'SEEK_PARTNER'] as const
@@ -268,7 +268,7 @@ function ShowParticipations() {
                     <span>{formatDate(s.startDate)} – {formatDate(s.endDate)}</span>
                     <span>{feeText(o)}</span>
                     {hosted && o.coorganizerLimit != null && <span>{tx('Còn', 'Seats left', '남은 자리')} {Math.max(0, o.coorganizerLimit - o.seatsTaken)}/{o.coorganizerLimit}</span>}
-                    {hosted && o.applicationCloseAt && <span>{tx('Hạn đăng ký', 'Applications close', '신청 마감')} {new Date(o.applicationCloseAt).toLocaleString()}</span>}
+                    {hosted && o.applicationCloseAt && <span>{tx('Hạn đăng ký', 'Applications close', '신청 마감')} {dateTime(o.applicationCloseAt)}</span>}
                   </p>
                 )}
                 {p?.status === 'REJECTED' && p.rejectReason && <p className="mt-2 text-sm text-red-600">{tx('Lý do từ chối', 'Reason', '거절 사유')}: {p.rejectReason}</p>}
@@ -316,7 +316,7 @@ function ParticipationPaymentBox({ showId, p, onDone }: { showId: string; p: MyP
     <div className="mt-3 rounded-lg bg-gold-soft p-4 text-sm">
       <p className="font-semibold">
         {tx('Cần thanh toán', 'Amount due', '결제 금액')}: {money(p.feeAmount, p.feeCurrency)}
-        {p.paymentDueAt && <span className="font-normal text-muted-foreground"> · {tx('hạn', 'due', '기한')} {new Date(p.paymentDueAt).toLocaleString()}</span>}
+        {p.paymentDueAt && <span className="font-normal text-muted-foreground"> · {tx('hạn', 'due', '기한')} {dateTime(p.paymentDueAt)}</span>}
       </p>
       <p className="mt-1 text-[13px] text-muted-foreground">{tx('Quá hạn chưa nộp biên lai thì đơn bị huỷ và trả lại suất.', 'If no receipt arrives before the deadline the application is cancelled and the seat released.', '기한 내 영수증이 없으면 신청이 취소되고 자리가 반환됩니다.')}</p>
       {p.paymentStatus === 'REJECTED' && <p className="mt-1 text-red-600">{tx('Biên lai bị từ chối', 'Receipt rejected', '영수증 거절됨')}{p.paymentRejectReason ? `: ${p.paymentRejectReason}` : ''} — {tx('vui lòng nộp lại', 'please resubmit', '다시 제출하세요')}</p>}
@@ -378,7 +378,7 @@ function ParticipationDialog({ show, options, existing, onClose }: { show: Onlin
 
   const title = hosted ? tx('Đăng ký đồng tổ chức', 'Apply to co-organise', '공동 주최 신청') : tx('Đăng ký tham gia', 'Participation application', '참가 신청')
   const description = hosted
-    ? `${options?.coorganizerLimit != null ? `${tx('Còn', 'Seats left', '남은 자리')} ${Math.max(0, options.coorganizerLimit - options.seatsTaken)}/${options.coorganizerLimit}` : ''}${options?.applicationCloseAt ? ` · ${tx('Hạn đăng ký', 'Applications close', '신청 마감')} ${new Date(options.applicationCloseAt).toLocaleString()}` : ''}`
+    ? `${options?.coorganizerLimit != null ? `${tx('Còn', 'Seats left', '남은 자리')} ${Math.max(0, options.coorganizerLimit - options.seatsTaken)}/${options.coorganizerLimit}` : ''}${options?.applicationCloseAt ? ` · ${tx('Hạn đăng ký', 'Applications close', '신청 마감')} ${dateTime(options.applicationCloseAt)}` : ''}`
     : launchAllowed ? tx('Có thể kèm tối đa 10 sản phẩm mới ra mắt; mỗi sản phẩm cần một ảnh và một mốc giờ trong thời gian hội chợ.', 'You may include up to 10 new product launches; each needs one image and a time slot within the show dates.', '최대 10개의 신제품을 포함할 수 있으며, 각 제품에는 이미지와 쇼 기간 내 시간대가 필요합니다.')
       : tx('Doanh nghiệp tham gia với tư cách người tham gia; VCCI duyệt từng đơn.', 'You take part as a participant; VCCI reviews each application.', '참가자로 참여하며 VCCI가 각 신청을 검토합니다.')
 
@@ -492,7 +492,7 @@ function PaymentBox({ booth, onDone }: { booth: MyBooth; onDone: () => void }) {
   const submitted = p?.status === 'SUBMITTED'
   return (
     <div className="mt-3 rounded-lg bg-muted/50 p-4 text-sm">
-      <p className="font-semibold">{tx('Phí gian', 'Booth fee', '부스 비용')}: {p?.amount ?? '-'} {p?.currency ?? ''} {p?.dueAt && <span className="font-normal text-muted-foreground">· {tx('hạn', 'due', '기한')} {new Date(p.dueAt).toLocaleString()}</span>}</p>
+      <p className="font-semibold">{tx('Phí gian', 'Booth fee', '부스 비용')}: {p?.amount ?? '-'} {p?.currency ?? ''} {p?.dueAt && <span className="font-normal text-muted-foreground">· {tx('hạn', 'due', '기한')} {dateTime(p.dueAt)}</span>}</p>
       {p?.status === 'REJECTED' && <p className="mt-1 text-red-600">{tx('Biên lai bị từ chối', 'Receipt rejected', '영수증 거절됨')}{p.rejectReason ? `: ${p.rejectReason}` : ''} — {tx('vui lòng nộp lại', 'please resubmit', '다시 제출하세요')}</p>}
       {submitted ? <p className="mt-1 text-muted-foreground">{tx('Đã nộp biên lai, chờ xác nhận.', 'Receipt submitted, awaiting confirmation.', '영수증 제출됨, 확인 대기 중.')}</p> : (
         <div className="mt-2 flex flex-wrap items-end gap-3">
@@ -589,7 +589,7 @@ function BoothDialog({ show, booth, onClose }: { show: OpenShow; booth: MyBooth 
 
   return (
     <Dialog open onOpenChange={(v) => { if (!v) onClose(false) }}>
-      <DialogContent title={`${booth ? tx('Sửa gian', 'Edit booth', '부스 수정') : tx('Đăng ký gian', 'Apply for a booth', '부스 신청')} - ${show.name}`} description={show.closeAt ? `${tx('Hạn nhận đăng ký', 'Applications close', '신청 마감')}: ${new Date(show.closeAt).toLocaleString()}` : ''}>
+      <DialogContent title={`${booth ? tx('Sửa gian', 'Edit booth', '부스 수정') : tx('Đăng ký gian', 'Apply for a booth', '부스 신청')} - ${show.name}`} description={show.closeAt ? `${tx('Hạn nhận đăng ký', 'Applications close', '신청 마감')}: ${dateTime(show.closeAt)}` : ''}>
         <form onSubmit={save} className="max-h-[75dvh] space-y-4 overflow-y-auto p-6">
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label={tx('Khu trưng bày', 'Pavilion', '전시관')} htmlFor="bt-pav"><Select id="bt-pav" placeholder={tx('Chọn khu trưng bày', 'Choose a pavilion', '전시관 선택')} value={f.pavilionId} onValueChange={(v) => set('pavilionId', v)} options={[{ value: '', label: tx('Không chọn', 'None', '선택 안 함') }, ...show.pavilions.map((p) => ({ value: p.id, label: p.name }))]} /></Field>

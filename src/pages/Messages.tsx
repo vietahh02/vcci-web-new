@@ -15,7 +15,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { useToast } from '@/components/ui/overlay'
 import { useI18n } from '@/lib/i18n'
 import { useProfile } from '@/lib/profile'
-import { tx } from '@/lib/tx'
+import { dateTime, tx } from '@/lib/tx'
 import { cn } from '@/lib/utils'
 
 type Tab = 'b2b' | 'support'
@@ -325,7 +325,7 @@ export default function Messages() {
               <p className="flex items-center gap-2 border-b bg-gold-soft px-5 py-2 text-xs text-gold">
                 <Clock className="size-3.5" />
                 {status0 ? tx(`VCCI phản hồi trong vòng ${status0.slaHours} giờ.`, `VCCI replies within ${status0.slaHours} hours.`, `VCCI는 ${status0.slaHours}시간 이내에 답변합니다.`) : ''}
-                {active.dueAt && ` ${tx('Hạn xử lý', 'Due', '처리 기한')}: ${new Date(active.dueAt).toLocaleString()}`}
+                {active.dueAt && ` ${tx('Hạn xử lý', 'Due', '처리 기한')}: ${dateTime(active.dueAt)}`}
               </p>
             )}
             {searching && (
