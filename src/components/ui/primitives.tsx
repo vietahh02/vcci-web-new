@@ -117,12 +117,14 @@ export function Label({ className, ...props }: LabelHTMLAttributes<HTMLLabelElem
   return <label className={cn('mb-1.5 block text-[13px] font-semibold text-foreground', className)} {...props} />
 }
 
-export function Field({ label, htmlFor, hint, children, className }: { label: ReactNode; htmlFor?: string; hint?: string; children: ReactNode; className?: string }) {
+/** `hint` and `error` get ids `<htmlFor>-hint` / `<htmlFor>-err`: point the control's aria-describedby at them. */
+export function Field({ label, htmlFor, hint, error, children, className }: { label: ReactNode; htmlFor?: string; hint?: string; error?: string; children: ReactNode; className?: string }) {
   return (
     <div className={className}>
       <Label htmlFor={htmlFor}>{label}</Label>
       {children}
-      {hint && <p className="mt-1 text-xs text-muted-foreground">{hint}</p>}
+      {hint && <p id={htmlFor && `${htmlFor}-hint`} className="mt-1 text-xs text-muted-foreground">{hint}</p>}
+      {error && <p id={htmlFor && `${htmlFor}-err`} role="alert" className="mt-1.5 text-[13px] font-semibold text-destructive">{error}</p>}
     </div>
   )
 }

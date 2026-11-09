@@ -107,9 +107,7 @@ export function PageHero({ title, sub, crumbs, children, image }: { title: strin
   return (
     <section className="relative isolate overflow-hidden bg-navy text-white">
       {image && <img src={image} alt="" className="absolute inset-0 -z-20 size-full animate-kenburns object-cover opacity-35" />}
-      <div className="absolute inset-0 -z-10 bg-gradient-to-br from-navy via-navy/90 to-[#003a5c]/80" />
-      <div className="bg-grid absolute inset-0 -z-10 opacity-60 [mask-image:radial-gradient(ellipse_at_top,#000_30%,transparent_75%)]" />
-      <div className="absolute -right-24 -top-24 -z-10 size-96 animate-aurora rounded-full bg-primary/40 blur-3xl" />
+      <div className="absolute inset-0 -z-10 bg-navy/85" />
       <div className="container-page py-12 md:py-16">
         {crumbs && (
           <nav aria-label={t.ui.breadcrumb} className="mb-4 flex flex-wrap items-center gap-1.5 text-[13px] text-white/60">

@@ -17,7 +17,7 @@ import { tx } from '@/lib/tx'
 import { cn, formatDate } from '@/lib/utils'
 
 const POLL_MS = 60_000
-const btn = 'relative rounded-full p-2.5 text-muted-foreground transition-all duration-200 hover:bg-primary-soft hover:text-primary hover:shadow-sm'
+const btn = 'relative grid size-11 place-items-center rounded-full text-muted-foreground transition-colors duration-200 hover:bg-primary-soft hover:text-primary'
 
 export function NotificationBell() {
   return USE_MOCK ? <StaticBell /> : <LiveBell />

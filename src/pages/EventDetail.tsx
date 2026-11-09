@@ -91,7 +91,7 @@ function WebinarView({ ev }: { ev: EventItem }) {
     <>
       <section className="relative isolate overflow-hidden bg-navy text-white">
         <img src={img(ev.coverImage, 1800, 800)} alt="" className="absolute inset-0 -z-20 size-full animate-kenburns object-cover opacity-40" />
-        <div className="absolute inset-0 -z-10 bg-gradient-to-r from-navy via-navy/85 to-navy/40" />
+        <div className="absolute inset-0 -z-10 bg-navy/75" />
         <div className="container-page grid gap-10 py-12 md:py-20 lg:grid-cols-[1fr_380px]">
           <Reveal>
             <nav className="mb-5 text-[13px] text-white/60"><Link to="/events" className="hover:text-white">{t.nav.events}</Link> / {t.events.type[ev.eventType]}</nav>
@@ -121,7 +121,7 @@ function WebinarView({ ev }: { ev: EventItem }) {
             </div>
           </Reveal>
 
-          <Reveal delay={0.15} className="glass-dark h-fit rounded-2xl p-6">
+          <Reveal delay={0.15} className="h-fit rounded-2xl bg-navy/80 p-6 ring-1 ring-white/10">
             {ev.eventStatus === 'UPCOMING' && (
               <>
                 <p className="text-xs font-semibold uppercase tracking-wider text-white/60">{t.events.startsIn}</p>

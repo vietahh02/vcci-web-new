@@ -290,10 +290,10 @@ function ParticipationDialog({ show, existing, onClose }: { show: OnlineShow; ex
       >
         <form onSubmit={submit} className="max-h-[75dvh] space-y-4 overflow-y-auto p-6">
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field label={tx('Người phụ trách', 'Contact name', '담당자')} htmlFor="pt-cn"><Input id="pt-cn" value={contactName} maxLength={255} onChange={(e) => setContactName(e.target.value)} /></Field>
-            <Field label={tx('Điện thoại', 'Phone', '전화')} htmlFor="pt-cp"><Input id="pt-cp" value={contactPhone} maxLength={30} onChange={(e) => setContactPhone(e.target.value)} /></Field>
+            <Field label={tx('Người phụ trách', 'Contact name', '담당자')} htmlFor="pt-cn"><Input id="pt-cn" placeholder={tx('VD: Nguyễn Văn An', 'e.g. Nguyen Van An', '예: Nguyen Van An')} value={contactName} maxLength={255} onChange={(e) => setContactName(e.target.value)} /></Field>
+            <Field label={tx('Điện thoại', 'Phone', '전화')} htmlFor="pt-cp"><Input id="pt-cp" placeholder={tx('VD: 0912 345 678', 'e.g. +84 912 345 678', '예: +84 912 345 678')} value={contactPhone} maxLength={30} onChange={(e) => setContactPhone(e.target.value)} /></Field>
           </div>
-          <Field label={tx('Ghi chú', 'Note', '비고')} htmlFor="pt-note"><Textarea id="pt-note" rows={3} maxLength={2000} value={note} onChange={(e) => setNote(e.target.value)} /></Field>
+          <Field label={tx('Ghi chú', 'Note', '비고')} htmlFor="pt-note"><Textarea id="pt-note" placeholder={tx('Yêu cầu thêm cho Ban tổ chức: điện, kệ trưng bày, số người trực gian hàng…', 'Extra requests for the organisers: power, shelving, booth staff…', '주최 측 추가 요청: 전기, 진열대, 부스 인원…')} rows={3} maxLength={2000} value={note} onChange={(e) => setNote(e.target.value)} /></Field>
           <div>
             <div className="mb-2 flex items-center justify-between">
               <p className="text-sm font-semibold">{tx('Sản phẩm mới ra mắt', 'New product launches', '신제품 출시')} ({launches.length}/10)</p>
@@ -307,12 +307,12 @@ function ParticipationDialog({ show, existing, onClose }: { show: OnlineShow; ex
                     <button type="button" aria-label="remove" className="rounded-full p-1 hover:bg-muted" onClick={() => removeLaunch(i)}><Trash2 className="size-4" /></button>
                   </div>
                   <div className="grid gap-4 sm:grid-cols-2">
-                    <Field label={tx('Tên sản phẩm', 'Product name', '제품명')} htmlFor={`pt-pn-${i}`}><Input id={`pt-pn-${i}`} value={l.productName} maxLength={500} onChange={(e) => setLaunch(i, { productName: e.target.value })} /></Field>
+                    <Field label={tx('Tên sản phẩm', 'Product name', '제품명')} htmlFor={`pt-pn-${i}`}><Input id={`pt-pn-${i}`} placeholder={tx('Tên sản phẩm ra mắt', 'Launch product name', '출시 제품명')} value={l.productName} maxLength={500} onChange={(e) => setLaunch(i, { productName: e.target.value })} /></Field>
                     <Field label={tx('Danh mục', 'Category', '카테고리')} htmlFor={`pt-pc-${i}`}>
-                      <Select id={`pt-pc-${i}`} value={l.categoryId} onValueChange={(v) => setLaunch(i, { categoryId: v })} placeholder="—" options={categories.map((c) => ({ value: c.id, label: L(c.categoryName) }))} />
+                      <Select id={`pt-pc-${i}`} value={l.categoryId} onValueChange={(v) => setLaunch(i, { categoryId: v })} placeholder={tx('Chọn danh mục', 'Choose a category', '카테고리 선택')} options={categories.map((c) => ({ value: c.id, label: L(c.categoryName) }))} />
                     </Field>
                   </div>
-                  <Field label={tx('Mô tả ngắn', 'Short description', '간단 설명')} htmlFor={`pt-pd-${i}`}><Textarea id={`pt-pd-${i}`} rows={2} maxLength={1000} value={l.shortDescription} onChange={(e) => setLaunch(i, { shortDescription: e.target.value })} /></Field>
+                  <Field label={tx('Mô tả ngắn', 'Short description', '간단 설명')} htmlFor={`pt-pd-${i}`}><Textarea id={`pt-pd-${i}`} placeholder={tx('Mô tả ngắn: điểm mới, quy cách, thị trường hướng tới', 'Short description: what is new, spec, target market', '간단 설명: 신규 사항, 규격, 목표 시장')} rows={2} maxLength={1000} value={l.shortDescription} onChange={(e) => setLaunch(i, { shortDescription: e.target.value })} /></Field>
                   <div className="grid gap-4 sm:grid-cols-3">
                     <Field label={tx('Ngày ra mắt', 'Launch date', '출시일')} htmlFor={`pt-pld-${i}`}><Input id={`pt-pld-${i}`} type="date" min={show.startDate?.slice(0, 10)} max={show.endDate?.slice(0, 10)} value={l.launchDate} onChange={(e) => setLaunch(i, { launchDate: e.target.value })} /></Field>
                     <Field label={tx('Giờ bắt đầu', 'Start time', '시작 시간')} htmlFor={`pt-pst-${i}`}><Input id={`pt-pst-${i}`} type="time" value={l.startTime} onChange={(e) => setLaunch(i, { startTime: e.target.value })} /></Field>
@@ -451,11 +451,11 @@ function BoothDialog({ show, booth, onClose }: { show: OpenShow; booth: MyBooth 
       <DialogContent title={`${booth ? tx('Sửa gian', 'Edit booth', '부스 수정') : tx('Đăng ký gian', 'Apply for a booth', '부스 신청')} - ${show.name}`} description={show.closeAt ? `${tx('Hạn nhận đăng ký', 'Applications close', '신청 마감')}: ${new Date(show.closeAt).toLocaleString()}` : ''}>
         <form onSubmit={save} className="max-h-[75dvh] space-y-4 overflow-y-auto p-6">
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field label={tx('Khu trưng bày', 'Pavilion', '전시관')} htmlFor="bt-pav"><Select id="bt-pav" value={f.pavilionId} onValueChange={(v) => set('pavilionId', v)} options={[{ value: '', label: '—' }, ...show.pavilions.map((p) => ({ value: p.id, label: p.name }))]} /></Field>
-            <Field label={tx('Giai đoạn', 'Phase', '단계')} htmlFor="bt-phase"><Select id="bt-phase" value={f.phaseId} onValueChange={(v) => set('phaseId', v)} options={[{ value: '', label: '—' }, ...show.phases.map((p) => ({ value: p.id, label: p.name }))]} /></Field>
+            <Field label={tx('Khu trưng bày', 'Pavilion', '전시관')} htmlFor="bt-pav"><Select id="bt-pav" placeholder={tx('Chọn khu trưng bày', 'Choose a pavilion', '전시관 선택')} value={f.pavilionId} onValueChange={(v) => set('pavilionId', v)} options={[{ value: '', label: tx('Không chọn', 'None', '선택 안 함') }, ...show.pavilions.map((p) => ({ value: p.id, label: p.name }))]} /></Field>
+            <Field label={tx('Giai đoạn', 'Phase', '단계')} htmlFor="bt-phase"><Select id="bt-phase" placeholder={tx('Chọn giai đoạn', 'Choose a phase', '단계 선택')} value={f.phaseId} onValueChange={(v) => set('phaseId', v)} options={[{ value: '', label: tx('Không chọn', 'None', '선택 안 함') }, ...show.phases.map((p) => ({ value: p.id, label: p.name }))]} /></Field>
           </div>
-          <Field label={tx('Khẩu hiệu', 'Tagline', '태그라인')} htmlFor="bt-tag"><Input id="bt-tag" value={f.tagline} maxLength={500} onChange={(e) => set('tagline', e.target.value)} /></Field>
-          <Field label={tx('Giới thiệu gian (tiếng Việt, ≥100 ký tự)', 'Introduction (Vietnamese, ≥100 chars)', '소개 (베트남어, 100자 이상)')} htmlFor="bt-intro"><Textarea id="bt-intro" rows={5} value={f.intro} onChange={(e) => set('intro', e.target.value)} /></Field>
+          <Field label={tx('Khẩu hiệu', 'Tagline', '태그라인')} htmlFor="bt-tag"><Input id="bt-tag" placeholder={tx('Một câu giới thiệu gian hàng', 'One line about the booth', '부스 한 줄 소개')} value={f.tagline} maxLength={500} onChange={(e) => set('tagline', e.target.value)} /></Field>
+          <Field label={tx('Giới thiệu gian (tiếng Việt, ≥100 ký tự)', 'Introduction (Vietnamese, ≥100 chars)', '소개 (베트남어, 100자 이상)')} htmlFor="bt-intro"><Textarea id="bt-intro" placeholder={tx('Giới thiệu doanh nghiệp, sản phẩm trưng bày và điều khách nên ghé xem', 'About the company, products on show and what visitors should see', '회사, 전시 제품, 볼거리 소개')} rows={5} value={f.intro} onChange={(e) => set('intro', e.target.value)} /></Field>
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label={tx('Màu nhấn', 'Accent colour', '강조 색상')} htmlFor="bt-acc"><Input id="bt-acc" value={f.accent} placeholder="#0F766E" maxLength={7} onChange={(e) => set('accent', e.target.value)} /></Field>
             <Field label="Website" htmlFor="bt-web"><Input id="bt-web" value={f.website} placeholder="https://" maxLength={500} onChange={(e) => set('website', e.target.value)} /></Field>
@@ -465,9 +465,9 @@ function BoothDialog({ show, booth, onClose }: { show: OpenShow; booth: MyBooth 
             {f.bannerImage && <img src={fileSrc(f.bannerImage)} alt="" className="mt-2 h-20 rounded-lg object-cover" />}
           </Field>
           <div className="grid gap-4 sm:grid-cols-3">
-            <Field label={tx('Người phụ trách', 'Contact name', '담당자')} htmlFor="bt-cn"><Input id="bt-cn" value={f.contactName} onChange={(e) => set('contactName', e.target.value)} /></Field>
-            <Field label="Email" htmlFor="bt-ce"><Input id="bt-ce" type="email" value={f.contactEmail} onChange={(e) => set('contactEmail', e.target.value)} /></Field>
-            <Field label={tx('Điện thoại', 'Phone', '전화')} htmlFor="bt-cp"><Input id="bt-cp" value={f.contactPhone} onChange={(e) => set('contactPhone', e.target.value)} /></Field>
+            <Field label={tx('Người phụ trách', 'Contact name', '담당자')} htmlFor="bt-cn"><Input id="bt-cn" placeholder={tx('VD: Nguyễn Văn An', 'e.g. Nguyen Van An', '예: Nguyen Van An')} value={f.contactName} onChange={(e) => set('contactName', e.target.value)} /></Field>
+            <Field label="Email" htmlFor="bt-ce"><Input id="bt-ce" placeholder={'sales@congty.vn'} type="email" value={f.contactEmail} onChange={(e) => set('contactEmail', e.target.value)} /></Field>
+            <Field label={tx('Điện thoại', 'Phone', '전화')} htmlFor="bt-cp"><Input id="bt-cp" placeholder={tx('VD: 0912 345 678', 'e.g. +84 912 345 678', '예: +84 912 345 678')} value={f.contactPhone} onChange={(e) => set('contactPhone', e.target.value)} /></Field>
           </div>
           <div>
             <p className="mb-2 text-sm font-semibold">{tx('Mục tiêu tham gia', 'Goals', '참가 목표')}</p>

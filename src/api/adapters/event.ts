@@ -33,7 +33,8 @@ export function toEvent(r: Raw): EventItem {
     // an ONLINE show has no address, whatever is left in the catalog row: the UI says "Online"
     location: bi(str(r.eventType) === 'SHOW' && isOnlineFormat(str(r.format)) ? '' : r.location),
     format: (str(r.format, 'ONLINE') || 'ONLINE') as EventFormat,
-    platform: r.platform ? str(r.platform) : undefined,
+    // SRS / Jitsi are our own streaming back ends: to the visitor that is simply "on the VCCI platform"
+    platform: r.platform && !/^(srs|jitsi)$/i.test(str(r.platform)) ? str(r.platform) : undefined,
     // BE contract: {startTime,endTime,title,description}; the older FE-shaped keys are still accepted
     agendaOptions: arr(r.agendaOptions).map((a) => ({
       agendaStartTime: hhmm(a.startTime ?? a.agendaStartTime),

@@ -8,7 +8,8 @@ import { ErrorBlock } from '@/components/ui/StateViews'
 import { categories, products, type Product } from '@/data/mock'
 import { categoryIcons } from '@/components/brand'
 import { ProductCard } from '@/components/cards'
-import { Badge, Button, Skeleton } from '@/components/ui/primitives'
+import { Badge, Button, buttonClass, Skeleton } from '@/components/ui/primitives'
+import { SearchBar } from '@/components/layout/SearchBar'
 import { Select } from '@/components/ui/select'
 import { useI18n } from '@/lib/i18n'
 import { tx } from '@/lib/tx'
@@ -23,9 +24,18 @@ export default function SearchPage() {
   const [params, setParams] = useSearchParams()
   const keyword = params.get('q') ?? ''
   const categoryId = params.get('category') ?? ''
-  const [maxMoq, setMaxMoq] = useState(0)
-  const [certs, setCerts] = useState<string[]>([])
-  const [sort, setSort] = useState<NonNullable<ProductQuery['sort']>>('popular')
+  // filters and sort live in the URL, so reload, Back and shared links keep them
+  const patch = (fn: (n: URLSearchParams) => void) => { const n = new URLSearchParams(params); fn(n); setParams(n, { replace: true }) }
+  const moqParam = Number(params.get('moq'))
+  const maxMoq = MOQ_STEPS.includes(moqParam) ? moqParam : 0
+  const setMaxMoq = (v: number) => patch((n) => (v ? n.set('moq', String(v)) : n.delete('moq')))
+  const certsKey = params.getAll('cert').join('|')
+  const certs = useMemo(() => (certsKey ? certsKey.split('|') : []), [certsKey])
+  const setCerts = (next: string[]) => patch((n) => { n.delete('cert'); next.forEach((c) => n.append('cert', c)) })
+  const sorts = Object.keys(t.searchPage.sorts) as NonNullable<ProductQuery['sort']>[]
+  const sortParam = params.get('sort') as NonNullable<ProductQuery['sort']> | null
+  const sort = sortParam && sorts.includes(sortParam) ? sortParam : 'popular'
+  const setSort = (v: NonNullable<ProductQuery['sort']>) => patch((n) => (v === 'popular' ? n.delete('sort') : n.set('sort', v)))
   const [results, setResults] = useState<Product[] | null>(null)
   const [loadError, setLoadError] = useState<Error>()
   const [attempt, setAttempt] = useState(0)
@@ -48,7 +58,7 @@ export default function SearchPage() {
       alive = false
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [keyword, categoryId, maxMoq, certs, sort, lang, attempt])
+  }, [keyword, categoryId, maxMoq, certsKey, sort, lang, attempt])
 
   useEffect(() => {
     if (!USE_MOCK) catalogApi.popularCertificates(12).then(setFacetCerts, () => undefined)
@@ -82,10 +92,12 @@ export default function SearchPage() {
     else next.delete('category')
     setParams(next)
   }
-  const clearAll = () => {
-    setMaxMoq(0)
-    setCerts([])
-  }
+  const clearAll = () => patch((n) => { n.delete('moq'); n.delete('cert') })
+
+  // the BE total, not the page size: "215 results · showing 24"
+  const countLabel = total > (results?.length ?? 0)
+    ? `${formatNumber(total, locale)} ${t.searchPage.results} · ${tx('đang hiển thị', 'showing', '표시 중')} ${formatNumber(results?.length ?? 0, locale)}`
+    : `${formatNumber(results?.length ?? 0, locale)} ${t.searchPage.results}`
 
   const moqIndex = MOQ_STEPS.indexOf(maxMoq)
   const moqLabel = maxMoq ? `≤ ${formatNumber(maxMoq, locale)}` : t.searchPage.any
@@ -119,7 +131,7 @@ export default function SearchPage() {
             const on = certs.includes(c)
             return (
               <label key={c} className="flex cursor-pointer items-center gap-2.5 text-[13px]">
-                <input type="checkbox" className="size-4 accent-[var(--primary)]" checked={on} onChange={() => setCerts((v) => (on ? v.filter((x) => x !== c) : [...v, c]))} />
+                <input type="checkbox" className="size-4 accent-[var(--primary)]" checked={on} onChange={() => setCerts(on ? certs.filter((x) => x !== c) : [...certs, c])} />
                 {c}
               </label>
             )
@@ -131,27 +143,30 @@ export default function SearchPage() {
 
   return (
     <>
-      {/* video strip */}
-      <section className="relative isolate h-44 overflow-hidden bg-navy text-white md:h-52">
+      {/* compact header: the search field stays visible (with the current query) at every width */}
+      <section className="relative isolate overflow-hidden bg-navy py-6 text-white md:py-8">
         <video className="absolute inset-0 -z-20 size-full object-cover" src="/video/product_search.mp4" poster="/video/product_search-poster.jpg" autoPlay muted loop playsInline aria-hidden />
-        <div className="absolute inset-0 -z-10 bg-gradient-to-r from-navy via-navy/80 to-navy/20" />
-        <div className="container-page flex h-full flex-col justify-center">
-          <nav aria-label={t.ui.breadcrumb} className="text-[13px] text-white/60">
-            <Link to="/" className="hover:text-white">{t.common.home}</Link> / {t.nav.products}{cat && ` / ${L(cat.categoryName)}`}
-          </nav>
-          <motion.h1 key={keyword + categoryId} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-2 text-3xl font-extrabold tracking-tight md:text-4xl">
-            {keyword ? `“${keyword}”` : cat ? L(cat.categoryName) : t.nav.products}
-          </motion.h1>
-          <p className="mt-1 text-sm text-white/70">{loadError ? '' : results ? `${results.length} ${t.searchPage.results}` : t.common.loading}</p>
+        <div className="absolute inset-0 -z-10 bg-navy/80" />
+        <div className="container-page grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)] lg:items-end">
+          <div className="min-w-0">
+            <nav aria-label={t.ui.breadcrumb} className="text-[13px] text-white/70">
+              <Link to="/" className="hover:text-white">{t.common.home}</Link> / {t.nav.products}{cat && ` / ${L(cat.categoryName)}`}
+            </nav>
+            <motion.h1 key={keyword + categoryId} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-2 line-clamp-2 text-3xl font-extrabold tracking-tight md:text-4xl">
+              {keyword ? `“${keyword}”` : cat ? L(cat.categoryName) : t.nav.products}
+            </motion.h1>
+            <p className="mt-1 text-[15px] text-white/85" aria-live="polite">{loadError ? '' : !results ? t.common.loading : countLabel}</p>
+          </div>
+          <SearchBar size="lg" initialQuery={keyword} />
         </div>
       </section>
 
       {/* category rail */}
-      <div className="sticky top-[68px] z-30 border-b bg-background/90 backdrop-blur lg:static lg:border-b-0 lg:bg-transparent lg:backdrop-blur-none">
+      <div className="sticky top-[68px] z-30 bg-background lg:static lg:bg-transparent">
         {/* Desktop xuống hàng để thấy đủ danh mục trong khung nội dung; mobile cuộn ngang để không đẩy sản phẩm xuống */}
         <div ref={rail} className="container-page no-scrollbar relative flex gap-2 overflow-x-auto py-2.5 lg:flex-wrap lg:overflow-visible lg:pb-0 lg:pt-6">
           {[{ id: '', name: t.searchPage.all, Icon: null }, ...categories.map((c) => ({ id: c.id, name: L(c.categoryName), Icon: categoryIcons[c.icon] }))].map(({ id, name, Icon }) => (
-            <button key={id} aria-pressed={categoryId === id} onClick={() => setCategory(id)} className={cn('relative flex h-9 shrink-0 items-center gap-2 rounded-full border px-3.5 text-[13px] font-semibold transition-colors', categoryId === id ? 'border-transparent text-primary-foreground' : 'bg-card text-foreground/75 hover:border-primary/40 hover:text-foreground')}>
+            <button key={id} aria-pressed={categoryId === id} onClick={() => setCategory(id)} className={cn('relative flex h-11 shrink-0 items-center gap-2 rounded-full border px-4 lg:h-9 lg:px-3.5 text-[13px] font-semibold transition-colors', categoryId === id ? 'border-transparent text-primary-foreground' : 'bg-card text-foreground/75 hover:border-primary/40 hover:text-foreground')}>
               {categoryId === id && <motion.span layoutId="search-cat" className="absolute -inset-px rounded-full bg-primary" transition={{ type: 'spring', bounce: 0.2, duration: 0.4 }} />}
               {Icon && <Icon className="relative size-4" />}
               <span className="relative">{name}</span>
@@ -162,7 +177,7 @@ export default function SearchPage() {
 
       <div className="container-page mt-6 grid gap-8 lg:grid-cols-[240px_minmax(0,1fr)]">
         <aside className="hidden lg:block">
-          <div className="sticky top-32 rounded-2xl border bg-card p-4 shadow-sm">
+          <div className="sticky top-32 rounded-2xl bg-muted/60 p-5">
             <p className="mb-5 flex items-center gap-2 font-bold"><SlidersHorizontal className="size-4" /> {t.searchPage.filters}</p>
             {filters}
           </div>
@@ -170,12 +185,12 @@ export default function SearchPage() {
 
         <div>
           <div className="mb-6 flex flex-wrap items-center gap-3">
-            <Button variant="outline" size="sm" className="lg:hidden" onClick={() => setFiltersOpen(true)}><SlidersHorizontal /> {t.searchPage.filters}</Button>
+            <Button variant="outline" className="h-11 lg:hidden" onClick={() => setFiltersOpen(true)}><SlidersHorizontal /> {t.searchPage.filters}{activeFilters.length > 0 && ` (${activeFilters.length})`}</Button>
             <div className="flex flex-1 flex-wrap items-center gap-2">
               {activeFilters.map((f) => <Badge key={f} variant="secondary" className="py-1">{f}</Badge>)}
-              {activeFilters.length > 0 && <button onClick={clearAll} className="text-xs font-semibold text-muted-foreground hover:text-foreground">{t.searchPage.clear}</button>}
+              {activeFilters.length > 0 && <button onClick={clearAll} className="min-h-9 px-1 text-[13px] font-semibold text-primary hover:underline">{t.searchPage.clear}</button>}
             </div>
-            <Select value={sort} onValueChange={setSort} className="h-9 w-auto min-w-44 text-[13px]" aria-label={t.searchPage.sort} options={(Object.keys(t.searchPage.sorts) as (keyof typeof t.searchPage.sorts)[]).map((k) => ({ value: k, label: t.searchPage.sorts[k] }))} />
+            <Select value={sort} onValueChange={setSort} className="h-11 w-auto min-w-44 text-[13px] lg:h-9" aria-label={t.searchPage.sort} options={(Object.keys(t.searchPage.sorts) as (keyof typeof t.searchPage.sorts)[]).map((k) => ({ value: k, label: t.searchPage.sorts[k] }))} />
           </div>
 
           {!results ? (
@@ -185,10 +200,15 @@ export default function SearchPage() {
           ) : loadError ? (
             <ErrorBlock error={loadError} onRetry={() => setAttempt((n) => n + 1)} />
           ) : results.length === 0 ? (
-            <div className="grid place-items-center py-20 text-center">
+            <div className="grid place-items-center rounded-3xl bg-muted/60 px-6 py-16 text-center">
               <SearchX className="size-10 text-muted-foreground" />
-              <p className="mt-4 font-bold">{t.common.noResults}</p>
-              <p className="mt-1 text-sm text-muted-foreground">{t.common.noResultsHint}</p>
+              <p className="mt-4 text-lg font-bold">{t.common.noResults}</p>
+              <p className="mt-1 max-w-md text-[15px] text-foreground/80">{tx('Sửa từ khoá ở ô tìm kiếm phía trên, hoặc:', 'Edit the keyword in the search field above, or:', '위 검색창에서 검색어를 고치거나:')}</p>
+              <div className="mt-5 flex flex-wrap justify-center gap-2">
+                {(activeFilters.length > 0 || categoryId) && <Button variant="outline" onClick={() => patch((n) => { n.delete('moq'); n.delete('cert'); n.delete('category') })}>{tx('Xoá bộ lọc và danh mục', 'Clear filters and category', '필터·카테고리 지우기')}</Button>}
+                {keyword && <Link to={categoryId ? `/search?category=${categoryId}` : '/search'} className={buttonClass('outline')}>{tx('Bỏ từ khoá', 'Drop the keyword', '검색어 지우기')}</Link>}
+                <Link to="/requests?post=1" className={buttonClass('default')}>{tx('Đăng yêu cầu nhập khẩu', 'Post an import request', '수입 요청 등록')}</Link>
+              </div>
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-4 md:grid-cols-3 md:gap-5 xl:grid-cols-4">
@@ -201,7 +221,7 @@ export default function SearchPage() {
           )}
           {results && results.length > 0 && results.length < total && (
             <div className="mt-10 flex justify-center">
-              <Button variant="outline" disabled={loadingMore} onClick={loadMore}>{tx('Xem thêm', 'Load more', '더 보기')} ({results.length}/{total})</Button>
+              <Button variant="outline" disabled={loadingMore} onClick={loadMore}>{tx('Xem thêm', 'Load more', '더 보기')} · {formatNumber(results.length, locale)}/{formatNumber(total, locale)}</Button>
             </div>
           )}
         </div>
@@ -214,7 +234,7 @@ export default function SearchPage() {
             <motion.div className="fixed inset-x-0 bottom-0 z-[81] max-h-[85dvh] overflow-y-auto rounded-t-3xl bg-popover p-5" initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} transition={{ type: 'spring', bounce: 0.1, duration: 0.45 }}>
               <div className="mb-4 flex items-center justify-between">
                 <p className="font-extrabold">{t.searchPage.filters}</p>
-                <button onClick={() => setFiltersOpen(false)} className="rounded-full p-1.5 hover:bg-primary-soft hover:text-primary" aria-label={t.ui.close}><X className="size-4" /></button>
+                <button onClick={() => setFiltersOpen(false)} className="grid size-11 place-items-center rounded-full hover:bg-primary-soft hover:text-primary" aria-label={t.ui.close}><X className="size-4" /></button>
               </div>
               {filters}
             </motion.div>

@@ -66,40 +66,41 @@ function CountdownHero({ ev }: { ev: EventItem }) {
   return (
     <section className="relative isolate overflow-hidden bg-navy text-white">
       <img src={img(ev.coverImage, 1920, 1000)} alt="" className="absolute inset-0 -z-20 size-full animate-kenburns object-cover opacity-45" />
-      <div className="absolute inset-0 -z-10 bg-gradient-to-t from-navy via-navy/60 to-navy/30" />
-      <div className="container-page flex min-h-[560px] flex-col justify-end py-14">
-        <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-[13px] font-semibold uppercase tracking-[0.18em] text-gold-bright">
+      <div className="absolute inset-0 -z-10 bg-navy/65" />
+      {/* a tool page: the hero stays short so the event finder starts on the first screen */}
+      <div className="container-page flex min-h-[300px] flex-col justify-end py-8 md:min-h-[420px] md:py-12">
+        <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-[15px] font-semibold text-gold-bright">
           {t.home.upcoming} · {t.events.type[ev.eventType]}
         </motion.p>
-        <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7 }} className="mt-3 max-w-4xl text-4xl font-extrabold leading-[1.05] tracking-tight text-balance md:text-6xl">
+        <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7 }} className="mt-2 line-clamp-2 max-w-4xl text-[28px] font-extrabold leading-[1.05] tracking-tight text-balance md:text-6xl">
           {L(ev.title)}
         </motion.h1>
-        <p className="mt-4 flex flex-wrap gap-x-5 gap-y-1 text-white/75">
+        <p className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-white/90">
           <span>{formatDate(ev.startDate, locale, { day: '2-digit', month: 'long', year: 'numeric' })}{time && ` · ${time}`}</span>
           {/* online-first: format/platform first, venue secondary and only when set */}
           {ev.format !== 'OFFLINE' && <span className="inline-flex items-center gap-1.5"><Video className="size-4" /> {formatLabel(ev.format)}{ev.platform ? ` · ${ev.platform}` : ''}</span>}
-          {L(ev.location) && <span className="inline-flex items-center gap-1.5 text-white/60"><MapPin className="size-4" /> {L(ev.location)}</span>}
+          {L(ev.location) && <span className="inline-flex items-center gap-1.5 text-white/80"><MapPin className="size-4" /> {L(ev.location)}</span>}
         </p>
-        <div className="mt-10 flex flex-wrap items-end justify-between gap-8">
+        <div className="mt-6 flex flex-wrap items-end justify-between gap-5 md:mt-10 md:gap-8">
           <div className="flex flex-wrap gap-3 md:gap-6">
             {parts.map(([v, label]) => {
               const digits = String(v).padStart(2, '0')
               return (
                 <div key={label} className="text-center">
                   {/* Be Vietnam Pro has no tabular figures, so each digit gets its own fixed slot */}
-                  <div className="relative h-[56px] overflow-hidden text-[44px] font-extrabold leading-[56px] md:h-[88px] md:text-[84px] md:leading-[88px]" style={{ width: `${digits.length * 0.68}em` }}>
+                  <div className="relative h-[40px] overflow-hidden text-[32px] font-extrabold leading-[40px] md:h-[88px] md:text-[84px] md:leading-[88px]" style={{ width: `${digits.length * 0.68}em` }}>
                     <motion.span key={v} initial={{ y: '-100%' }} animate={{ y: 0 }} transition={{ type: 'spring', bounce: 0.25, duration: 0.5 }} className="absolute inset-0 flex">
                       {[...digits].map((d, i) => <span key={i} className="flex-1 text-center">{d}</span>)}
                     </motion.span>
                   </div>
-                  <p className="mt-1 text-[11px] font-semibold uppercase tracking-wider text-white/55">{label}</p>
+                  <p className="mt-1 text-[13px] font-semibold text-white/75">{label}</p>
                 </div>
               )
             })}
           </div>
           <div className="flex flex-wrap gap-3">
             <Link to={`/events/${ev.id}`} className={buttonClass('gold', 'lg')}><Ticket /> {t.events.register}</Link>
-            <Link to={`/events/${ev.id}`} className={buttonClass('ghost', 'lg', 'border border-white/25 text-white hover:bg-white/10')}>{t.common.viewDetail}</Link>
+            <Link to={`/events/${ev.id}`} className={buttonClass('ghost', 'lg', 'bg-white/10 text-white hover:bg-white/20 max-sm:hidden')}>{t.common.viewDetail}</Link>
           </div>
         </div>
       </div>

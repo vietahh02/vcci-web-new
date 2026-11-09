@@ -4,12 +4,13 @@ import { Link } from 'react-router-dom'
 import { USE_MOCK } from '@/api'
 import { Logo } from '@/components/brand'
 import { useToast } from '@/components/ui/overlay'
+import { CONTACT } from '@/lib/contact'
 import { useI18n } from '@/lib/i18n'
 
 const footerRoutes = {
   buyers: ['/search', '/suppliers', '/requests?post=1', '/events'],
   suppliers: ['/register', '/requests', '/register', '/events'],
-  vcci: ['/about', '/legal-ai', '/about', '/about'],
+  vcci: ['/about', '/help', '/privacy', '/terms'],
 } as const
 
 export function Footer() {
@@ -18,16 +19,15 @@ export function Footer() {
   const [email, setEmail] = useState('')
 
   return (
-    <footer className="relative mt-24 overflow-hidden border-t bg-muted/40">
-      <div className="pointer-events-none absolute -left-40 top-0 size-96 rounded-full bg-primary/10 blur-3xl" />
+    <footer className="relative mt-24 overflow-hidden bg-muted">
       <div className="container-page relative grid grid-cols-2 gap-x-6 gap-y-10 py-14 sm:grid-cols-3 lg:grid-cols-[1.4fr_1fr_1fr_1fr_1.4fr]">
         <div className="col-span-2 sm:col-span-3 lg:col-span-1">
           <Logo />
           <p className="mt-4 max-w-sm text-sm leading-relaxed text-muted-foreground">{t.footer.about}</p>
           <ul className="mt-5 space-y-2 text-sm text-muted-foreground">
             <li className="flex items-center gap-2"><MapPin className="size-4 shrink-0 text-primary" /> {t.footer.address}</li>
-            <li className="flex items-center gap-2"><Phone className="size-4 shrink-0 text-primary" /> 1900 6 1111</li>
-            <li className="flex items-center gap-2"><Mail className="size-4 shrink-0 text-primary" /> tradehub@vcci.example.vn</li>
+            <li><a href={CONTACT.hotlineHref} className="inline-flex min-h-8 items-center gap-2 hover:text-primary"><Phone className="size-4 shrink-0 text-primary" /> {CONTACT.hotline}</a></li>
+            {CONTACT.email && <li><a href={`mailto:${CONTACT.email}`} className="inline-flex min-h-8 items-center gap-2 hover:text-primary"><Mail className="size-4 shrink-0 text-primary" /> {CONTACT.email}</a></li>}
           </ul>
         </div>
         {(Object.keys(t.footer.cols) as (keyof typeof t.footer.cols)[]).map((k) => (

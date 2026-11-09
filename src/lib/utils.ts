@@ -45,3 +45,7 @@ export function initials(name: string) {
     .map((w) => w[0]!.toUpperCase())
     .join('')
 }
+
+/** Payment-term codes as traders write them (TT_30_70 → T/T 30/70). Formatting only: the meaning stays the supplier's. */
+export const formatTerms = (code: string) =>
+  code.replace(/_/g, ' ').replace(/\b(TT|LC|DP|DA)\b/g, (m) => `${m[0]}/${m[1]}`).replace(/(\d+) (?=\d)/g, '$1/').trim()

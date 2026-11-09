@@ -143,14 +143,14 @@ function RegisterFlow({ ev }: { ev: EventItem }) {
       {/* banner */}
       <section className="relative isolate overflow-hidden bg-navy text-white">
         <img src={img(ev.coverImage, 1800, 500)} alt="" className="absolute inset-0 -z-20 size-full object-cover opacity-25" />
-        <div className="absolute inset-0 -z-10 bg-gradient-to-r from-navy via-navy/90 to-navy/60" />
+        <div className="absolute inset-0 -z-10 bg-navy/80" />
         <div className="container-page py-10">
-          <Link to={`/events/${ev.id}`} className="inline-flex items-center gap-1.5 text-[13px] text-white/60 hover:text-white"><ArrowLeft className="size-4" /> {tx('Quay lại sự kiện', 'Back to event', '행사로 돌아가기')}</Link>
-          <p className="mt-4 text-[13px] font-semibold uppercase tracking-[0.16em] text-gold-bright">{matchmaking ? tx('Đăng ký tham gia chương trình', 'Programme application', '프로그램 참가 신청') : tx('Đăng ký tham quan', 'Visitor registration', '참관 등록')}</p>
+          <Link to={`/events/${ev.id}`} className="inline-flex min-h-10 items-center gap-1.5 text-[13px] text-white/80 hover:text-white"><ArrowLeft className="size-4" /> {tx('Quay lại sự kiện', 'Back to event', '행사로 돌아가기')}</Link>
+          <p className="mt-3 text-[15px] font-semibold text-gold-bright">{registerTitle(ev.eventType)}</p>
           <h1 className="mt-2 max-w-3xl text-2xl font-extrabold leading-tight md:text-4xl">{L(ev.title)}</h1>
-          <p className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-sm text-white/75">
+          <p className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-sm text-white/90">
             <span className="inline-flex items-center gap-1.5"><CalendarDays className="size-4" /> {formatDate(ev.startDate, locale)}{ev.endDate.slice(0, 10) !== ev.startDate.slice(0, 10) && ` – ${formatDate(ev.endDate, locale)}`}</span>
-            <span className="inline-flex items-center gap-1.5"><MapPin className="size-4" /> {L(ev.location)}</span>
+            {L(ev.location) && <span className="inline-flex items-center gap-1.5"><MapPin className="size-4" /> {L(ev.location)}</span>}
           </p>
           {/* steps */}
           <ol className="mt-8 flex max-w-xl items-center gap-2">
@@ -302,19 +302,19 @@ function RegisterFlow({ ev }: { ev: EventItem }) {
                       <Field label={tx('Danh xưng', 'Title', '호칭')} htmlFor="r-sal">
                         <Select id="r-sal" value={f.salutation} onValueChange={(v) => set('salutation', v)} options={SALUTATIONS.map((o) => ({ value: o.value, label: L(o) }))} />
                       </Field>
-                      <Field label={tx('Họ', 'Last name', '성') + ' *'} htmlFor="r-ln"><Input id="r-ln" required value={f.lastName} onChange={(e) => set('lastName', e.target.value)} /></Field>
-                      <Field label={tx('Tên', 'First name', '이름') + ' *'} htmlFor="r-fn"><Input id="r-fn" required value={f.firstName} onChange={(e) => set('firstName', e.target.value)} /></Field>
+                      <Field label={tx('Họ', 'Last name', '성') + ' *'} htmlFor="r-ln"><Input id="r-ln" placeholder={tx('VD: Nguyễn', 'e.g. Nguyen', '예: Nguyen')} required value={f.lastName} onChange={(e) => set('lastName', e.target.value)} /></Field>
+                      <Field label={tx('Tên', 'First name', '이름') + ' *'} htmlFor="r-fn"><Input id="r-fn" placeholder={tx('VD: Văn An', 'e.g. An', '예: An')} required value={f.firstName} onChange={(e) => set('firstName', e.target.value)} /></Field>
                     </div>
                     <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                      <Field label={tx('Chức danh', 'Job title', '직함') + ' *'} htmlFor="r-jt"><Input id="r-jt" required value={f.jobTitle} onChange={(e) => set('jobTitle', e.target.value)} /></Field>
+                      <Field label={tx('Chức danh', 'Job title', '직함') + ' *'} htmlFor="r-jt"><Input id="r-jt" placeholder={tx('VD: Giám đốc mua hàng', 'e.g. Purchasing manager', '예: 구매 담당 이사')} required value={f.jobTitle} onChange={(e) => set('jobTitle', e.target.value)} /></Field>
                       <Field label={tx('Bộ phận', 'Department', '부서')} htmlFor="r-dep">
-                        <Select id="r-dep" value={f.department} onValueChange={(v) => set('department', v)} options={[{ value: '', label: '—' }, ...DEPARTMENTS.map((o) => ({ value: o.value, label: L(o) }))]} />
+                        <Select id="r-dep" placeholder={tx('Chọn phòng ban', 'Choose a department', '부서 선택')} value={f.department} onValueChange={(v) => set('department', v)} options={[{ value: '', label: tx('Không chọn', 'None', '선택 안 함') }, ...DEPARTMENTS.map((o) => ({ value: o.value, label: L(o) }))]} />
                       </Field>
-                      <Field label="Email *" htmlFor="r-em" hint={tx('Thẻ tham dự và link tham gia gửi về email này', 'Your badge and joining link are sent here', '참가 배지와 참여 링크가 이 이메일로 발송됩니다')}><Input id="r-em" type="email" required value={f.email} onChange={(e) => set('email', e.target.value)} /></Field>
+                      <Field label="Email *" htmlFor="r-em" hint={tx('Thẻ tham dự và link tham gia gửi về email này', 'Your badge and joining link are sent here', '참가 배지와 참여 링크가 이 이메일로 발송됩니다')}><Input id="r-em" placeholder={'ban@congty.vn'} type="email" required value={f.email} onChange={(e) => set('email', e.target.value)} /></Field>
                       <Field label={tx('Điện thoại di động', 'Mobile', '휴대폰') + ' *'} htmlFor="r-ph">
                         <div className="flex gap-2">
                           <Select aria-label={tx('Mã quốc gia', 'Country code', '국가 번호')} className="w-28 shrink-0" value={f.country} onValueChange={(v) => set('country', v)} options={COUNTRIES.map((c) => ({ value: c, label: `${c} ${DIAL[c]}` }))} />
-                          <Input id="r-ph" type="tel" required value={f.phone} onChange={(e) => set('phone', e.target.value)} />
+                          <Input id="r-ph" placeholder={tx('VD: 0912 345 678', 'e.g. +84 912 345 678', '예: +84 912 345 678')} type="tel" required value={f.phone} onChange={(e) => set('phone', e.target.value)} />
                         </div>
                       </Field>
                     </div>
@@ -322,22 +322,22 @@ function RegisterFlow({ ev }: { ev: EventItem }) {
 
                   <Section n={3} title={tx('Thông tin doanh nghiệp', 'Company information', '기업 정보')}>
                     <div className="grid gap-4 sm:grid-cols-2">
-                      <Field label={tx('Tên doanh nghiệp', 'Company name', '기업명') + ' *'} htmlFor="r-co" className="sm:col-span-2"><Input id="r-co" required value={f.company} onChange={(e) => set('company', e.target.value)} /></Field>
+                      <Field label={tx('Tên doanh nghiệp', 'Company name', '기업명') + ' *'} htmlFor="r-co" className="sm:col-span-2"><Input id="r-co" placeholder={tx('Tên công ty của bạn', 'Your company name', '회사명')} required value={f.company} onChange={(e) => set('company', e.target.value)} /></Field>
                       <Field label={tx('Quốc gia / khu vực', 'Country / region', '국가 / 지역') + ' *'} htmlFor="r-cc">
                         <Select id="r-cc" value={f.companyCountry} onValueChange={(v) => set('companyCountry', v)} options={COUNTRIES.map((c) => ({ value: c, label: region.of(c) }))} />
                       </Field>
-                      <Field label={tx('Tỉnh / Thành phố', 'City', '도시')} htmlFor="r-city"><Input id="r-city" value={f.city} onChange={(e) => set('city', e.target.value)} /></Field>
+                      <Field label={tx('Tỉnh / Thành phố', 'City', '도시')} htmlFor="r-city"><Input id="r-city" placeholder={tx('VD: TP. Hồ Chí Minh', 'e.g. Ho Chi Minh City', '예: 호치민시')} value={f.city} onChange={(e) => set('city', e.target.value)} /></Field>
                       <Field label="Website" htmlFor="r-web"><Input id="r-web" value={f.website} onChange={(e) => set('website', e.target.value)} placeholder="www.company.com" /></Field>
-                      <Field label={tx('Mã số thuế', 'Tax / business reg. no.', '사업자 번호')} htmlFor="r-tax"><Input id="r-tax" value={f.taxCode} onChange={(e) => set('taxCode', e.target.value)} /></Field>
+                      <Field label={tx('Mã số thuế', 'Tax / business reg. no.', '사업자 번호')} htmlFor="r-tax"><Input id="r-tax" placeholder={tx('VD: 0312345678', 'e.g. 0312345678', '예: 0312345678')} value={f.taxCode} onChange={(e) => set('taxCode', e.target.value)} /></Field>
                     </div>
                     <p className="mb-2.5 mt-5 text-[13px] font-semibold">{tx('Loại hình kinh doanh', 'Business type', '사업 유형')} *</p>
                     <Chips options={BUSINESS_TYPES} value={f.businessType ? [f.businessType] : []} onToggle={(v) => set('businessType', v)} single />
                     <div className="mt-5 grid gap-4 sm:grid-cols-2">
                       <Field label={tx('Quy mô nhân sự', 'Number of employees', '직원 수')} htmlFor="r-staff">
-                        <Select id="r-staff" value={f.staff} onValueChange={(v) => set('staff', v)} options={[{ value: '', label: '—' }, ...STAFF.map((s) => ({ value: s, label: s }))]} />
+                        <Select id="r-staff" placeholder={tx('Chọn quy mô nhân sự', 'Choose a headcount range', '직원 규모 선택')} value={f.staff} onValueChange={(v) => set('staff', v)} options={[{ value: '', label: tx('Không chọn', 'None', '선택 안 함') }, ...STAFF.map((s) => ({ value: s, label: s }))]} />
                       </Field>
                       <Field label={tx('Kim ngạch mua hàng hằng năm', 'Annual purchasing volume', '연간 구매 규모')} htmlFor="r-vol">
-                        <Select id="r-vol" value={f.volume} onValueChange={(v) => set('volume', v)} options={[{ value: '', label: '—' }, ...VOLUME.map((o) => ({ value: o.value, label: L(o) }))]} />
+                        <Select id="r-vol" placeholder={tx('Chọn khối lượng giao dịch', 'Choose a trade volume', '거래 규모 선택')} value={f.volume} onValueChange={(v) => set('volume', v)} options={[{ value: '', label: tx('Không chọn', 'None', '선택 안 함') }, ...VOLUME.map((o) => ({ value: o.value, label: L(o) }))]} />
                       </Field>
                     </div>
                   </Section>
@@ -376,7 +376,7 @@ function RegisterFlow({ ev }: { ev: EventItem }) {
                         {q.options ? (
                           <Chips options={q.options.map((o) => ({ ...o, value: o.en }))} value={f.answers[q.id] ? [f.answers[q.id]!] : []} onToggle={(v) => set('answers', { ...f.answers, [q.id]: v })} single />
                         ) : (
-                          <Textarea className="min-h-20" value={f.answers[q.id] ?? ''} onChange={(e) => set('answers', { ...f.answers, [q.id]: e.target.value })} />
+                          <Textarea className="min-h-20" placeholder={tx('Nhập câu trả lời của bạn', 'Your answer', '답변 입력')} value={f.answers[q.id] ?? ''} onChange={(e) => set('answers', { ...f.answers, [q.id]: e.target.value })} />
                         )}
                       </div>
                     ))}
@@ -564,7 +564,13 @@ function Badge({ ev, code, name, title, company, dates, meetings }: { ev: EventI
 
 function Sidebar({ ev }: { ev: EventItem }) {
   const { t, L, locale } = useI18n()
-  const benefits = [
+  // what registering gives depends on the kind of event: a livestream has no booths to preview
+  const online = ev.eventType === 'LIVESTREAM' || ev.eventType === 'WEBINAR'
+  const benefits = online ? [
+    { icon: Ticket, text: tx('Nút Xem trực tiếp trên hệ thống VCCI khi phiên bắt đầu', 'A Watch live button on the VCCI platform when the session starts', '세션 시작 시 VCCI 플랫폼의 라이브 시청 버튼') },
+    { icon: Handshake, text: tx('Đặt câu hỏi cho diễn giả và doanh nghiệp trong khung chat phiên', 'Ask the speakers and companies questions in the session chat', '세션 채팅에서 연사·기업에 질문') },
+    { icon: Gift, text: tx('Tài liệu và bản ghi sau sự kiện (khi Ban tổ chức đăng tải)', 'Materials and the recording after the event (once the organisers publish them)', '행사 후 자료 및 녹화본(주최 측 게시 시)') },
+  ] : [
     { icon: Ticket, text: tx('Thẻ tham dự điện tử, check-in nhanh bằng QR', 'E-badge with fast QR check-in', 'QR 빠른 체크인 전자 배지') },
     { icon: Handshake, text: tx('Đặt lịch gặp nhà cung cấp ngay trên hệ thống', 'Book supplier meetings online', '온라인으로 공급업체 미팅 예약') },
     { icon: Sparkles, text: tx('Xem trước sản phẩm ra mắt và danh sách gian hàng', 'Preview launches and exhibitor list', '신제품 및 참가사 목록 미리 보기') },
@@ -581,19 +587,27 @@ function Sidebar({ ev }: { ev: EventItem }) {
           <p className="flex items-center gap-2 text-muted-foreground"><Users className="size-4" /> {ev.registeredSlots}{ev.maxSlots > 0 && `/${ev.maxSlots}`} {t.events.registered}</p>
         </div>
       </div>
-      <div className="rounded-2xl border bg-gradient-to-br from-primary-soft/70 to-card p-5">
+      <div className="rounded-2xl bg-primary-soft p-5">
         <p className="font-bold">{tx('Quyền lợi khi đăng ký', 'Why register', '등록 혜택')}</p>
         <ul className="mt-3 space-y-3">
           {benefits.map((x) => (
-            <li key={x.text} className="flex gap-3 text-[13px]"><x.icon className="mt-0.5 size-4 shrink-0 text-primary" /> {x.text}</li>
+            <li key={x.text} className="flex gap-3 text-sm"><x.icon className="mt-0.5 size-4 shrink-0 text-primary" /> {x.text}</li>
           ))}
         </ul>
       </div>
       {ev.contact && (
-        <p className="rounded-2xl bg-muted/60 p-4 text-xs text-muted-foreground">
+        <p className="rounded-2xl bg-muted/60 p-4 text-[13px] text-foreground/80">
           {tx('Cần hỗ trợ?', 'Need help?', '도움이 필요하신가요?')} {ev.contact.name} · {ev.contact.phone} · {ev.contact.email}
         </p>
       )}
     </aside>
   )
+}
+
+/** The banner names what the visitor is signing up for, by event type. */
+function registerTitle(type: EventItem['eventType']) {
+  if (type === 'MATCHMAKING') return tx('Đăng ký tham gia chương trình', 'Programme application', '프로그램 참가 신청')
+  if (type === 'LIVESTREAM' || type === 'WEBINAR') return tx('Đăng ký xem trực tuyến', 'Register to watch online', '온라인 시청 신청')
+  if (type === 'SHOW') return tx('Đăng ký tham quan', 'Visitor registration', '참관 등록')
+  return tx('Đăng ký tham dự', 'Event registration', '참가 신청')
 }

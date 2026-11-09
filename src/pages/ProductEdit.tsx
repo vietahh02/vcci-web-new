@@ -134,16 +134,16 @@ function ProductEditor({ product }: { product: MyProduct | null }) {
           <Section icon={Package} title={tx('Thông tin cơ bản', 'Basic info', '기본 정보')} hint={tx('Nội dung gốc bằng tiếng Việt.', 'Original content in Vietnamese.', '베트남어 원문.')}>
             <div className="grid gap-4">
               <Field label={tx('Tên sản phẩm (tiếng Việt)', 'Product name (Vietnamese)', '제품명 (베트남어)')} htmlFor="mp-name">
-                <Input id="mp-name" value={d.productName} maxLength={500} onChange={(e) => set('productName', e.target.value)} required />
+                <Input id="mp-name" placeholder={tx('VD: Cà phê Robusta nhân xanh S18', 'e.g. Green Robusta coffee beans S18', '예: 로부스타 생두 S18')} value={d.productName} maxLength={500} onChange={(e) => set('productName', e.target.value)} required />
               </Field>
               <div className="grid gap-4 sm:grid-cols-2">
                 <Field label={tx('Danh mục', 'Category', '카테고리')} htmlFor="mp-cat">
-                  <Select id="mp-cat" value={d.categoryId} onValueChange={(v) => set('categoryId', v)} required placeholder="—" options={categories.map((c) => ({ value: c.id, label: c.categoryName.vi }))} />
+                  <Select id="mp-cat" value={d.categoryId} onValueChange={(v) => set('categoryId', v)} required placeholder={tx('Chọn danh mục', 'Choose a category', '카테고리 선택')} options={categories.map((c) => ({ value: c.id, label: c.categoryName.vi }))} />
                 </Field>
-                <Field label={tx('Xuất xứ', 'Origin', '원산지')} htmlFor="mp-origin"><Input id="mp-origin" value={d.origin} onChange={(e) => set('origin', e.target.value)} /></Field>
+                <Field label={tx('Xuất xứ', 'Origin', '원산지')} htmlFor="mp-origin"><Input id="mp-origin" placeholder={tx('VD: Đắk Lắk, Việt Nam', 'e.g. Dak Lak, Vietnam', '예: 베트남 닥락')} value={d.origin} onChange={(e) => set('origin', e.target.value)} /></Field>
               </div>
               <Field label={tx('Mô tả (tiếng Việt)', 'Description (Vietnamese)', '설명 (베트남어)')} htmlFor="mp-desc">
-                <Textarea id="mp-desc" rows={5} maxLength={4000} value={d.description} onChange={(e) => set('description', e.target.value)} />
+                <Textarea id="mp-desc" placeholder={tx('Quy cách, chất lượng, chứng nhận, đóng gói, năng lực cung ứng…', 'Spec, grade, certificates, packing, supply capacity…', '규격, 등급, 인증, 포장, 공급 능력…')} rows={5} maxLength={4000} value={d.description} onChange={(e) => set('description', e.target.value)} />
               </Field>
             </div>
           </Section>
@@ -151,10 +151,10 @@ function ProductEditor({ product }: { product: MyProduct | null }) {
           <Section icon={Wallet} title={tx('Giá & giao hàng', 'Pricing & delivery', '가격 및 배송')} hint={tx('Để trống nếu chưa có giá.', 'Leave empty if not set yet.', '가격이 없으면 비워 두세요.')}>
             <div className="grid gap-4 sm:grid-cols-3">
               <Field label={tx('Đơn vị', 'Unit', '단위')} htmlFor="mp-unit"><Input id="mp-unit" value={d.unit} placeholder="kg, MT, pcs" onChange={(e) => set('unit', e.target.value)} /></Field>
-              <Field label="MOQ" htmlFor="mp-moq"><Input id="mp-moq" type="number" min={1} value={d.moq} onChange={(e) => set('moq', e.target.value)} /></Field>
-              <Field label={tx('Thời gian giao hàng', 'Lead time', '리드타임')} htmlFor="mp-lead"><Input id="mp-lead" value={d.leadTime} maxLength={200} onChange={(e) => set('leadTime', e.target.value)} /></Field>
-              <Field label="FOB" htmlFor="mp-fob"><Input id="mp-fob" type="number" min={0} step="0.01" value={d.priceFob} onChange={(e) => set('priceFob', e.target.value)} /></Field>
-              <Field label="CIF" htmlFor="mp-cif"><Input id="mp-cif" type="number" min={0} step="0.01" value={d.priceCif} onChange={(e) => set('priceCif', e.target.value)} /></Field>
+              <Field label="MOQ" htmlFor="mp-moq"><Input id="mp-moq" placeholder={tx('VD: 100', 'e.g. 100', '예: 100')} type="number" min={1} value={d.moq} onChange={(e) => set('moq', e.target.value)} /></Field>
+              <Field label={tx('Thời gian giao hàng', 'Lead time', '리드타임')} htmlFor="mp-lead"><Input id="mp-lead" placeholder={tx('VD: 15–20 ngày sau khi đặt cọc', 'e.g. 15–20 days after deposit', '예: 계약금 후 15–20일')} value={d.leadTime} maxLength={200} onChange={(e) => set('leadTime', e.target.value)} /></Field>
+              <Field label="FOB" htmlFor="mp-fob"><Input id="mp-fob" placeholder={tx('VD: 4.50', 'e.g. 4.50', '예: 4.50')} type="number" min={0} step="0.01" value={d.priceFob} onChange={(e) => set('priceFob', e.target.value)} /></Field>
+              <Field label="CIF" htmlFor="mp-cif"><Input id="mp-cif" placeholder={tx('VD: 5.20', 'e.g. 5.20', '예: 5.20')} type="number" min={0} step="0.01" value={d.priceCif} onChange={(e) => set('priceCif', e.target.value)} /></Field>
             </div>
           </Section>
 

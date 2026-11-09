@@ -100,7 +100,7 @@ export function ShowEventDetail({ show }: { show: Show }) {
     <ShowFormatContext.Provider value={show.format}>
       <section className="relative isolate overflow-hidden bg-navy text-white">
         <img src={img((ended && recapBanner) || show.banner || show.cover, 1800, 800)} alt="" className="absolute inset-0 -z-20 size-full animate-kenburns object-cover opacity-40" />
-        <div className="absolute inset-0 -z-10 bg-gradient-to-r from-navy via-navy/85 to-navy/40" />
+        <div className="absolute inset-0 -z-10 bg-navy/75" />
         <div className="container-page grid gap-8 py-8 md:py-10 lg:grid-cols-[1fr_380px]">
           <Reveal>
             <nav className="mb-5 text-[13px] text-white/60"><Link to="/events" className="hover:text-white">{t.nav.events}</Link> / {t.events.type.SHOW}</nav>
@@ -128,7 +128,7 @@ export function ShowEventDetail({ show }: { show: Show }) {
             <ShareButtons url={`${window.location.origin}/events/${show.id}`} tone="dark" className="mt-5" />
           </Reveal>
 
-          <Reveal delay={0.15} className="glass-dark h-fit rounded-3xl p-6 shadow-2xl shadow-black/30 ring-1 ring-gold-bright/25">
+          <Reveal delay={0.15} className="h-fit rounded-3xl bg-navy/80 p-6 ring-1 ring-gold-bright/25">
             {show.status === 'UPCOMING' && (
               <>
                 <p className="text-xs font-semibold uppercase tracking-wider text-white/60">{t.events.startsIn}</p>
@@ -478,9 +478,9 @@ function InquiryDialog({ show, ctx, badge, onClose, onSent }: { show: Show; ctx:
           liveApi.showInquiry(booth.id, { email: badge.email, badgeCode: badge.code, productId: product || ctx.product?.id, quantity: qty, message: msg }).then(done, (err: Error) => toast({ title: err.message, kind: 'info' }))
         }}>
           <Field label={x.inquiryProduct} htmlFor="iq-p">
-            <Select id="iq-p" value={product || ctx.product?.id || ''} onValueChange={setProduct} options={[{ value: '', label: '—' }, ...booth.products.map((p) => ({ value: p.id, label: L(p.name) }))]} />
+            <Select id="iq-p" placeholder={tx('Chọn sản phẩm', 'Choose a product', '제품 선택')} value={product || ctx.product?.id || ''} onValueChange={setProduct} options={[{ value: '', label: tx('Không chọn', 'None', '선택 안 함') }, ...booth.products.map((p) => ({ value: p.id, label: L(p.name) }))]} />
           </Field>
-          <Field label={x.inquiryQty} htmlFor="iq-q"><Input id="iq-q" value={qty} onChange={(e) => setQty(e.target.value)} /></Field>
+          <Field label={x.inquiryQty} htmlFor="iq-q"><Input id="iq-q" placeholder={tx('VD: 500 kg', 'e.g. 500 kg', '예: 500 kg')} value={qty} onChange={(e) => setQty(e.target.value)} /></Field>
           <Field label={x.inquiryMsg} htmlFor="iq-m" hint={x.inquiryDaily}><Textarea id="iq-m" required placeholder={x.inquiryMsgPh} value={msg} onChange={(e) => setMsg(e.target.value)} /></Field>
           <Button type="submit" size="lg" className="w-full"><Send /> {x.inquirySend}</Button>
         </form>

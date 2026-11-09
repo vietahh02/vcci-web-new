@@ -113,7 +113,6 @@
   --animate-aurora: aurora 18s ease-in-out infinite alternate;
   --animate-kenburns: kenburns 26s ease-in-out infinite alternate;
   --animate-shimmer: shimmer 1.6s linear infinite;
-  --animate-border-spin: border-spin 6s linear infinite;
 }
 
 @keyframes marquee {
@@ -157,14 +156,6 @@
   from { transform: translateX(-100%); }
   to { transform: translateX(0); }
 }
-@property --angle {
-  syntax: "<angle>";
-  initial-value: 0deg;
-  inherits: false;
-}
-@keyframes border-spin {
-  to { --angle: 360deg; }
-}
 /* Select / DropdownMenu (transform-origin comes from Radix, so the list grows out of its trigger) */
 @keyframes popover-in {
   from { opacity: 0; transform: scale(0.96); }
@@ -202,22 +193,11 @@
   @media (min-width: 1440px) { .container-page { max-width: 1440px; } }
   @media (min-width: 1800px) { .container-page { max-width: 1640px; } }
 
-  .bg-grid {
-    background-image:
-      linear-gradient(to right, rgb(255 255 255 / 0.06) 1px, transparent 1px),
-      linear-gradient(to bottom, rgb(255 255 255 / 0.06) 1px, transparent 1px);
-    background-size: 44px 44px;
-  }
   .bg-dots {
     background-image: radial-gradient(color-mix(in oklab, var(--foreground) 12%, transparent) 1px, transparent 1px);
     background-size: 18px 18px;
   }
 
-  .glass {
-    background: color-mix(in oklab, var(--background) 76%, transparent);
-    backdrop-filter: blur(14px) saturate(1.4);
-    -webkit-backdrop-filter: blur(14px) saturate(1.4);
-  }
   .glass-dark {
     background: rgb(8 8 46 / 0.5);
     backdrop-filter: blur(14px) saturate(1.3);
@@ -225,32 +205,8 @@
     border: 1px solid rgb(255 255 255 / 0.12);
   }
 
-  .text-gold-gradient {
-    background: linear-gradient(100deg, #f6d77a 0%, #d4af37 40%, #fff2c2 55%, #c99a22 75%, #f6d77a 100%);
-    background-size: 200% auto;
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-    animation: shimmer 6s linear infinite;
-  }
+  .text-gold-gradient { color: var(--gold-bright); }
 
-  .border-spin {
-    position: relative;
-    isolation: isolate;
-  }
-  .border-spin::before {
-    content: "";
-    position: absolute;
-    inset: -1px;
-    border-radius: inherit;
-    padding: 1.5px;
-    background: conic-gradient(from var(--angle), transparent 0deg, var(--gold-bright) 60deg, var(--primary) 140deg, transparent 220deg);
-    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-    -webkit-mask-composite: xor;
-    mask-composite: exclude;
-    animation: var(--animate-border-spin);
-    pointer-events: none;
-  }
 
   .skeleton {
     background: linear-gradient(90deg, var(--muted) 0%, color-mix(in oklab, var(--muted) 40%, var(--background)) 50%, var(--muted) 100%);
@@ -285,4 +241,7 @@
     transition-duration: 0.001ms !important;
     scroll-behavior: auto !important;
   }
+  /* opt-out for motion the visitor triggers and that carries a layout change (home featured panels):
+     restore each element's own Tailwind duration, 150ms default */
+  .motion-keep, .motion-keep * { transition-duration: var(--tw-duration, 150ms) !important; }
 }
