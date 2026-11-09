@@ -6,6 +6,7 @@
 import { Plus, Send, Trash2, Undo2 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { catalogApi } from '@/api'
+import { CMS_URL } from '@/api/config'
 import { MyInquiries } from '@/components/catalog/MyInquiries'
 import type { BoothInput, MyBooth, MyParticipation, OnlineShow, OpenShow, ParticipationLaunchInput, ParticipationOptions, ShowKind, ShowProductRow } from '@/api/catalogApi'
 import { fileSrc, uploadFile } from '@/api/uploads'
@@ -281,8 +282,13 @@ function ShowParticipations() {
                     <ul className="flex flex-wrap gap-2">
                       {p.launches.map((l) => (
                         <li key={l.productId} className="flex items-center gap-2 rounded-full border py-1 px-3 text-xs">
-                          {l.productName} <span className="text-muted-foreground">{l.launchDate} {l.startTime}-{l.endTime}</span>
+                          {l.productName} <span className="text-muted-foreground">{dayLabel(l.launchDate)} {l.startTime}-{l.endTime}</span>
                           {l.productModerationStatus === 'APPROVED' && <span className="font-semibold text-success">{tx('Đã duyệt', 'Approved', '승인됨')}</span>}
+                          {CMS_URL && l.hostPath && l.streamStatus !== 'ENDED' && (
+                            <a href={`${CMS_URL}${l.hostPath}`} target="_blank" rel="noopener noreferrer" className="font-semibold text-primary underline">
+                              {l.streamStatus === 'LIVE' ? tx('Đang phát · vào Studio', 'Live · open Studio', '방송 중 · 스튜디오') : tx('Vào Studio phát trực tiếp', 'Open live Studio', '라이브 스튜디오 열기')}
+                            </a>
+                          )}
                         </li>
                       ))}
                     </ul>

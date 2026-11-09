@@ -221,7 +221,9 @@ export const removeShowProduct = (showId: string, productId: string) => apiFetch
 
 /* ------------------------------------------- show participation application (kèm sản phẩm mới ra mắt) */
 export interface ParticipationLaunchInput { productName: string; categoryId: number; shortDescription?: string; launchDate: string; startTime: string; endTime: string }
-export interface ParticipationLaunch { productId: string; productName?: string; productImage?: string; categoryName?: string; shortDescription?: string; productModerationStatus?: string; launchDate: string; startTime: string; endTime: string }
+export interface ParticipationLaunch { productId: string; productName?: string; productImage?: string; categoryName?: string; shortDescription?: string; productModerationStatus?: string; launchDate: string; startTime: string; endTime: string
+  /** Show HOSTED: phiên phát của DN cho mốc này (có sau khi VCCI xác nhận đơn) và route Studio trên CMS */
+  streamSessionId?: string; streamStatus?: string; hostPath?: string }
 export interface MyParticipation {
   id: string; showId: string; status: string; rejectReason?: string; submittedAt?: string; reviewedAt?: string
   contactName: string; contactPhone: string; note: string; launches: ParticipationLaunch[]
@@ -245,6 +247,8 @@ const toParticipation = (r: Raw): MyParticipation => ({
     productId: String(l.productId), productName: l.productName ?? undefined, productImage: l.productImage ?? undefined,
     categoryName: l.categoryName ?? undefined, shortDescription: l.shortDescription ?? undefined, productModerationStatus: l.productModerationStatus ?? undefined,
     launchDate: l.launchDate ?? '', startTime: l.startTime ?? '', endTime: l.endTime ?? '',
+    streamSessionId: l.streamSessionId == null ? undefined : String(l.streamSessionId), streamStatus: l.streamStatus ?? undefined,
+    hostPath: typeof l.hostPath === 'string' && l.hostPath.startsWith('/') ? l.hostPath : undefined,
   })),
   days: Array.isArray(r.days) ? r.days.map(String) : [],
   feeAmount: r.feeAmount == null ? undefined : Number(r.feeAmount), feeCurrency: r.feeCurrency ?? undefined,
