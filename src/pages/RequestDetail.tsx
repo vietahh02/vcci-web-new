@@ -2,8 +2,10 @@ import * as DialogPrimitive from '@radix-ui/react-dialog'
 import { AnimatePresence, motion } from 'motion/react'
 import { CalendarClock, FileUp, MapPin, Package, Paperclip, Send, Tag, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
-import { browseImportRequests, catalogApi, getCategory, liveApi, searchProducts, USE_MOCK, useImportRequest } from '@/api'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { browseImportRequests, catalogApi, getCategory, liveApi, searchProducts, tokens, USE_MOCK, useImportRequest } from '@/api'
+import { LoginRequiredDialog } from '@/components/auth/LoginRequiredDialog'
+import { useProfile } from '@/lib/profile'
 import type { MyProduct } from '@/api/catalogApi'
 import { chatApi, chatConfigured } from '@/api/chat'
 import { Select } from '@/components/ui/select'
@@ -28,6 +30,37 @@ export default function RequestDetail() {
   const [matches, setMatches] = useState<Product[]>([])
   const [others, setOthers] = useState<ImportRequest[]>([])
   const catId = r?.categoryId
+  const navigate = useNavigate()
+  const [params] = useSearchParams()
+  const { session } = useProfile()
+  // live: the token is there before /api/auth/me answers, so a signed-in user is never asked to sign in again
+  const authed = USE_MOCK ? !!session : !!tokens.access()
+  const [askLogin, setAskLogin] = useState(false)
+  const openQuote = () => (authed ? setQuoteOpen(true) : setAskLogin(true))
+
+  // Same rules as the BE (QuotationServiceImpl + ImportRequestAccessPolicy.assertCanQuote): the request is open,
+  // the sender is signed in with an organisation, and it is not the organisation that posted the request.
+  // Business type is not checked: app.import-request.quote-allowed-business-types is empty (= every type).
+  // BR-TRD-15: the sender's company needs at least one visible (ACTIVE) product.
+  const isOpen = r?.status === 'OPEN'
+  const isOwn = !!session?.organizationId && !!r?.organizationId && session.organizationId === r.organizationId
+  const noOrg = !USE_MOCK && !!session && !session.organizationId
+  const [hasProducts, setHasProducts] = useState<boolean | null>(null)
+  const checkProducts = isOpen && authed && !!session && !isOwn && !noOrg && !USE_MOCK
+  useEffect(() => {
+    if (!checkProducts) return
+    // on error let the button show: the BE still refuses a company without products
+    catalogApi.myProducts('', 'visible', 0, 1).then((p) => setHasProducts(p.total > 0), () => setHasProducts(true))
+  }, [checkProducts])
+  // signed in but /api/auth/me (or the product check) not answered yet: wait rather than flash the button
+  const quoteBlock: 'closed' | 'own' | 'noOrg' | 'noProduct' | 'loading' | null =
+    !isOpen ? 'closed' : !authed ? null : !session ? 'loading' : isOwn ? 'own' : noOrg ? 'noOrg'
+      : !checkProducts ? null : hasProducts === null ? 'loading' : hasProducts ? null : 'noProduct'
+
+  // back from /login with ?quote=1: reopen the quote sheet the user was heading to
+  useEffect(() => {
+    if (r && authed && quoteBlock === null && params.get('quote') === '1') setQuoteOpen(true)
+  }, [r, authed, quoteBlock, params])
 
   useEffect(() => {
     if (!r) return
@@ -49,7 +82,9 @@ export default function RequestDetail() {
       <div className="grid gap-8 lg:grid-cols-[1fr_360px]">
         <Reveal>
           <div className="flex flex-wrap items-center gap-2">
-            <Badge variant="success"><span className="size-1.5 rounded-full bg-success" /> {t.requests.open}</Badge>
+            {isOpen
+              ? <Badge variant="success"><span className="size-1.5 rounded-full bg-success" /> {t.requests.open}</Badge>
+              : <Badge variant="muted">{tx('Đã đóng', 'Closed', '마감')}</Badge>}
             {cat && <Badge variant="muted">{L(cat.categoryName)}</Badge>}
             <span className="font-mono text-xs text-muted-foreground">{r.requestCode}</span>
           </div>
@@ -88,7 +123,26 @@ export default function RequestDetail() {
                 <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t.requests.buyer}</p>
                 <p className="mt-2 font-bold">{r.organizationName}</p>
                 <CountryChip code={r.country} label={L(r.countryName)} className="mt-1" />
-                <Button size="lg" className="mt-5 w-full" onClick={() => setQuoteOpen(true)}><Send /> {t.requests.sendQuote}</Button>
+                {quoteBlock === null ? (
+                  <Button size="lg" className="mt-5 w-full" onClick={openQuote}><Send /> {t.requests.sendQuote}</Button>
+                ) : quoteBlock === 'loading' ? (
+                  <div className="mt-5 h-12 w-full animate-pulse rounded-full bg-muted" />
+                ) : quoteBlock === 'noProduct' ? (
+                  <div className="mt-5 rounded-xl bg-muted px-4 py-3 text-sm leading-relaxed text-foreground/85">
+                    {tx('Chỉ doanh nghiệp đã có sản phẩm đang hiển thị mới được gửi báo giá.', 'Only companies with at least one listed product can send quotes.', '게시된 제품이 있는 기업만 견적을 보낼 수 있습니다.')}{' '}
+                    <Link to="/account/catalog/products/new" className="font-semibold text-primary underline-offset-4 hover:underline">
+                      {tx('Thêm sản phẩm', 'Add a product', '제품 등록')}
+                    </Link>
+                  </div>
+                ) : (
+                  <p className="mt-5 rounded-xl bg-muted px-4 py-3 text-sm leading-relaxed text-foreground/85">
+                    {quoteBlock === 'closed'
+                      ? tx('Yêu cầu này đã đóng, không nhận thêm báo giá.', 'This request is closed and no longer takes quotes.', '이 요청은 마감되어 더 이상 견적을 받지 않습니다.')
+                      : quoteBlock === 'own'
+                        ? tx('Đây là yêu cầu của doanh nghiệp bạn. Báo giá từ nhà cung cấp sẽ gửi về email của doanh nghiệp.', 'This is your company\'s request. Supplier quotes arrive at your company email.', '귀사의 요청입니다. 공급업체 견적은 회사 이메일로 도착합니다.')
+                        : tx('Tài khoản cần được gắn với một doanh nghiệp để gửi báo giá.', 'Your account must belong to a company to send quotes.', '견적을 보내려면 계정이 기업에 연결되어 있어야 합니다.')}
+                  </p>
+                )}
               </div>
             </div>
           </Reveal>
@@ -107,6 +161,17 @@ export default function RequestDetail() {
       </section>
 
       <QuoteSheet open={quoteOpen} onOpenChange={setQuoteOpen} requestId={r.id} buyerOrgId={r.organizationId} to={r.organizationEmail} subject={`Quotation – ${r.requestCode} – ${L(r.requestName)}`} />
+      <LoginRequiredDialog
+        open={askLogin}
+        onOpenChange={setAskLogin}
+        onLogin={() => navigate(`/login?return=${encodeURIComponent(`/requests/${id}?quote=1`)}`)}
+        title={tx('Đăng nhập để gửi báo giá', 'Sign in to send a quote', '로그인하고 견적 보내기')}
+        description={tx(`Báo giá tới ${r.organizationName} được gửi từ tài khoản doanh nghiệp của bạn.`, `Quotes to ${r.organizationName} are sent from your business account.`, `${r.organizationName}에 보내는 견적은 귀사 기업 계정에서 전송됩니다.`)}
+        points={[
+          tx('Gửi báo giá qua email, kèm tệp đính kèm', 'Send your quote by email, with attachments', '첨부 파일과 함께 이메일로 견적 전송'),
+          tx('Đăng nhập xong, bạn quay lại đúng yêu cầu này', 'After signing in you come straight back to this request', '로그인 후 바로 이 요청으로 돌아옵니다'),
+        ]}
+      />
     </div>
   )
 }
@@ -124,6 +189,7 @@ function QuoteSheet({ open, onOpenChange, requestId, to, subject, buyerOrgId }: 
   const [qty, setQty] = useState('')
   const [note, setNote] = useState('')
   const [busy, setBusy] = useState(false)
+  const navigate = useNavigate()
 
   // chat channel: the supplier pins one of its own products to this request
   useEffect(() => {
@@ -146,8 +212,10 @@ function QuoteSheet({ open, onOpenChange, requestId, to, subject, buyerOrgId }: 
         body: note,
         payload: { requestId, productId, item: p ? (p.productName || '') : productId, quantity: qty, note },
       })
-      setSent(true)
       toast({ kind: 'success', title: t.requests.quoteSent })
+      // báo giá qua chat: mở luôn hội thoại B2B với DN mua trên website (không phải màn "đã gửi email")
+      onOpenChange(false)
+      navigate(`/messages?b2b=${encodeURIComponent(buyerOrgId)}`)
     } catch (err) {
       toast({ kind: 'info', title: (err as Error).message })
     } finally {
@@ -161,7 +229,7 @@ function QuoteSheet({ open, onOpenChange, requestId, to, subject, buyerOrgId }: 
 
   return (
     <DialogPrimitive.Root open={open} onOpenChange={(v) => { onOpenChange(v); if (!v) { setSent(false); setFiles([]); setChannel('email') } }}>
-      <SheetContent title={t.requests.quoteTitle} description={t.requests.quoteDesc} className="max-w-lg">
+      <SheetContent title={channel === 'chat' ? tx('Gửi báo giá qua chat B2B', 'Send quote via B2B chat', 'B2B 채팅으로 견적 보내기') : t.requests.quoteTitle} description={channel === 'chat' ? tx('Báo giá được gửi vào chat B2B với người mua ngay trên website.', 'Your quote is posted in the B2B chat with the buyer, right on the website.', '견적은 웹사이트의 B2B 채팅으로 바이어에게 전송됩니다.') : t.requests.quoteDesc} className="max-w-lg">
         {sent ? (
           <SuccessState title={t.requests.quoteSent} desc={t.requests.quoteSentDesc} onClose={() => onOpenChange(false)} />
         ) : (

@@ -5,7 +5,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { liveApi, USE_MOCK, useEvent } from '@/api'
 import { useToast } from '@/components/ui/overlay'
-import { Button, buttonClass, Field, Input, Textarea } from '@/components/ui/primitives'
+import { Button, buttonClass, Field, Input, Textarea, Req } from '@/components/ui/primitives'
 import { DateField } from '@/components/ui/DateField'
 import { Select } from '@/components/ui/select'
 import { useI18n } from '@/lib/i18n'
@@ -251,7 +251,7 @@ function Q({ label, required, children, hint }: { label: string; required?: bool
   return (
     <div>
       <p className="mb-2.5 text-[14px] font-semibold">
-        {label} {required && <span className="text-destructive">*</span>}
+        {label}{required && <Req />}
       </p>
       {children}
       {hint && <p className="mt-1.5 text-xs text-muted-foreground">{hint}</p>}

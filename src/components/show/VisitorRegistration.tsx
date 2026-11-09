@@ -6,7 +6,7 @@ import { Dialog, DialogContent, useToast } from '@/components/ui/overlay'
 import { useCancelRegistration } from '@/components/show/useCancelRegistration'
 import { Captcha } from '@/components/ui/captcha'
 import { useLiveCaptcha } from '@/components/ui/useLiveCaptcha'
-import { Button, Field, Input } from '@/components/ui/primitives'
+import { Button, Field, Input, Req } from '@/components/ui/primitives'
 import { Select } from '@/components/ui/select'
 import type { Show } from '@/data/shows'
 import { SELLER_BUYER_TYPES, VISITOR_TYPES } from '@/data/shows'
@@ -198,7 +198,7 @@ export function VisitorRegistration({ show, open, onOpenChange, visitor }: { sho
               {paid && <p className="rounded-lg bg-gold-soft p-3 text-sm text-gold">{x.fee}: <b>{formatMoney(show.visitorTicketFee, show.ticketCurrency, locale)}</b></p>}
               {show.requireVisitorApproval && <p className="rounded-lg bg-primary-soft p-3 text-sm text-primary">{x.needApproval}</p>}
               <label className="flex items-start gap-2 text-sm"><input type="checkbox" className="mt-1" checked={form.share} onChange={(e) => set('share', e.target.checked)} /> {x.reg.shareContact}</label>
-              <label className="flex items-start gap-2 text-sm"><input type="checkbox" className="mt-1" checked={form.consent} onChange={(e) => set('consent', e.target.checked)} /> {x.reg.consent} *</label>
+              <label className="flex items-start gap-2 text-sm"><input type="checkbox" className="mt-1" checked={form.consent} onChange={(e) => set('consent', e.target.checked)} /> {x.reg.consent}<Req /></label>
               {showCaptcha && <Field label={`${t.auth.captcha} *`} htmlFor="captcha"><Captcha live={captcha} value={captchaText} onChange={setCaptchaText} /></Field>}
               {err && <p className="text-sm font-medium text-destructive">{err}</p>}
               <Button className="w-full" size="lg" disabled={busy} onClick={toOtp}><MailCheck /> {x.reg.sendOtp}</Button>

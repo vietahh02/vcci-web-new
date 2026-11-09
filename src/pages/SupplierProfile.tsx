@@ -21,7 +21,7 @@ import { Button, Field, Input, Textarea } from '@/components/ui/primitives'
 import NotFound from '@/pages/NotFound'
 import { SuccessState } from '@/pages/ProductDetail'
 import { useI18n, type Bilingual } from '@/lib/i18n'
-import { OPTIONS, useProfile, type MediaItem, type VerifyStatus } from '@/lib/profile'
+import { OPTIONS, sellsProducts, useProfile, type MediaItem, type VerifyStatus } from '@/lib/profile'
 import { tx } from '@/lib/tx'
 import { formatSize } from '@/lib/upload'
 import { cn, formatDate, img } from '@/lib/utils'
@@ -73,6 +73,7 @@ function Storefront({ b, remote }: { b: Business; remote: PublicProfile | null }
   const { scrollYProgress } = useScroll({ target: coverRef, offset: ['start start', 'end start'] })
   const coverY = useTransform(scrollYProgress, [0, 1], ['0%', '25%'])
   const items = useOrgProducts(b.id).data ?? []
+  const hasProducts = sellsProducts(b.businessType)
   const gallerySlides: Slide[] = pp.gallery.map((m) => ({ url: m.url, caption: caption(m, L) }))
 
   return (
@@ -128,7 +129,7 @@ function Storefront({ b, remote }: { b: Business; remote: PublicProfile | null }
             <span className="max-w-56 truncate text-sm font-bold">{b.name}</span>
           </span>
           <div className="no-scrollbar flex gap-1 overflow-x-auto rounded-full bg-muted p-1">
-            {(['overview', 'capability', 'products', 'contact'] as Tab[]).map((k) => (
+            {(['overview', 'capability', 'products', 'contact'] as Tab[]).filter((k) => k !== 'products' || hasProducts).map((k) => (
               <button key={k} onClick={() => setTab(k)} className={cn('relative min-h-10 shrink-0 rounded-full px-4 text-sm font-semibold transition-colors duration-200', tab === k ? 'text-foreground' : 'text-muted-foreground hover:text-foreground')}>
                 {tab === k && <motion.span layoutId="store-tab" className="absolute inset-0 rounded-full bg-background shadow-md shadow-primary/10 ring-1 ring-border" transition={{ type: 'spring', bounce: 0.2, duration: 0.5 }} />}
                 <span className="relative">{t.supplier.tabs[k]}</span>
@@ -162,13 +163,17 @@ function Storefront({ b, remote }: { b: Business; remote: PublicProfile | null }
                       </div>
                     </>
                   )}
-                  <div className="mt-10 flex items-end justify-between">
-                    <h3 className="text-xl font-bold">{t.nav.products}</h3>
-                    {items.length > 3 && <button onClick={() => setTab('products')} className="text-sm font-semibold text-primary">{t.common.viewAll}</button>}
-                  </div>
-                  <div className="mt-5 grid grid-cols-2 gap-4 md:grid-cols-3 md:gap-5">
-                    {items.slice(0, 3).map((p) => <ProductCard key={p.id} product={p} />)}
-                  </div>
+                  {hasProducts && (
+                    <>
+                      <div className="mt-10 flex items-end justify-between">
+                        <h3 className="text-xl font-bold">{t.nav.products}</h3>
+                        {items.length > 3 && <button onClick={() => setTab('products')} className="text-sm font-semibold text-primary">{t.common.viewAll}</button>}
+                      </div>
+                      <div className="mt-5 grid grid-cols-2 gap-4 md:grid-cols-3 md:gap-5">
+                        {items.slice(0, 3).map((p) => <ProductCard key={p.id} product={p} />)}
+                      </div>
+                    </>
+                  )}
                 </div>
                 <div className="space-y-5">
                   <ReputationPanel orgId={b.id} />
@@ -176,8 +181,8 @@ function Storefront({ b, remote }: { b: Business; remote: PublicProfile | null }
                 </div>
               </div>
             )}
-            {tab === 'capability' && <Capability pp={pp} open={(slides, index) => setLightbox({ slides, index })} />}
-            {tab === 'products' && (
+            {tab === 'capability' && <Capability pp={pp} hasProducts={hasProducts} open={(slides, index) => setLightbox({ slides, index })} />}
+            {tab === 'products' && hasProducts && (
               <div className="grid grid-cols-2 gap-4 md:grid-cols-3 md:gap-5 lg:grid-cols-4">
                 {items.map((p) => <ProductCard key={p.id} product={p} />)}
               </div>
@@ -185,7 +190,6 @@ function Storefront({ b, remote }: { b: Business; remote: PublicProfile | null }
             {tab === 'contact' && <div className="max-w-xl"><InfoCard b={b} pp={pp} /></div>}
           </motion.div>
         </AnimatePresence>
-        <Link to="/suppliers" className="text-sm font-semibold text-primary">← {t.supplier.directoryTitle}</Link>
       </div>
 
       <Lightbox state={lightbox} onClose={() => setLightbox(null)} onIndex={(index) => setLightbox((s) => (s ? { ...s, index } : s))} />
@@ -259,7 +263,7 @@ const safeRegion = (r: Intl.DisplayNames, code: string) => {
 }
 
 /* ---------------------------------------------------------------- capability profile */
-function Capability({ pp, open }: { pp: PublicProfile; open: (slides: Slide[], index: number) => void }) {
+function Capability({ pp, hasProducts, open }: { pp: PublicProfile; hasProducts: boolean; open: (slides: Slide[], index: number) => void }) {
   const { L, locale } = useI18n()
   const region = new Intl.DisplayNames([locale], { type: 'region' })
   const [kind, setKind] = useState('ALL')
@@ -278,7 +282,7 @@ function Capability({ pp, open }: { pp: PublicProfile; open: (slides: Slide[], i
     ['cap-certs', tx('Chứng nhận', 'Certificates', '인증')],
     ['cap-markets', tx('Thị trường & xuất khẩu', 'Markets & export', '시장 & 수출')],
     ['cap-qc', tx('Kiểm soát chất lượng', 'Quality control', '품질 관리')],
-    ['cap-customers', tx('Sản phẩm', 'Products', '제품')],
+    ...(hasProducts ? [['cap-customers', tx('Sản phẩm', 'Products', '제품')]] : []),
     ...(yt ? [['cap-video', tx('Video giới thiệu', 'Intro video', '소개 영상')]] : []),
     ['cap-docs', tx('Tài liệu', 'Documents', '자료')],
   ] as [string, string][]
@@ -288,7 +292,7 @@ function Capability({ pp, open }: { pp: PublicProfile; open: (slides: Slide[], i
     [tx('Dây chuyền sản xuất', 'Production lines', '생산 라인'), c.productionLines],
     [tx('Công suất / tháng', 'Monthly capacity', '월 생산 능력'), c.monthlyCapacity],
     [tx('Dành cho xuất khẩu', 'For export', '수출 비중'), c.exportPct && `${c.exportPct}%`],
-    [tx('Đơn hàng tối thiểu', 'Minimum order', '최소 주문'), c.moq],
+    [tx('Đơn hàng tối thiểu', 'Minimum order', '최소 주문'), hasProducts && c.moq],
     ['OEM / ODM', label(OPTIONS.oem, c.oem, L)],
     [tx('Năng lực cung ứng', 'Supply capacity', '공급 능력'), label(OPTIONS.supplyCapacity, c.supply, L)],
   ].filter(([, v]) => v) as [string, string][]
@@ -380,14 +384,14 @@ function Capability({ pp, open }: { pp: PublicProfile; open: (slides: Slide[], i
           {c.qcProcess ? <p className="max-w-3xl leading-relaxed text-foreground/85">{c.qcProcess}</p> : <Empty />}
         </Block>
 
-        <Block id="cap-customers" title={toc[5]![1]}>
+        {hasProducts && <Block id="cap-customers" title={tx('Sản phẩm', 'Products', '제품')}>
           <div className="grid gap-6 sm:grid-cols-2">
             <div>
               <p className="mb-2 text-sm font-semibold">{tx('Sản phẩm chủ lực', 'Key products', '주력 제품')}</p>
               <ul className="space-y-1.5 text-sm">{c.mainProducts.map((m) => <li key={m} className="flex gap-2"><Award className="mt-0.5 size-4 shrink-0 text-gold" /> {m}</li>)}</ul>
             </div>
           </div>
-        </Block>
+        </Block>}
 
         {yt && (
           <Block id="cap-video" title={tx('Video giới thiệu', 'Intro video', '소개 영상')}>

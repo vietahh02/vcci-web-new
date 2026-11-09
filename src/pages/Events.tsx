@@ -100,7 +100,7 @@ function CountdownHero({ ev }: { ev: EventItem }) {
           </div>
           <div className="flex flex-wrap gap-3">
             <Link to={`/events/${ev.id}`} className={buttonClass('gold', 'lg')}><Ticket /> {t.events.register}</Link>
-            <Link to={`/events/${ev.id}`} className={buttonClass('ghost', 'lg', 'bg-white/10 text-white hover:bg-white/20 max-sm:hidden')}>{t.common.viewDetail}</Link>
+            <Link to={`/events/${ev.id}`} className={buttonClass('ghost', 'lg', 'bg-white/10 text-white hover:bg-white/20 hover:text-white max-sm:hidden')}>{t.common.viewDetail}</Link>
           </div>
         </div>
       </div>

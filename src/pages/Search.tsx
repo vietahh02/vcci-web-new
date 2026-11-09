@@ -9,7 +9,6 @@ import { categories, products, type Product } from '@/data/mock'
 import { categoryIcons } from '@/components/brand'
 import { ProductCard } from '@/components/cards'
 import { Badge, Button, buttonClass, Skeleton } from '@/components/ui/primitives'
-import { SearchBar } from '@/components/layout/SearchBar'
 import { Select } from '@/components/ui/select'
 import { useI18n } from '@/lib/i18n'
 import { tx } from '@/lib/tx'
@@ -143,11 +142,10 @@ export default function SearchPage() {
 
   return (
     <>
-      {/* compact header: the search field stays visible (with the current query) at every width */}
       <section className="relative isolate overflow-hidden bg-navy py-6 text-white md:py-8">
         <video className="absolute inset-0 -z-20 size-full object-cover" src="/video/product_search.mp4" poster="/video/product_search-poster.jpg" autoPlay muted loop playsInline aria-hidden />
         <div className="absolute inset-0 -z-10 bg-navy/80" />
-        <div className="container-page grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)] lg:items-end">
+        <div className="container-page">
           <div className="min-w-0">
             <nav aria-label={t.ui.breadcrumb} className="text-[13px] text-white/70">
               <Link to="/" className="hover:text-white">{t.common.home}</Link> / {t.nav.products}{cat && ` / ${L(cat.categoryName)}`}
@@ -157,7 +155,6 @@ export default function SearchPage() {
             </motion.h1>
             <p className="mt-1 text-[15px] text-white/85" aria-live="polite">{loadError ? '' : !results ? t.common.loading : countLabel}</p>
           </div>
-          <SearchBar size="lg" initialQuery={keyword} />
         </div>
       </section>
 

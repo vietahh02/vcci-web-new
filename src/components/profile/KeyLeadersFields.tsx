@@ -1,7 +1,7 @@
 /** "Lãnh đạo chủ chốt" + chi nhánh: dùng chung cho form đăng ký và hồ sơ doanh nghiệp. */
 import { Plus, Trash2 } from 'lucide-react'
 import type { Branch, KeyLeaders, LeaderPerson } from '@/api/realApi'
-import { Button, Field, Input } from '@/components/ui/primitives'
+import { Button, Field, Input, Req } from '@/components/ui/primitives'
 import { Select } from '@/components/ui/select'
 import { useI18n } from '@/lib/i18n'
 import { tx } from '@/lib/tx'
@@ -40,7 +40,7 @@ export function LeadersFields({ value, onChange, omit }: { value: KeyLeaders; on
     <>
       {LEADER_ROLES.filter((role) => role.key !== omit).map((role) => (
         <fieldset key={role.key} className="grid gap-3 rounded-xl border p-4 sm:col-span-2 sm:grid-cols-2">
-          <legend className="px-1 text-[13px] font-semibold">{tx(...role.label)}{role.required && ' *'}</legend>
+          <legend className="px-1 text-[13px] font-semibold">{tx(...role.label)}{role.required && <Req />}</legend>
           {role.fields.map((f) => {
             const id = `${role.key}-${f}`
             const label = tx(...PERSON_LABEL[f]) + (role.required ? ' *' : '')

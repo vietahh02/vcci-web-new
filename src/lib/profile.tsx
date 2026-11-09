@@ -155,6 +155,8 @@ export const SECTIONS = SECTIONS_RAW.map((x) => ({ ...x, title: withKo(x.title),
  */
 export type ProfileKind = 'SELLER' | 'DISTRIBUTOR' | 'LIMITED'
 const LIMITED_TYPES = ['FOREIGN_IMPORTER', 'FOREIGN_INVESTOR', 'FOREIGN_DISTRIBUTOR_FINDER', 'INVESTMENT_CONSULTING', 'LAW_FIRM', 'NGO']
+/** Loại hình LIMITED (bên mua, đầu tư, tư vấn, luật, NGO) không đăng sản phẩm. */
+export const sellsProducts = (businessType: string) => !LIMITED_TYPES.includes(businessType)
 export const profileKind = (p: CompanyProfile): ProfileKind => {
   const t = p.registration.businessType
   return t === 'DISTRIBUTION_COMPANY' ? 'DISTRIBUTOR' : LIMITED_TYPES.includes(t) ? 'LIMITED' : 'SELLER'
@@ -255,7 +257,8 @@ const demoProfile = (): CompanyProfile => {
 }
 
 /* ---------------------------------------------------------------- store */
-export interface Session { companyName: string; taxCode: string }
+/** organizationId: live mode only (from /api/auth/me or /api/me/profile); used to hide actions on the user's own records. */
+export interface Session { companyName: string; taxCode: string; organizationId?: string }
 export interface EventRegistration { eventId: string; at: string; attendees: Attendee[]; answers: Record<string, string>; snapshot: CompanyProfile }
 
 type Ctx = {
@@ -307,7 +310,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     if (!me && !r) throw new Error('session')
     const profile = r?.profile ?? emptyProfile(me?.companyName ?? '', me?.taxCode ?? '')
     setRemoteStatus(r ? { orgStatus: r.orgStatus, statusReason: r.statusReason } : null)
-    setState((prev) => ({ ...prev, session: { companyName: me?.companyName || profile.general.nameVi, taxCode: me?.taxCode || profile.general.taxCode }, profile }))
+    setState((prev) => ({ ...prev, session: { companyName: me?.companyName || profile.general.nameVi, taxCode: me?.taxCode || profile.general.taxCode, organizationId: me?.organizationId || r?.organizationId || undefined }, profile }))
   }, [])
 
   // live mode: keep the session in sync with the stored token; drop it when the refresh token is rejected

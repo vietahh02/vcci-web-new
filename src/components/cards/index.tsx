@@ -20,8 +20,10 @@ export function ProductCard({ product, className }: { product: Product; classNam
   return (
     <Link
       to={`/products/${product.id}`}
-      className={cn('group flex h-full flex-col overflow-hidden rounded-2xl border bg-card outline-none transition-[box-shadow,border-color,translate] duration-300 hover:-translate-y-1 hover:border-primary/30 hover:shadow-xl hover:shadow-navy/10 focus-visible:ring-2 focus-visible:ring-primary active:translate-y-0', className)}
+      className={cn('group block h-full rounded-2xl outline-none focus-visible:ring-2 focus-visible:ring-primary', className)}
     >
+      {/* Link giữ nguyên vị trí làm vùng hover; chỉ lớp trong nhấc lên → không nháy ở mép card */}
+      <div className="flex h-full flex-col overflow-hidden rounded-2xl border bg-card transition-[box-shadow,border-color,translate] duration-300 group-hover:-translate-y-1 group-hover:border-primary/30 group-hover:shadow-xl group-hover:shadow-navy/10 group-active:translate-y-0">
       <SmartImage
         src={img(product.productImages[0]!, 520, 520)}
         alt={L(product.productName)}
@@ -40,6 +42,7 @@ export function ProductCard({ product, className }: { product: Product; classNam
           <span className="shrink-0">{t.common.moq} {formatNumber(product.moq, locale)} {product.unit}</span>
           <span className="flex min-w-0 items-center gap-1"><MapPin className="size-3 shrink-0" /><span className="truncate">{product.origin.split(',')[0]}</span></span>
         </p>
+      </div>
       </div>
     </Link>
   )

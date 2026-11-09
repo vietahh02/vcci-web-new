@@ -15,7 +15,7 @@ import { categories } from '@/data/mock'
 import { Logo } from '@/components/brand'
 import { LangSwitcher } from '@/components/layout/LangSwitcher'
 import { useToast } from '@/components/ui/overlay'
-import { Button, buttonClass, Field, Input } from '@/components/ui/primitives'
+import { Button, buttonClass, Field, Input, Req } from '@/components/ui/primitives'
 import { DateField } from '@/components/ui/DateField'
 import { Select } from '@/components/ui/select'
 import { useI18n } from '@/lib/i18n'
@@ -399,7 +399,7 @@ export function Register() {
                   <Select id="bt" value={r.businessType} onValueChange={(v) => set('businessType', v)} options={(Object.keys(t.supplier.types) as (keyof typeof t.supplier.types)[]).map((k) => ({ value: k, label: t.supplier.types[k] }))} />
                 </Field>
                 <div className="sm:col-span-2" role="group" aria-labelledby="ind-label" aria-describedby={errors.industries ? 'ind-err' : undefined}>
-                  <p id="ind-label" className="mb-2 text-[13px] font-semibold">{t.auth.industry} *</p>
+                  <p id="ind-label" className="mb-2 text-[13px] font-semibold">{t.auth.industry}<Req /></p>
                   <div ref={industriesRef} className="flex flex-wrap gap-2">
                     {categories.map((c) => {
                       const on = r.industries.includes(c.id)
@@ -464,7 +464,7 @@ export function Register() {
               <>
                 {DOC_GROUPS.map((g) => (
                   <div key={g.key} className="sm:col-span-2">
-                    <p className="text-[13px] font-semibold">{tx(...g.label)}{g.required && ' *'}</p>
+                    <p className="text-[13px] font-semibold">{tx(...g.label)}{g.required && <Req />}</p>
                     <ul className="mb-2 mt-0.5 text-xs text-muted-foreground">{g.items.map((it) => <li key={it[1]}>• {tx(...it)}</li>)}</ul>
                     <MultiFileUpload rule="legal" value={r.docs[g.key]} onChange={(v) => setDocs(g.key, v)} />
                   </div>

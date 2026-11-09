@@ -380,7 +380,7 @@ function RequestsSection() {
             </ol>
             <div className="mt-7 flex flex-wrap gap-2">
               <Link to="/requests" className={buttonClass('gold', 'md')}>{t.requests.sendQuote} <ArrowRight /></Link>
-              <Link to="/requests?post=1" className={buttonClass('ghost', 'md', 'text-white hover:bg-white/10')}>{t.nav.postRequest}</Link>
+              <Link to="/requests?post=1" className={buttonClass('ghost', 'md', 'text-white hover:bg-white/10 hover:text-white')}>{t.nav.postRequest}</Link>
             </div>
             <div className="mt-7 flex flex-wrap gap-x-4 gap-y-2">
               {importRequests.slice(0, 5).map((r) => (
@@ -412,7 +412,7 @@ function CtaSection() {
             </div>
             <div className="flex flex-wrap gap-3">
               <Link to="/register" className={buttonClass('gold', 'lg')}>{t.home.ctaPrimary} <ArrowRight /></Link>
-              <Link to="/about" className={buttonClass('ghost', 'lg', 'bg-white/10 text-white hover:bg-white/20')}>{t.home.ctaSecondary}</Link>
+              <Link to="/about" className={buttonClass('ghost', 'lg', 'bg-white/10 text-white hover:bg-white/20 hover:text-white')}>{t.home.ctaSecondary}</Link>
             </div>
           </div>
         </div>

@@ -67,7 +67,7 @@ function ContactBlock() {
       <p className="mt-3 max-w-xl text-white/85">{tx('Chuyên viên VCCI Trade Hub trả lời qua hotline trong giờ hành chính. Khi đã đăng nhập, bạn có thể nhắn qua khung chat Hỗ trợ VCCI ở góc màn hình.', 'VCCI Trade Hub staff answer the hotline during office hours. Once signed in, you can also write to VCCI Support from the chat in the corner of the screen.', '근무 시간에는 핫라인으로 상담할 수 있으며, 로그인 후 화면 모서리의 VCCI 지원 채팅도 이용할 수 있습니다.')}</p>
       <div className="mt-6 flex flex-wrap gap-3">
         <a href={CONTACT.hotlineHref} className={buttonClass('gold', 'lg')}><Phone /> Hotline {CONTACT.hotline}</a>
-        {CONTACT.email && <a href={`mailto:${CONTACT.email}`} className={buttonClass('ghost', 'lg', 'text-white hover:bg-white/10')}>{CONTACT.email}</a>}
+        {CONTACT.email && <a href={`mailto:${CONTACT.email}`} className={buttonClass('ghost', 'lg', 'text-white hover:bg-white/10 hover:text-white')}>{CONTACT.email}</a>}
       </div>
     </section>
   )

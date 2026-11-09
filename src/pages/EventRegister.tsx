@@ -16,7 +16,7 @@ import { useEventProgramme } from '@/api/eventApi'
 import { ProfileRegistration } from '@/components/event/ProfileRegistration'
 import { Confetti, FakeQr } from '@/components/event/visuals'
 import { useToast } from '@/components/ui/overlay'
-import { Button, buttonClass, Field, Input, Textarea } from '@/components/ui/primitives'
+import { Button, buttonClass, Field, Input, Textarea, Req } from '@/components/ui/primitives'
 import { Select } from '@/components/ui/select'
 import NotFound from '@/pages/NotFound'
 import { eventStartTime, eventTimeRange } from '@/lib/eventStatus'
@@ -330,7 +330,7 @@ function RegisterFlow({ ev }: { ev: EventItem }) {
                       <Field label="Website" htmlFor="r-web"><Input id="r-web" value={f.website} onChange={(e) => set('website', e.target.value)} placeholder="www.company.com" /></Field>
                       <Field label={tx('Mã số thuế', 'Tax / business reg. no.', '사업자 번호')} htmlFor="r-tax"><Input id="r-tax" placeholder={tx('VD: 0312345678', 'e.g. 0312345678', '예: 0312345678')} value={f.taxCode} onChange={(e) => set('taxCode', e.target.value)} /></Field>
                     </div>
-                    <p className="mb-2.5 mt-5 text-[13px] font-semibold">{tx('Loại hình kinh doanh', 'Business type', '사업 유형')} *</p>
+                    <p className="mb-2.5 mt-5 text-[13px] font-semibold">{tx('Loại hình kinh doanh', 'Business type', '사업 유형')}<Req /></p>
                     <Chips options={BUSINESS_TYPES} value={f.businessType ? [f.businessType] : []} onToggle={(v) => set('businessType', v)} single />
                     <div className="mt-5 grid gap-4 sm:grid-cols-2">
                       <Field label={tx('Quy mô nhân sự', 'Number of employees', '직원 수')} htmlFor="r-staff">

@@ -113,8 +113,17 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaHTMLAttributes<H
   return <textarea ref={ref} className={cn(fieldBase, 'min-h-24 rounded-2xl py-2.5 leading-relaxed', className)} {...props} />
 })
 
-export function Label({ className, ...props }: LabelHTMLAttributes<HTMLLabelElement>) {
-  return <label className={cn('mb-1.5 block text-[13px] font-semibold text-foreground', className)} {...props} />
+/** Red asterisk for required fields. */
+export const Req = () => <span className="text-destructive" aria-hidden> *</span>
+
+export function Label({ className, children, ...props }: LabelHTMLAttributes<HTMLLabelElement>) {
+  // labels written as "Name *" get the asterisk in red
+  const star = typeof children === 'string' ? /^(.*?)\s*\*$/s.exec(children) : null
+  return (
+    <label className={cn('mb-1.5 block text-[13px] font-semibold text-foreground', className)} {...props}>
+      {star ? <>{star[1]}<Req /></> : children}
+    </label>
+  )
 }
 
 /** `hint` and `error` get ids `<htmlFor>-hint` / `<htmlFor>-err`: point the control's aria-describedby at them. */

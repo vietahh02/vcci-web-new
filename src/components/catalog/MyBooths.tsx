@@ -10,7 +10,7 @@ import { MyInquiries } from '@/components/catalog/MyInquiries'
 import type { BoothInput, MyBooth, MyParticipation, OnlineShow, OpenShow, ParticipationLaunchInput, ParticipationOptions, ShowKind, ShowProductRow } from '@/api/catalogApi'
 import { fileSrc, uploadFile } from '@/api/uploads'
 import { Dialog, DialogContent, useToast } from '@/components/ui/overlay'
-import { Badge, Button, Field, Input, Skeleton, Textarea } from '@/components/ui/primitives'
+import { Badge, Button, Field, Input, Skeleton, Textarea, Req } from '@/components/ui/primitives'
 import { Select } from '@/components/ui/select'
 import { categories } from '@/data/mock'
 import { useI18n } from '@/lib/i18n'
@@ -388,7 +388,7 @@ function ParticipationDialog({ show, options, existing, onClose }: { show: Onlin
         <form onSubmit={submit} className="max-h-[75dvh] space-y-4 overflow-y-auto p-6">
           {hosted && (
             <fieldset>
-              <legend className="mb-1.5 block text-[13px] font-semibold">{tx('Ngày đồng tổ chức', 'Co-organising days', '공동 주최일')} *</legend>
+              <legend className="mb-1.5 block text-[13px] font-semibold">{tx('Ngày đồng tổ chức', 'Co-organising days', '공동 주최일')}<Req /></legend>
               <div className="grid gap-2 sm:grid-cols-2">
                 {allDays.map((d) => (
                   <label key={d} className={`flex min-h-11 cursor-pointer items-center gap-2.5 rounded-xl border px-3.5 py-2 text-sm ${days.includes(d) ? 'border-primary bg-primary-soft' : ''}`}>
