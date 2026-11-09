@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom'
 import type { AppointmentView, AttachmentView, ChatConversation, ChatConversationDetail, SupportStatus } from '@/api/chat'
 import { Button, Field, Input, Textarea } from '@/components/ui/primitives'
 import { Select } from '@/components/ui/select'
-import { tx } from '@/lib/tx'
+import { dateTime, tx } from '@/lib/tx'
 import { cn } from '@/lib/utils'
 import { fmtSize, listTime } from './chatFormat'
 import { ChatAvatar } from './ChatMessages'
@@ -76,7 +76,7 @@ export function PartnerPanel({
         <h3 className="text-[13px] font-semibold">{tx('Lịch hẹn sắp tới', 'Upcoming appointments', '예정된 약속')} ({appts.length})</h3>
         {appts.length === 0 && <p className="text-xs text-muted-foreground">{tx('Chưa có lịch hẹn.', 'No appointments.', '약속이 없습니다.')}</p>}
         {appts.slice(0, 4).map((a) => (
-          <p key={a.messageId} className="flex items-start gap-2 text-xs"><CalendarClock className="mt-0.5 size-3.5 shrink-0 text-primary" /><span><strong className="block">{a.title}</strong><span className="text-muted-foreground">{new Date(a.startAt).toLocaleString()}</span></span></p>
+          <p key={a.messageId} className="flex items-start gap-2 text-xs"><CalendarClock className="mt-0.5 size-3.5 shrink-0 text-primary" /><span><strong className="block">{a.title}</strong><span className="text-muted-foreground">{dateTime(a.startAt)}</span></span></p>
         ))}
       </section>
       <section className="space-y-2 border-t px-5 py-4">
@@ -106,7 +106,7 @@ export function SupportPanel({ conv, onRate }: { conv: ChatConversation | null; 
     [tx('Lĩnh vực', 'Category', '분야'), conv?.categoryLabel],
     [tx('Bộ phận', 'Department', '부서'), conv?.department],
     [tx('Ưu tiên', 'Priority', '우선순위'), conv?.priority],
-    [tx('Hạn xử lý', 'Due', '처리 기한'), conv?.dueAt ? new Date(conv.dueAt).toLocaleString() : null],
+    [tx('Hạn xử lý', 'Due', '처리 기한'), conv?.dueAt ? dateTime(conv.dueAt) : null],
   ]
   return (
     <>

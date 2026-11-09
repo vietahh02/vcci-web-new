@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { chatApi } from '@/api/chat'
 import type { BizChat, WidgetMsg } from '@/components/layout/useBizChat'
-import { tx } from '@/lib/tx'
+import { dateTime, tx } from '@/lib/tx'
 import { cn } from '@/lib/utils'
 import { fmtMoney, fmtSize } from './chatFormat'
 
@@ -151,7 +151,7 @@ export function MessageCard({ chat, m, onReply }: { chat: BizChat; m: WidgetMsg;
         <div className={card}>
           <span className="flex items-center gap-1.5 text-xs font-semibold text-primary"><CalendarClock className="size-3.5" /> {tx('Lịch hẹn', 'Appointment', '약속')}</span>
           <strong className="block text-[13px]">{str(p.title)}</strong>
-          <span className="block text-xs text-muted-foreground">{Number.isNaN(s.getTime()) ? str(p.startAt) : s.toLocaleString()}{str(p.location) ? ` · ${str(p.location)}` : ''}</span>
+          <span className="block text-xs text-muted-foreground">{Number.isNaN(s.getTime()) ? str(p.startAt) : dateTime(s)}{str(p.location) ? ` · ${str(p.location)}` : ''}</span>
         </div>
       )
     }
