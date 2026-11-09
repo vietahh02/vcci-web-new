@@ -79,9 +79,7 @@ function Storefront({ b, remote }: { b: Business; remote: PublicProfile | null }
     <div>
       <div ref={coverRef} className="relative isolate overflow-hidden bg-navy text-white">
         <motion.img style={{ y: coverY }} src={pp.cover ?? img(b.coverImage, 1800, 700)} alt="" className="absolute inset-0 -z-20 size-full scale-110 object-cover" />
-        <div className="absolute inset-0 -z-10 bg-gradient-to-r from-navy via-navy/80 to-navy/30" />
-        <div aria-hidden className="pointer-events-none absolute -right-24 -top-24 -z-10 size-96 animate-aurora rounded-full bg-primary/30 blur-3xl" />
-        <div aria-hidden className="pointer-events-none absolute -bottom-32 left-1/3 -z-10 size-80 animate-aurora rounded-full bg-gold-bright/20 blur-3xl [animation-delay:-6s]" />
+        <div className="absolute inset-0 -z-10 bg-navy/70" />
         <div className="container-page flex min-h-72 flex-col justify-end gap-6 py-10 md:flex-row md:items-end md:justify-between">
           <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="flex items-end gap-5">
             {pp.logo ? (
@@ -98,8 +96,8 @@ function Storefront({ b, remote }: { b: Business; remote: PublicProfile | null }
               <p className="text-sm text-white/65">{pp.nameEn}</p>
               <p className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-white/75">
                 <ReputationStars orgId={b.id} legacyScore={b.reputationScore} className="text-white" dark />
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 backdrop-blur"><MapPin className="size-4 text-gold-bright" /> {b.province}</span>
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 backdrop-blur"><Users className="size-4 text-gold-bright" /> {pp.facts.employees}</span>
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1"><MapPin className="size-4 text-gold-bright" /> {b.province}</span>
+                {pp.facts.employees && <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1"><Users className="size-4 text-gold-bright" /> {pp.facts.employees}</span>}
               </p>
             </div>
           </motion.div>
@@ -114,7 +112,7 @@ function Storefront({ b, remote }: { b: Business; remote: PublicProfile | null }
               {following ? <BadgeCheck /> : <Plus />} {t.supplier.follow}
             </Button>
             {!pp.own && (
-              <Button variant="default" className="bg-gradient-to-b from-[#2a9fd8] to-primary text-white shadow-lg shadow-primary/40 transition-all duration-300 hover:-translate-y-0.5 hover:brightness-110" onClick={() => openB2bChat(b.id)}>
+              <Button variant="default" className="transition-all duration-300 hover:-translate-y-0.5" onClick={() => openB2bChat(b.id)}>
                 <MessageSquare /> {tx('Nhắn tin', 'Message', '메시지')}
               </Button>
             )}
@@ -123,7 +121,7 @@ function Storefront({ b, remote }: { b: Business; remote: PublicProfile | null }
         </div>
       </div>
 
-      <div className="sticky top-[112px] z-30 border-b bg-background/85 py-3 backdrop-blur-xl max-lg:top-[68px]">
+      <div className="sticky top-[112px] z-30 bg-background py-3 max-lg:top-[68px]">
         <div className="container-page flex items-center gap-4">
           <span className="hidden shrink-0 items-center gap-2 lg:flex">
             <CompanyMark name={b.nameEn} accent={b.accent} className="size-8 rounded-full text-[10px]" />
@@ -131,7 +129,7 @@ function Storefront({ b, remote }: { b: Business; remote: PublicProfile | null }
           </span>
           <div className="no-scrollbar flex gap-1 overflow-x-auto rounded-full bg-muted p-1">
             {(['overview', 'capability', 'products', 'contact'] as Tab[]).map((k) => (
-              <button key={k} onClick={() => setTab(k)} className={cn('relative shrink-0 rounded-full px-4 py-2 text-sm font-semibold transition-colors duration-200', tab === k ? 'text-foreground' : 'text-muted-foreground hover:text-foreground')}>
+              <button key={k} onClick={() => setTab(k)} className={cn('relative min-h-10 shrink-0 rounded-full px-4 text-sm font-semibold transition-colors duration-200', tab === k ? 'text-foreground' : 'text-muted-foreground hover:text-foreground')}>
                 {tab === k && <motion.span layoutId="store-tab" className="absolute inset-0 rounded-full bg-background shadow-md shadow-primary/10 ring-1 ring-border" transition={{ type: 'spring', bounce: 0.2, duration: 0.5 }} />}
                 <span className="relative">{t.supplier.tabs[k]}</span>
               </button>
@@ -234,12 +232,16 @@ function Facts({ b, pp }: { b: Business; pp: PublicProfile }) {
     <div className="mt-8">
       <h3 className="text-xl font-bold">{tx('Thông tin doanh nghiệp', 'Company information', '기업 정보')}</h3>
       <dl className="mt-4 grid gap-x-8 sm:grid-cols-2">
-        {rows.map((r) => (
-          <div key={r.k} className="flex justify-between gap-4 border-b py-3 text-sm">
-            <dt className="text-muted-foreground">{r.k}</dt>
-            <dd className="text-right font-medium">{r.v}</dd>
-          </div>
-        ))}
+        {rows.map((r) => {
+          // a blank field reads as a bug; say plainly that the company has not filled it in
+          const empty = r.v == null || r.v === '' || r.v === '—'
+          return (
+            <div key={r.k} className="flex justify-between gap-4 border-b py-3 text-sm">
+              <dt className="text-muted-foreground">{r.k}</dt>
+              <dd className={cn('text-right', empty ? 'text-muted-foreground' : 'font-medium')}>{empty ? tx('Chưa cung cấp', 'Not provided', '미제공') : r.v}</dd>
+            </div>
+          )
+        })}
       </dl>
       {f.legalVerified.length > 0 && (
         <p className="mt-4 flex flex-wrap items-center gap-2 rounded-xl bg-success-soft px-4 py-3 text-sm text-success">
@@ -544,7 +546,7 @@ function ContactDialog({ id, name, email }: { id: string; name: string; email: s
             const fd = new FormData(e.currentTarget)
             liveApi.sendBusinessRfq(id, { subject: String(fd.get('subject') ?? ''), content: String(fd.get('content') ?? '') }).then(() => setSent(true), (err: Error) => toast({ kind: 'info', title: err.message }))
           }}>
-            <Field label={t.requests.to} htmlFor="c-to"><Input id="c-to" value={email} readOnly className="bg-muted" /></Field>
+            <Field label={t.requests.to} htmlFor="c-to"><Input id="c-to" placeholder={tx('Chưa cung cấp', 'Not provided', '미제공')} value={email} readOnly className="bg-muted" /></Field>
             <Field label={t.requests.subject} htmlFor="c-sub"><Input id="c-sub" name="subject" required placeholder="RFQ – …" /></Field>
             <Field label={t.product.message} htmlFor="c-msg"><Textarea id="c-msg" name="content" required placeholder={t.product.messagePh} /></Field>
             <div className="flex justify-end gap-2">

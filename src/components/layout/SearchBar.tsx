@@ -12,11 +12,13 @@ import { cn, img } from '@/lib/utils'
 
 export type Scope = 'products' | 'suppliers' | 'requests'
 
-export function SearchBar({ size = 'md', className, autoFocusKey }: { size?: 'md' | 'lg'; className?: string; autoFocusKey?: boolean }) {
+/** `initialQuery`/`initialScope` mirror the current URL on result pages, so the field always shows what was searched. */
+export function SearchBar({ size = 'md', className, autoFocusKey, autoFocus, initialQuery = '', initialScope = 'products', onSubmitted }: { size?: 'md' | 'lg'; className?: string; autoFocusKey?: boolean; autoFocus?: boolean; initialQuery?: string; initialScope?: Scope; onSubmitted?: () => void }) {
   const { t, L } = useI18n()
   const navigate = useNavigate()
-  const [scope, setScope] = useState<Scope>('products')
-  const [q, setQ] = useState('')
+  const [scope, setScope] = useState<Scope>(initialScope)
+  const [q, setQ] = useState(initialQuery)
+  useEffect(() => setQ(initialQuery), [initialQuery])
   const [open, setOpen] = useState(false)
   const [phIndex, setPhIndex] = useState(0)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -70,8 +72,9 @@ export function SearchBar({ size = 'md', className, autoFocusKey }: { size?: 'md
   function submit(term = q) {
     setOpen(false)
     const path = scope === 'suppliers' ? '/suppliers' : scope === 'requests' ? '/requests' : '/search'
-    navigate(`${path}?q=${encodeURIComponent(term.trim())}`)
+    navigate(term.trim() ? `${path}?q=${encodeURIComponent(term.trim())}` : path)
     inputRef.current?.blur()
+    onSubmitted?.()
   }
 
   const scopes: Scope[] = ['products', 'suppliers', 'requests']
@@ -90,6 +93,16 @@ export function SearchBar({ size = 'md', className, autoFocusKey }: { size?: 'md
         )}
         role="search"
       >
+        {lg && (
+          <Select
+            value={scope}
+            onValueChange={setScope}
+            aria-label={t.ui.scope}
+            options={scopes.map((s) => ({ value: s, label: t.search.scopes[s] }))}
+            className="mr-1 h-full w-auto max-w-[42%] shrink-0 gap-1 rounded-full border-0 bg-muted pl-3 pr-2 text-xs font-semibold shadow-none focus:ring-0 data-[state=open]:ring-0 md:hidden"
+            contentClassName="min-w-40"
+          />
+        )}
         {!lg && (
           <Select
             value={scope}
@@ -114,18 +127,21 @@ export function SearchBar({ size = 'md', className, autoFocusKey }: { size?: 'md
           ))}
         </div>
         <div className="relative flex min-w-0 flex-1 items-center">
-          <Search className={cn('ml-2 shrink-0 text-muted-foreground md:hidden', lg ? 'size-5' : 'size-4')} />
+          <Search className={cn('ml-2 shrink-0 text-muted-foreground md:hidden', lg ? 'size-5 max-md:hidden' : 'size-4')} />
           <input
             ref={inputRef}
             value={q}
             onChange={(e) => setQ(e.target.value)}
             onFocus={() => setOpen(true)}
+            autoFocus={autoFocus}
+            enterKeyHint="search"
+            type="search"
             aria-label={t.search.submit}
             className={cn('peer h-full w-full min-w-0 bg-transparent px-2 text-foreground outline-none placeholder:text-transparent focus-visible:outline-none', lg ? 'text-base' : 'text-sm')}
             placeholder={t.search.placeholders[phIndex]}
           />
           {!q && (
-            <div className="pointer-events-none absolute inset-y-0 left-2 right-2 flex items-center overflow-hidden max-md:left-9">
+            <div className={cn('pointer-events-none absolute inset-y-0 left-2 right-2 flex items-center overflow-hidden', !lg && 'max-md:left-9')}>
               <AnimatePresence mode="wait">
                 <motion.span
                   key={phIndex + t.search.placeholders[0]!}
@@ -185,7 +201,7 @@ export function SearchBar({ size = 'md', className, autoFocusKey }: { size?: 'md
             ) : (
               <div className="grid gap-5 p-4 md:grid-cols-[1.2fr_1fr]">
                 <div>
-                  <p className="mb-2.5 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                  <p className="mb-2.5 flex items-center gap-1.5 text-[13px] font-bold text-muted-foreground">
                     <Flame className="size-3.5 text-live" /> {t.search.trending}
                   </p>
                   <div className="flex flex-wrap gap-2">
@@ -208,7 +224,7 @@ export function SearchBar({ size = 'md', className, autoFocusKey }: { size?: 'md
                   </div>
                 </div>
                 <div>
-                  <p className="mb-2.5 text-xs font-bold uppercase tracking-wider text-muted-foreground">{t.search.recent}</p>
+                  <p className="mb-2.5 text-[13px] font-bold text-muted-foreground">{t.search.recent}</p>
                   <div className="grid grid-cols-2 gap-1">
                     {categories.slice(0, 6).map((c) => {
                       const Icon = categoryIcons[c.icon]

@@ -1,5 +1,6 @@
 import { IMG, type Product } from '@/data/mock'
 import { arr, bi, id, num, str, url, type Raw } from './common'
+import { formatTerms } from '@/lib/utils'
 
 /** ProductListItemResponse | ProductResponse -> FE Product. Fields BE does not expose yet (specs, leadTime) stay empty. */
 export function toProduct(r: Raw): Product {
@@ -18,7 +19,7 @@ export function toProduct(r: Raw): Product {
     moq: num(r.moq),
     priceFob: num(r.priceFob),
     priceCif: num(r.priceCif),
-    paymentTerms: str(r.paymentTerms),
+    paymentTerms: formatTerms(str(r.paymentTerms)),
     // certificate labels (ISO 9001...) come from certificateLabels; `certificates` holds uploaded file URLs and is only a fallback for old rows
     certificates: arr<string>(r.certificateLabels).length ? arr<string>(r.certificateLabels) : arr<string>(r.certificates).filter((c) => !/^(https?:)?\//.test(c)),
     viewCount: num(r.viewCount),

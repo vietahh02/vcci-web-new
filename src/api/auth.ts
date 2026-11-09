@@ -35,3 +35,11 @@ export async function fetchSession(): Promise<SessionInfo> {
     completion: typeof r.completion === 'number' ? r.completion : undefined, organizationId: r.organizationId ? String(r.organizationId) : undefined,
   }
 }
+
+/** POST /api/auth/forgot-password — same answer whether or not the account exists. */
+export const forgotPassword = (email: string) =>
+  apiFetch('/api/auth/forgot-password', { method: 'POST', anon: true, json: { usernameOrEmail: email } })
+
+/** POST /api/auth/complete-password-reset — token from the reset email link. */
+export const completePasswordReset = (token: string, password: string, confirmPassword: string) =>
+  apiFetch('/api/auth/complete-password-reset', { method: 'POST', anon: true, json: { token, password, confirmPassword } })

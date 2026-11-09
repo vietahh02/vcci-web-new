@@ -174,11 +174,11 @@ function QuoteSheet({ open, onOpenChange, requestId, to, subject, buyerOrgId }: 
             {channel === 'chat' ? (
               <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); void sendChat() }}>
                 <Field label={tx('Sản phẩm báo giá', 'Product to quote', '견적 제품')} htmlFor="q-prod">
-                  <Select id="q-prod" value={productId} onValueChange={setProductId} placeholder="—" options={(products ?? []).map((p) => ({ value: p.id, label: p.productName || p.id }))} />
+                  <Select id="q-prod" value={productId} onValueChange={setProductId} placeholder={tx('Chọn sản phẩm', 'Choose a product', '제품 선택')} options={(products ?? []).map((p) => ({ value: p.id, label: p.productName || p.id }))} />
                 </Field>
                 <div className="grid grid-cols-2 gap-3">
-                  <Field label={t.requests.quantity} htmlFor="q-qty"><Input id="q-qty" type="number" min={1} value={qty} onChange={(e) => setQty(e.target.value)} /></Field>
-                  <Field label={tx('Mã yêu cầu', 'Request code', '요청 코드')} htmlFor="q-rid"><Input id="q-rid" value={requestId} readOnly className="bg-muted" /></Field>
+                  <Field label={t.requests.quantity} htmlFor="q-qty"><Input id="q-qty" placeholder={tx('VD: 1000', 'e.g. 1000', '예: 1000')} type="number" min={1} value={qty} onChange={(e) => setQty(e.target.value)} /></Field>
+                  <Field label={tx('Mã yêu cầu', 'Request code', '요청 코드')} htmlFor="q-rid"><Input id="q-rid" placeholder={tx('Chưa cung cấp', 'Not provided', '미제공')} value={requestId} readOnly className="bg-muted" /></Field>
                 </div>
                 <Field label={t.requests.content} htmlFor="q-note"><Textarea id="q-note" className="min-h-28" value={note} onChange={(e) => setNote(e.target.value)} placeholder={t.ui.quotePh} /></Field>
                 <p className="rounded-2xl bg-primary-soft p-3 text-xs text-primary">{tx('Báo giá sẽ được gửi vào hội thoại B2B với doanh nghiệp mua, kèm mã yêu cầu và thẻ sản phẩm.', 'The quote is posted in the B2B conversation with the buyer, with the request code and product card.', '견적은 구매 기업과의 B2B 대화에 요청 코드와 제품 카드와 함께 전송됩니다.')}</p>
@@ -194,12 +194,12 @@ function QuoteSheet({ open, onOpenChange, requestId, to, subject, buyerOrgId }: 
                   (err: Error) => toast({ kind: 'info', title: err.message }),
                 )
               }}>
-                <Field label={t.requests.to} htmlFor="q-to"><Input id="q-to" value={to} readOnly className="bg-muted" /></Field>
+                <Field label={t.requests.to} htmlFor="q-to"><Input id="q-to" placeholder={tx('Chưa cung cấp', 'Not provided', '미제공')} value={to} readOnly className="bg-muted" /></Field>
                 <div className="grid grid-cols-2 gap-3">
                   <Field label="CC" htmlFor="q-cc"><Input id="q-cc" name="cc" type="email" placeholder="sales@company.vn" /></Field>
-                  <Field label="BCC" htmlFor="q-bcc"><Input id="q-bcc" name="bcc" type="email" /></Field>
+                  <Field label="BCC" htmlFor="q-bcc"><Input id="q-bcc" placeholder={tx('Email nhận bản sao (không bắt buộc)', 'Copy to this email (optional)', '사본 받을 이메일(선택)')} name="bcc" type="email" /></Field>
                 </div>
-                <Field label={t.requests.subject} htmlFor="q-sub"><Input id="q-sub" name="subject" defaultValue={subject} required /></Field>
+                <Field label={t.requests.subject} htmlFor="q-sub"><Input id="q-sub" placeholder={tx('Tiêu đề email báo giá', 'Quotation email subject', '견적 이메일 제목')} name="subject" defaultValue={subject} required /></Field>
                 <Field label={t.requests.content} htmlFor="q-body"><Textarea id="q-body" name="content" className="min-h-36" required placeholder={t.ui.quotePh} /></Field>
                 <div>
                   <p className="mb-1.5 text-[13px] font-semibold">{t.requests.attachments}</p>

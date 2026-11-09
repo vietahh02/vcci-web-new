@@ -1,7 +1,7 @@
 import { AnimatePresence, motion } from 'motion/react'
 import { Award, CheckCircle2, CreditCard, MapPin, MessageSquare, Package, Send, Share2, ShieldCheck } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { Link, useParams, useSearchParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { getCategory, getProduct, liveApi, USE_MOCK, useBusiness, useRelatedProducts } from '@/api'
 import { openBusinessChat } from '@/api/chat'
 import { businessStub } from '@/api/adapters/business'
@@ -16,6 +16,8 @@ import { Dialog, DialogContent, DialogTrigger, UnderlineTabs, useToast } from '@
 import { Badge, Button, buttonClass, Field, Input, Skeleton, Textarea } from '@/components/ui/primitives'
 import NotFound from '@/pages/NotFound'
 import { useI18n } from '@/lib/i18n'
+import { useProfile } from '@/lib/profile'
+import { tx } from '@/lib/tx'
 import { cn, formatMoney, formatNumber, img } from '@/lib/utils'
 
 export default function ProductDetail() {
@@ -56,6 +58,7 @@ function ProductView({ product }: { product: Product }) {
   const [tab, setTab] = useState('overview')
   const [zoom, setZoom] = useState({ on: false, x: 50, y: 50 })
   const related = useRelatedProducts(product.id, product.categoryId).data ?? []
+  const none = tx('Chưa cung cấp', 'Not provided', '미제공')
 
   return (
     <div className="container-page pt-6">
@@ -111,7 +114,7 @@ function ProductView({ product }: { product: Product }) {
           <Reveal>
             <div className="flex flex-wrap items-center gap-2">
               {category && <Badge variant="secondary">{L(category.categoryName)}</Badge>}
-              <span className="font-mono text-xs text-muted-foreground">{product.productCode}</span>
+              <span className="text-[13px] tabular-nums text-muted-foreground">{t.ui.productCode} {product.productCode}</span>
             </div>
             <h1 className="mt-3 text-2xl font-extrabold leading-tight tracking-tight md:text-[32px]">{L(product.productName)}</h1>
             <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
@@ -120,34 +123,34 @@ function ProductView({ product }: { product: Product }) {
             </div>
           </Reveal>
 
-          <Reveal delay={0.08} className="mt-6 overflow-hidden rounded-2xl border bg-gradient-to-br from-primary-soft/70 via-card to-card">
-            <div className="grid grid-cols-2 divide-x">
+          <Reveal delay={0.08} className="mt-6 overflow-hidden rounded-2xl bg-primary-soft">
+            <div className="grid grid-cols-2">
               <div className="p-5">
-                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t.common.fob}</p>
-                <p className="mt-1 text-3xl font-extrabold tracking-tight text-primary">{formatMoney(product.priceFob)}</p>
+                <p className="text-[13px] font-semibold text-muted-foreground">{t.common.fob}</p>
+                <p className="mt-1 text-3xl font-extrabold tracking-tight text-primary">{product.priceFob ? formatMoney(product.priceFob) : none}</p>
                 <p className="text-xs text-muted-foreground">/ {product.unit}</p>
               </div>
               <div className="p-5">
-                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t.common.cif}</p>
-                <p className="mt-1 text-3xl font-extrabold tracking-tight">{formatMoney(product.priceCif)}</p>
+                <p className="text-[13px] font-semibold text-muted-foreground">{t.common.cif}</p>
+                <p className="mt-1 text-3xl font-extrabold tracking-tight">{product.priceCif ? formatMoney(product.priceCif) : none}</p>
                 <p className="text-xs text-muted-foreground">/ {product.unit}</p>
               </div>
             </div>
-            <p className="border-t bg-muted/40 px-5 py-2.5 text-xs text-muted-foreground">{t.product.priceNote}</p>
+            <p className="bg-background/60 px-5 py-3 text-[13px] leading-relaxed text-foreground/80">{t.product.priceNote}. {tx('FOB: giao lên tàu tại cảng xuất. CIF: gồm cước và bảo hiểm tới cảng đích.', 'FOB: loaded on board at the port of export. CIF: includes freight and insurance to the destination port.', 'FOB: 수출항 본선 인도. CIF: 도착항까지 운임·보험 포함.')} <Link to="/help#terms" className="font-semibold text-primary hover:underline">{tx('Giải thích thuật ngữ', 'Glossary', '용어 설명')}</Link></p>
           </Reveal>
 
           <Stagger className="mt-5 grid grid-cols-2 gap-3">
             {[
-              { icon: Package, label: t.common.moq, value: `${formatNumber(product.moq, locale)} ${product.unit}` },
-              { icon: MapPin, label: t.common.origin, value: product.origin },
-              { icon: CreditCard, label: t.common.payment, value: product.paymentTerms },
-              { icon: ShieldCheck, label: t.common.certificates, value: product.certificates.join(', ') },
+              { icon: Package, label: tx('MOQ · đặt tối thiểu', 'MOQ · minimum order', 'MOQ · 최소 주문'), value: product.moq ? `${formatNumber(product.moq, locale)} ${product.unit}` : none },
+              { icon: MapPin, label: t.common.origin, value: product.origin || none },
+              { icon: CreditCard, label: t.common.payment, value: product.paymentTerms || none },
+              { icon: ShieldCheck, label: t.common.certificates, value: product.certificates.join(', ') || none },
             ].map((it) => (
-              <StaggerItem key={it.label} className="flex gap-3 rounded-xl border p-3.5">
+              <StaggerItem key={it.label} className="flex gap-3 rounded-xl bg-muted/60 p-3.5">
                 <it.icon className="mt-0.5 size-4 shrink-0 text-primary" />
                 <div className="min-w-0">
-                  <p className="text-xs text-muted-foreground">{it.label}</p>
-                  <p className="mt-0.5 text-sm font-semibold">{it.value}</p>
+                  <p className="text-[13px] text-muted-foreground">{it.label}</p>
+                  <p className={cn('mt-0.5 text-sm font-semibold', it.value === none && 'font-normal text-muted-foreground')}>{it.value}</p>
                 </div>
               </StaggerItem>
             ))}
@@ -175,16 +178,16 @@ function ProductView({ product }: { product: Product }) {
             />
             <AnimatePresence mode="wait">
               <motion.div key={tab} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.2 }} className="py-5">
-                {tab === 'overview' && <p className="leading-relaxed text-foreground/85">{L(product.description)}</p>}
+                {tab === 'overview' && <p className="leading-relaxed text-foreground/90">{L(product.description) || none}</p>}
                 {tab === 'specs' && (
                   <dl className="divide-y rounded-xl border">
                     {[
                       { label: t.ui.productCode, value: product.productCode },
                       { label: t.searchPage.category, value: category ? L(category.categoryName) : product.industry },
-                      { label: t.common.origin, value: product.origin },
-                      { label: t.common.unit, value: product.unit },
-                      { label: t.common.moq, value: `${formatNumber(product.moq, locale)} ${product.unit}` },
-                      { label: t.common.payment, value: product.paymentTerms },
+                      { label: t.common.origin, value: product.origin || none },
+                      { label: t.common.unit, value: product.unit || none },
+                      { label: t.common.moq, value: product.moq ? `${formatNumber(product.moq, locale)} ${product.unit}` : none },
+                      { label: t.common.payment, value: product.paymentTerms || none },
                     ].map((r) => (
                       <div key={r.label} className="grid grid-cols-[150px_1fr] gap-4 px-4 py-3 text-sm">
                         <dt className="text-muted-foreground">{r.label}</dt>
@@ -194,17 +197,14 @@ function ProductView({ product }: { product: Product }) {
                   </dl>
                 )}
                 {tab === 'certs' && (
-                  <div className="grid gap-3 sm:grid-cols-2">
+                  product.certificates.length ? <div className="grid gap-3 sm:grid-cols-2">
                     {product.certificates.map((c) => (
-                      <div key={c} className="flex items-center gap-3 rounded-xl border p-4">
+                      <div key={c} className="flex items-center gap-3 rounded-xl bg-muted/60 p-4">
                         <div className="grid size-10 place-items-center rounded-lg bg-gold-soft text-gold"><Award className="size-5" /></div>
-                        <div>
-                          <p className="font-semibold">{c}</p>
-                          <p className="text-xs text-muted-foreground">PDF · 2026</p>
-                        </div>
+                        <p className="font-semibold">{c}</p>
                       </div>
                     ))}
-                  </div>
+                  </div> : <p className="text-muted-foreground">{tx('Nhà cung cấp chưa khai chứng nhận cho sản phẩm này.', 'The supplier has not listed certificates for this product.', '공급업체가 이 상품의 인증을 등록하지 않았습니다.')}</p>
                 )}
               </motion.div>
             </AnimatePresence>
@@ -213,8 +213,8 @@ function ProductView({ product }: { product: Product }) {
 
         {/* supplier sticky */}
         <aside className="lg:col-start-2 xl:col-start-auto">
-          <Reveal className="rounded-2xl border bg-card p-5 xl:sticky xl:top-32">
-            <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{t.product.supplierCard}</p>
+          <Reveal className="rounded-2xl bg-muted/60 p-5 xl:sticky xl:top-32">
+            <h2 className="text-sm font-bold">{t.product.supplierCard}</h2>
             <div className="mt-4 flex items-start gap-3">
               <CompanyMark name={supplier.nameEn} accent={supplier.accent} className="size-12" />
               <div className="min-w-0">
@@ -224,13 +224,13 @@ function ProductView({ product }: { product: Product }) {
             </div>
             <dl className="mt-5 space-y-2.5 text-sm">
               {[
-                [t.supplier.businessType, t.supplier.types[supplier.businessType]],
-                [t.supplier.address, supplier.province],
-                [t.common.employees, supplier.employees],
+                [t.supplier.businessType, t.supplier.types[supplier.businessType] || none],
+                [t.supplier.address, supplier.province || none],
+                [t.common.employees, supplier.employees || none],
               ].map(([k, v]) => (
                 <div key={k} className="flex justify-between gap-3">
                   <dt className="text-muted-foreground">{k}</dt>
-                  <dd className="text-right font-semibold">{v}</dd>
+                  <dd className={cn('text-right font-semibold', v === none && 'font-normal text-muted-foreground')}>{v}</dd>
                 </div>
               ))}
             </dl>
@@ -252,18 +252,32 @@ function ProductView({ product }: { product: Product }) {
 function RfqDialog({ product }: { product: Product }) {
   const { t, L } = useI18n()
   // arrived from a show's product list: the quote counts as interest at that show. A plain visit sends nothing.
-  const [params] = useSearchParams()
+  const [params, setParams] = useSearchParams()
   const sourceEventPid = /^s-\d+$/.exec(params.get('fromEvent') ?? '')?.[0]
   const toast = useToast()
-  const [open, setOpen] = useState(false)
+  const { session } = useProfile()
+  const navigate = useNavigate()
+  const { pathname } = useLocation()
+  // ?rfq=1 is the way back from /login: reopen the dialog with what the guest had typed
+  const draftKey = `rfq-draft:${product.id}`
+  const [draft] = useState<{ quantity?: string; destination?: string; message?: string }>(() => {
+    try { return JSON.parse(sessionStorage.getItem(draftKey) ?? '{}') } catch { return {} }
+  })
+  const [open, setOpen] = useState(() => params.get('rfq') === '1')
   const [sent, setSent] = useState(false)
+  const close = (v: boolean) => {
+    setOpen(v)
+    if (v) return
+    setSent(false)
+    if (params.has('rfq')) { const n = new URLSearchParams(params); n.delete('rfq'); setParams(n, { replace: true }) }
+  }
 
   return (
-    <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) setSent(false) }}>
+    <Dialog open={open} onOpenChange={close}>
       <DialogTrigger asChild>
         <Button size="lg" className="flex-1 sm:flex-none"><Send /> {t.common.sendInquiry}</Button>
       </DialogTrigger>
-      <DialogContent title={t.product.rfqTitle} description={t.product.rfqDesc}>
+      <DialogContent title={t.product.rfqTitle} description={session ? tx('Yêu cầu được gửi tới email của nhà cung cấp.', 'The request goes to the supplier by email.', '요청은 공급업체 이메일로 전달됩니다.') : tx('Yêu cầu được gửi tới email của nhà cung cấp. Bạn soạn ngay được; khi gửi, bạn đăng nhập và nội dung đã soạn được giữ nguyên.', 'The request goes to the supplier by email. Write it now; when you send, you sign in and what you wrote is kept.', '요청은 공급업체 이메일로 전달됩니다. 지금 작성하고, 보낼 때 로그인하면 내용이 그대로 유지됩니다.')}>
         <AnimatePresence mode="wait">
           {sent ? (
             <SuccessState key="ok" title={t.product.sent} desc={t.product.sentDesc} onClose={() => setOpen(false)} />
@@ -276,13 +290,24 @@ function RfqDialog({ product }: { product: Product }) {
                 e.preventDefault()
                 const fd = new FormData(e.currentTarget)
                 const body = { quantity: Number(fd.get('quantity')), destination: String(fd.get('destination') ?? ''), message: String(fd.get('message') ?? '') }
-                if (USE_MOCK) {
+                if (!session && !USE_MOCK) {
+                  try { sessionStorage.setItem(draftKey, JSON.stringify({ ...body, quantity: String(body.quantity) })) } catch { /* private mode: the guest retypes */ }
+                  const back = new URLSearchParams(params)
+                  back.set('rfq', '1')
+                  navigate(`/login?return=${encodeURIComponent(`${pathname}?${back}`)}`)
+                  return
+                }
+                const done = () => {
+                  try { sessionStorage.removeItem(draftKey) } catch { /* nothing stored */ }
                   setSent(true)
                   toast({ kind: 'success', title: t.product.sent, description: L(product.productName) })
+                }
+                if (USE_MOCK) {
+                  done()
                   return
                 }
                 liveApi.sendProductRfq(product.id, { ...body, sourceEventPid }).then(
-                  () => { setSent(true); toast({ kind: 'success', title: t.product.sent, description: L(product.productName) }) },
+                  done,
                   (err: Error) => toast({ kind: 'info', title: err.message }),
                 )
               }}
@@ -295,13 +320,14 @@ function RfqDialog({ product }: { product: Product }) {
                 </div>
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
-                <Field label={t.product.quantity} htmlFor="rfq-q"><Input id="rfq-q" name="quantity" type="number" min={product.moq} defaultValue={product.moq} required /></Field>
-                <Field label={t.product.destination} htmlFor="rfq-d"><Input id="rfq-d" name="destination" placeholder="Busan, KR" required /></Field>
+                <Field label={t.product.quantity} htmlFor="rfq-q"><Input id="rfq-q" placeholder={tx('VD: 1000', 'e.g. 1000', '예: 1000')} name="quantity" type="number" min={product.moq || 1} defaultValue={draft.quantity ?? (product.moq || '')} required /></Field>
+                <Field label={t.product.destination} htmlFor="rfq-d"><Input id="rfq-d" name="destination" placeholder="Busan, KR" defaultValue={draft.destination} required /></Field>
               </div>
-              <Field label={t.product.message} htmlFor="rfq-m"><Textarea id="rfq-m" name="message" placeholder={t.product.messagePh} required /></Field>
-              <div className="flex justify-end gap-2 pt-2">
-                <Button variant="ghost" onClick={() => setOpen(false)}>{t.common.cancel}</Button>
-                <Button type="submit"><Send /> {t.common.submit}</Button>
+              <Field label={t.product.message} htmlFor="rfq-m"><Textarea id="rfq-m" name="message" placeholder={t.product.messagePh} defaultValue={draft.message} required /></Field>
+              <div className="flex flex-wrap items-center justify-end gap-2 pt-2">
+                {!session && !USE_MOCK && <Link to="/register" className="mr-auto text-sm font-semibold text-primary hover:underline">{tx('Chưa có tài khoản? Đăng ký', 'No account? Register', '계정이 없나요? 등록')}</Link>}
+                <Button variant="ghost" onClick={() => close(false)}>{t.common.cancel}</Button>
+                <Button type="submit"><Send /> {session || USE_MOCK ? t.common.submit : tx('Đăng nhập để gửi', 'Sign in to send', '로그인 후 보내기')}</Button>
               </div>
             </motion.form>
           )}

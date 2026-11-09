@@ -184,10 +184,10 @@ export function VisitorRegistration({ show, open, onOpenChange, visitor }: { sho
           {view === 0 && (
             <>
               <div className="grid gap-4 sm:grid-cols-2">
-                <Field label={req(x.reg.name)} htmlFor="v-name"><Input id="v-name" value={form.name} onChange={(e) => set('name', e.target.value)} /></Field>
-                <Field label={req(x.reg.email)} htmlFor="v-email" hint={x.reg.one}><Input id="v-email" type="email" value={form.email} onChange={(e) => set('email', e.target.value)} /></Field>
-                <Field label={optional(x.reg.phone)} htmlFor="v-phone"><Input id="v-phone" value={form.phone} onChange={(e) => set('phone', e.target.value)} /></Field>
-                <Field label={optional(x.reg.company)} htmlFor="v-co"><Input id="v-co" value={form.company} onChange={(e) => set('company', e.target.value)} /></Field>
+                <Field label={req(x.reg.name)} htmlFor="v-name"><Input id="v-name" placeholder={tx('VD: Nguyễn Văn An', 'e.g. Nguyen Van An', '예: Nguyen Van An')} value={form.name} onChange={(e) => set('name', e.target.value)} /></Field>
+                <Field label={req(x.reg.email)} htmlFor="v-email" hint={x.reg.one}><Input id="v-email" placeholder={'ban@congty.vn'} type="email" value={form.email} onChange={(e) => set('email', e.target.value)} /></Field>
+                <Field label={optional(x.reg.phone)} htmlFor="v-phone"><Input id="v-phone" placeholder={tx('VD: 0912 345 678', 'e.g. +84 912 345 678', '예: +84 912 345 678')} value={form.phone} onChange={(e) => set('phone', e.target.value)} /></Field>
+                <Field label={optional(x.reg.company)} htmlFor="v-co"><Input id="v-co" placeholder={tx('Tên công ty của bạn', 'Your company name', '회사명')} value={form.company} onChange={(e) => set('company', e.target.value)} /></Field>
                 <Field label={optional(x.reg.visitorType)} htmlFor="v-type">
                   <Select id="v-type" value={form.visitorType} onValueChange={(v) => set('visitorType', v)} options={VISITOR_TYPES.map((v) => ({ value: v, label: x.reg.visitorTypes[v] }))} />
                 </Field>
@@ -208,7 +208,7 @@ export function VisitorRegistration({ show, open, onOpenChange, visitor }: { sho
           {view === 1 && (
             <>
               <p className="text-sm text-muted-foreground">{x.reg.otpSent} <b className="text-foreground">{form.email}</b>. {USE_MOCK ? x.reg.otpHint : <>{x.reg.otpHintLive} {x.reg.registeredHint}</>}</p>
-              <Input maxLength={CONFIRM_CODE_LENGTH} autoCapitalize="characters" autoComplete="one-time-code" value={otp} disabled={locked} onChange={(e) => setOtp(e.target.value.replace(/[^0-9a-z]/gi, '').toUpperCase())} className={cn('h-14 text-center font-mono', otp.length > 6 ? 'text-lg tracking-widest' : 'text-2xl tracking-[0.6em]')} aria-label={x.reg.codeInput} />
+              <Input maxLength={CONFIRM_CODE_LENGTH} placeholder={tx('Mã trong email', 'Code from the email', '이메일 코드')} autoCapitalize="characters" autoComplete="one-time-code" value={otp} disabled={locked} onChange={(e) => setOtp(e.target.value.replace(/[^0-9a-z]/gi, '').toUpperCase())} className={cn('h-14 text-center font-mono', otp.length > 6 ? 'text-lg tracking-widest' : 'text-2xl tracking-[0.6em]')} aria-label={x.reg.codeInput} />
               {locked ? (
                 <p className="flex items-center gap-2 text-sm font-medium text-destructive"><ShieldAlert className="size-4" /> {x.reg.locked}</p>
               ) : (

@@ -132,7 +132,7 @@ export function ProfileRegistration({ ev, onDone }: { ev: EventItem; onDone: (in
               })}
             </div>
           ) : (
-            <Textarea className="min-h-20" value={answers[q.id] ?? ''} onChange={(e) => setAnswers((a) => ({ ...a, [q.id]: e.target.value }))} />
+            <Textarea className="min-h-20" placeholder={tx('Nhập câu trả lời của bạn', 'Your answer', '답변 입력')} value={answers[q.id] ?? ''} onChange={(e) => setAnswers((a) => ({ ...a, [q.id]: e.target.value }))} />
           )}
         </div>
       ))}

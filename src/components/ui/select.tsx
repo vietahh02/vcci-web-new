@@ -15,6 +15,7 @@ import * as SelectPrimitive from '@radix-ui/react-select'
 import { Check, ChevronDown, ChevronUp } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { fieldBase, menuItem, popoverContent } from '@/components/ui/styles'
+import { tx } from '@/lib/tx'
 import { cn } from '@/lib/utils'
 
 export type SelectOption<T extends string = string> = { value: T; label: ReactNode; disabled?: boolean }
@@ -42,6 +43,8 @@ const scrollButton = 'flex h-6 cursor-default items-center justify-center bg-pop
 export function Select<T extends string = string>({ options, value, defaultValue, onValueChange, placeholder, id, name, required, disabled, autoComplete, className, contentClassName, ...aria }: SelectProps<T>) {
   const noneShown = placeholder == null && options.some((o) => o.value === '')
   const toRadix = (v: string | undefined) => (v === '' && noneShown ? NONE : v)
+  // an empty select never shows a blank or a dash: it asks for a choice unless the caller worded it
+  const prompt = placeholder ?? (noneShown ? undefined : tx('Chọn…', 'Select…', '선택…'))
 
   return (
     <SelectPrimitive.Root value={toRadix(value)} defaultValue={toRadix(defaultValue)} onValueChange={(v) => onValueChange?.((v === NONE ? '' : v) as T)} name={name} required={required} disabled={disabled} autoComplete={autoComplete}>
@@ -50,7 +53,7 @@ export function Select<T extends string = string>({ options, value, defaultValue
         {...aria}
         className={cn(fieldBase, 'group flex h-10 items-center justify-between gap-2 rounded-full px-4 pr-3 text-left data-[placeholder]:text-muted-foreground/80 data-[state=open]:border-primary data-[state=open]:ring-4 data-[state=open]:ring-primary/12', className)}
       >
-        <span className="min-w-0 flex-1 truncate"><SelectPrimitive.Value placeholder={placeholder} /></span>
+        <span className="min-w-0 flex-1 truncate"><SelectPrimitive.Value placeholder={prompt} /></span>
         <SelectPrimitive.Icon asChild><ChevronDown className="size-4 shrink-0 text-muted-foreground transition-transform duration-200 group-data-[state=open]:rotate-180" /></SelectPrimitive.Icon>
       </SelectPrimitive.Trigger>
       <SelectPrimitive.Portal>

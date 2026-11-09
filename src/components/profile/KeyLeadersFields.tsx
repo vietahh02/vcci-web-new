@@ -47,7 +47,7 @@ export function LeadersFields({ value, onChange, omit }: { value: KeyLeaders; on
             const v = value[role.key][f]
             return f === 'gender' ? (
               <Field key={f} label={label} htmlFor={id}>
-                <Select id={id} value={v} onValueChange={(x) => onChange(role.key, f, x)} options={[{ value: '', label: '—' }, ...GENDERS.map((g) => ({ value: g.value, label: L(g) }))]} />
+                <Select id={id} placeholder={tx('Chọn giới tính', 'Choose gender', '성별 선택')} value={v} onValueChange={(x) => onChange(role.key, f, x)} options={[{ value: '', label: tx('Không chọn', 'None', '선택 안 함') }, ...GENDERS.map((g) => ({ value: g.value, label: L(g) }))]} />
               </Field>
             ) : (
               <Field key={f} label={label} htmlFor={id} className={f === 'fullName' && role.fields.length % 2 === 1 ? 'sm:col-span-2' : undefined}>

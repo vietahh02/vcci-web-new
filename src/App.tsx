@@ -11,7 +11,8 @@ import { ThemeProvider } from '@/lib/theme'
 import { ProfileProvider } from '@/lib/profile'
 import MyProfile from '@/pages/MyProfile'
 import About from '@/pages/About'
-import { Login, Register } from '@/pages/Auth'
+import { ForgotPassword, Login, Register, ResetPassword } from '@/pages/Auth'
+import { Help, Privacy, Terms } from '@/pages/Help'
 import EventDetail from '@/pages/EventDetail'
 import EventRegister from '@/pages/EventRegister'
 import Events from '@/pages/Events'
@@ -40,7 +41,7 @@ function ScrollToTop() {
 
 export default function App() {
   const location = useLocation()
-  const bare = location.pathname === '/login' || location.pathname === '/register'
+  const bare = ['/login', '/register', '/forgot-password', '/reset-password'].includes(location.pathname)
 
   return (
     <ThemeProvider>
@@ -79,6 +80,11 @@ export default function App() {
                     <Route path="/about" element={<About />} />
                     <Route path="/login" element={<Login />} />
                     <Route path="/register" element={<Register />} />
+                    <Route path="/forgot-password" element={<ForgotPassword />} />
+                    <Route path="/reset-password" element={<ResetPassword />} />
+                    <Route path="/help" element={<Help />} />
+                    <Route path="/privacy" element={<Privacy />} />
+                    <Route path="/terms" element={<Terms />} />
                     <Route path="/account/profile" element={<MyProfile />} />
                     <Route path="/account/catalog" element={<MyCatalog />} />
                     <Route path="/account/catalog/products/new" element={<ProductEditPage />} />

@@ -17,6 +17,7 @@ import { Select } from '@/components/ui/select'
 import { isOnAir } from '@/lib/eventStatus'
 import { useI18n } from '@/lib/i18n'
 import { useProfile } from '@/lib/profile'
+import { tx } from '@/lib/tx'
 import { CategoryTiles, EventsAgenda, FeaturedBusiness, SponsorTiers, Testimonials, WhyList } from '@/pages/home/sections'
 import { formatNumber, img } from '@/lib/utils'
 
@@ -51,11 +52,13 @@ function Hero() {
   const contentY = useTransform(scrollYProgress, [0, 1], [0, -60])
   const contentOpacity = useTransform(scrollYProgress, [0, 0.7], [1, 0])
 
+  // the footage plays on arrival (product decision); the pause button stays for anyone who wants it still.
+  // muted is set on the element too: React leaves the attribute off, and Chrome only autoplays muted media
   useEffect(() => {
-    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
-      videoRef.current?.pause()
-      setPlaying(false)
-    }
+    const v = videoRef.current
+    if (!v) return
+    v.muted = true
+    v.play().catch(() => setPlaying(false))
   }, [])
 
   const toggleVideo = () => {
@@ -64,6 +67,11 @@ function Hero() {
     if (v.paused) { void v.play(); setPlaying(true) } else { v.pause(); setPlaying(false) }
   }
 
+  const { session } = useProfile()
+  const doors = [
+    { to: '/search', title: tx('Tôi muốn mua', 'I want to buy', '구매하려고 해요'), sub: tx('Tìm sản phẩm, gửi yêu cầu báo giá', 'Find products, send an RFQ', '상품 찾기, 견적 요청') },
+    { to: session ? '/requests' : '/register', title: tx('Tôi muốn bán', 'I want to sell', '판매하려고 해요'), sub: tx('Nhận yêu cầu nhập khẩu, gửi báo giá', 'Get import requests, send quotes', '수입 요청 받기, 견적 보내기') },
+  ]
   const st = useHomeStats().data
   const trendingKeywords = useHomeTrending().data ?? []
   const stats = [
@@ -74,7 +82,7 @@ function Hero() {
   ].filter((s) => s.to > 0)
 
   return (
-    <section ref={ref} className="relative isolate overflow-hidden bg-navy pb-28 text-white md:pb-36">
+    <section ref={ref} className="relative isolate overflow-hidden bg-navy pb-[136px] text-white md:pb-[152px]">
       <motion.div style={{ y: bgY }} className="absolute inset-0 -z-30">
         <video
           ref={videoRef}
@@ -86,50 +94,68 @@ function Hero() {
           loop
           playsInline
           preload="auto"
+          onPlay={() => setPlaying(true)}
+          onPause={() => setPlaying(false)}
           aria-hidden
         />
       </motion.div>
-      <div className="absolute inset-0 -z-20 bg-[linear-gradient(100deg,#08082e_0%,rgb(8_8_46/0.88)_40%,rgb(0_40_70/0.45)_75%,rgb(8_8_46/0.3)_100%)]" />
-      <div className="absolute inset-x-0 bottom-0 -z-20 h-48 bg-gradient-to-t from-navy to-transparent" />
+      {/* flat neutral scrim: the footage stays visible, the type stays readable */}
+      <div className="absolute inset-0 -z-20 bg-navy/75" />
 
-      <motion.div style={{ y: contentY, opacity: contentOpacity }} className="container-page pt-16 md:pt-24">
-        <div className="max-w-3xl">
-          <motion.p initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }} className="text-[13px] font-semibold uppercase tracking-[0.18em] text-gold-bright">
-            {t.home.eyebrow}
-          </motion.p>
-          <h1 className="mt-4 text-[34px] font-extrabold leading-[1.08] tracking-tight sm:text-5xl lg:text-[64px]">
-            <WordsReveal key={t.home.heroTitleA} text={t.home.heroTitleA} className="block" />
-            <WordsReveal key={t.home.heroTitleB} text={t.home.heroTitleB} className="text-gold-gradient block" delay={0.25} />
-          </h1>
-          <motion.p initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, delay: 0.55 }} className="mt-5 max-w-2xl text-[15px] leading-relaxed text-white/75 md:text-lg">
-            {t.home.heroSub}
-          </motion.p>
-          <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, delay: 0.7 }} className="mt-8">
-            <SearchBar size="lg" autoFocusKey />
-          </motion.div>
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.95 }} className="mt-4 flex flex-wrap items-center gap-2 text-[13px]">
-            <span className="text-white/55">{t.search.trending}:</span>
-            {trendingKeywords.slice(0, 5).map((k) => (
-              <button key={k.en} onClick={() => navigate(`/search?q=${encodeURIComponent(L(k))}`)} className="rounded-full border border-white/15 bg-white/5 px-3 py-1 text-white/85 backdrop-blur transition hover:border-gold-bright/60 hover:text-white">
-                {L(k)}
-              </button>
+      <motion.div style={{ y: contentY, opacity: contentOpacity }} className="container-page pt-10 md:pt-16">
+        <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-end xl:grid-cols-[minmax(0,1fr)_380px]">
+          <div className="min-w-0">
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-gold-bright md:text-sm">{t.home.heroEyebrow}</p>
+            {/* each line stays on one row from sm up; the size follows the viewport so the longest line fits the column */}
+            <h1 className="mt-3 text-[34px] font-extrabold leading-[1.08] tracking-[-0.03em] sm:whitespace-nowrap sm:text-[clamp(36px,5.6vw,52px)] lg:text-[clamp(36px,3.9vw,76px)]">
+              <WordsReveal key={t.home.heroTitleA} text={t.home.heroTitleA} className="block" />
+              <WordsReveal key={t.home.heroTitleB} text={t.home.heroTitleB} delay={0.25} className="block text-gold-bright" />
+            </h1>
+            <motion.p initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.35 }} className="mt-5 max-w-2xl text-base leading-relaxed text-white/90 md:text-lg">
+              {t.home.heroSub}
+            </motion.p>
+            <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.5 }} className="mt-8 max-w-3xl">
+              <SearchBar size="lg" autoFocusKey />
+            </motion.div>
+            {trendingKeywords.length > 0 && (
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.7 }} className="mt-4 flex flex-wrap items-center gap-2 text-[13px]">
+                <span className="text-white/70">{t.search.trending}:</span>
+                {trendingKeywords.slice(0, 5).map((k) => (
+                  <button key={k.en} onClick={() => navigate(`/search?q=${encodeURIComponent(L(k))}`)} className="min-h-9 rounded-full bg-white/10 px-3.5 text-white transition hover:bg-white/20 active:scale-[0.97]">
+                    {L(k)}
+                  </button>
+                ))}
+              </motion.div>
+            )}
+          </div>
+          {/* two doors, by intent: the platform serves both sides equally */}
+          <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.6 }} className="grid gap-2 sm:grid-cols-2 lg:grid-cols-1">
+            {doors.map((d) => (
+              <Link key={d.to} to={d.to} className="group flex items-center justify-between gap-4 rounded-2xl bg-white/10 px-5 py-4 transition hover:bg-white hover:text-navy active:scale-[0.99]">
+                <span>
+                  <span className="block text-lg font-bold">{d.title}</span>
+                  <span className="block text-sm text-white/80 group-hover:text-navy/70">{d.sub}</span>
+                </span>
+                <ArrowRight className="size-5 shrink-0 transition-transform group-hover:translate-x-1" />
+              </Link>
             ))}
           </motion.div>
         </div>
       </motion.div>
 
-      <div className="container-page mt-14 flex items-end justify-between gap-6 md:mt-20">
-        <Stagger className="grid flex-1 grid-cols-2 gap-6 border-t border-white/15 pt-6 lg:grid-cols-4">
+      <div className="container-page mt-12 flex items-end justify-between gap-6 md:mt-16">
+        {/* remount once stats arrive: items mounted after the in-view trigger stay hidden */}
+        <Stagger key={stats.length} className="grid flex-1 grid-cols-2 gap-6 lg:grid-cols-4">
           {stats.map((s) => (
             <StaggerItem key={s.label}>
               <p className="text-2xl font-extrabold tracking-tight md:text-[34px]">
                 <CountUp to={s.to} format={(n) => formatNumber(Math.round(n), locale) + s.suffix} />
               </p>
-              <p className="mt-0.5 text-xs text-white/60 md:text-[13px]">{s.label}</p>
+              <p className="mt-0.5 text-[13px] text-white/75 md:text-sm">{s.label}</p>
             </StaggerItem>
           ))}
         </Stagger>
-        <button onClick={toggleVideo} className="hidden size-11 shrink-0 place-items-center rounded-full border border-white/25 bg-white/10 backdrop-blur transition hover:bg-white/20 md:grid" aria-label={playing ? t.ui.pauseVideo : t.ui.playVideo}>
+        <button onClick={toggleVideo} className="hidden size-11 shrink-0 place-items-center rounded-full bg-white/10 transition hover:bg-white/20 md:grid" aria-label={playing ? t.ui.pauseVideo : t.ui.playVideo}>
           {playing ? <Pause className="size-4" /> : <Play className="size-4" />}
         </button>
       </div>
@@ -154,17 +180,20 @@ function SourcingDock() {
   const ev = slides[slide]
 
   return (
-    <section className="container-page relative z-10 -mt-20 md:-mt-24">
-      <Reveal className={`grid gap-4 rounded-3xl border bg-card p-3 shadow-2xl shadow-navy/12 ${categories.length ? 'lg:grid-cols-[250px_1fr_310px]' : 'lg:grid-cols-[1fr_310px]'}`}>
+    <section className="container-page relative z-10 -mt-[96px] md:-mt-[104px]">
+      <Reveal className={`relative grid gap-4 rounded-3xl bg-card p-3 ${categories.length ? 'lg:grid-cols-[250px_1fr_310px]' : 'lg:grid-cols-[1fr_310px]'}`}>
+        {/* round the hero's inner bottom corners beside the card (hero bottom = card top + 104px); only where the gutter fits both radii */}
+        <span aria-hidden className="pointer-events-none absolute -left-6 top-[80px] hidden size-6 bg-[radial-gradient(circle_at_0_0,transparent_24px,var(--background)_24.5px)] min-[1520px]:block" />
+        <span aria-hidden className="pointer-events-none absolute -right-6 top-[80px] hidden size-6 bg-[radial-gradient(circle_at_100%_0,transparent_24px,var(--background)_24.5px)] min-[1520px]:block" />
         {/* categories rail */}
         {categories.length > 0 && <div className="hidden rounded-2xl bg-muted/50 p-2 lg:block">
-          <p className="px-3 pb-1.5 pt-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">{t.home.dock.categories}</p>
+          <h2 className="px-3 pb-1.5 pt-2 text-sm font-bold">{t.home.dock.categories}</h2>
           <ul>
             {categories.map((c) => {
               const Icon = categoryIcons[c.icon]
               return (
                 <li key={c.id}>
-                  <Link to={`/search?category=${c.id}`} className="group flex items-center gap-2.5 rounded-lg px-3 py-[7px] text-[13px] font-medium text-foreground/85 transition hover:bg-background hover:text-primary hover:shadow-sm">
+                  <Link to={`/search?category=${c.id}`} className="group flex items-center gap-2.5 rounded-lg px-3 py-[7px] text-[13px] font-medium text-foreground/85 transition hover:bg-background hover:text-primary">
                     <Icon className="size-4 text-muted-foreground transition group-hover:text-primary" />
                     <span className="flex-1 truncate">{L(c.categoryName)}</span>
                     <ChevronRight className="size-3.5 -translate-x-1 opacity-0 transition group-hover:translate-x-0 group-hover:opacity-100" />
@@ -189,7 +218,7 @@ function SourcingDock() {
               className="absolute inset-0 size-full object-cover"
             />
           </AnimatePresence>}
-          <div className="absolute inset-0 bg-gradient-to-r from-navy via-navy/75 to-transparent" />
+          <div className="absolute inset-0 bg-navy/60" />
           <div className="relative flex h-full flex-col justify-end p-6 md:p-8">
             {ev && <AnimatePresence mode="wait">
               <motion.div key={ev.id} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.45 }}>
@@ -221,7 +250,7 @@ function SourcingDock() {
 
         {/* account + quick RFQ */}
         <div className="flex flex-col gap-3">
-          {!session && <div className="rounded-2xl border bg-gradient-to-br from-primary-soft to-background p-4">
+          {!session && <div className="rounded-2xl bg-primary-soft p-4">
             <div className="flex items-center gap-3">
               <div className="grid size-11 place-items-center rounded-full bg-primary/10 text-primary"><UserRound className="size-5" /></div>
               <div>
@@ -229,14 +258,14 @@ function SourcingDock() {
                 <p className="text-xs text-muted-foreground">{t.brand.tagline}</p>
               </div>
             </div>
-            <p className="mt-3 text-[12.5px] leading-relaxed text-muted-foreground">{t.home.dock.welcomeSub}</p>
+            <p className="mt-3 text-[13px] leading-relaxed text-foreground/80">{t.home.dock.welcomeSub}</p>
             <div className="mt-3 grid grid-cols-2 gap-2">
               <Link to="/login" className={buttonClass('outline', 'sm', 'h-9')}>{t.nav.login}</Link>
               <Link to="/register" className={buttonClass('default', 'sm', 'h-9')}>{t.nav.register}</Link>
             </div>
           </div>}
           <form
-            className="flex-1 rounded-2xl border p-4"
+            className="flex-1 rounded-2xl bg-muted/60 p-4"
             onSubmit={(e) => {
               e.preventDefault()
               // the real post (and its required fields) happens on the RFQ form: this block only pre-fills it
@@ -244,7 +273,7 @@ function SourcingDock() {
               navigate(`/requests?${new URLSearchParams({ post: '1', need, qty, unit })}`)
             }}
           >
-            <p className="flex items-center gap-2 text-sm font-bold"><FilePlus2 className="size-4 text-gold" /> {t.home.dock.quickRfq}</p>
+            <h2 className="flex items-center gap-2 text-sm font-bold"><FilePlus2 className="size-4 text-gold" /> {t.home.dock.quickRfq}</h2>
             <p className="mt-1 text-xs text-muted-foreground">{t.home.dock.quickRfqSub}</p>
             <Input className="mt-3 h-9" placeholder={t.home.dock.whatNeed} value={need} onChange={(e) => setNeed(e.target.value)} aria-label={t.home.dock.whatNeed} />
             <div className="mt-2 grid grid-cols-[1fr_90px] gap-2">
@@ -312,7 +341,7 @@ function RequestsSection() {
       <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
         <div className="relative space-y-3">
           <AnimatePresence mode="popLayout" initial={false}>
-            {list.map((r, k) => (
+            {list.map((r) => (
               <motion.div
                 key={r.id}
                 layout
@@ -322,15 +351,6 @@ function RequestsSection() {
                 transition={{ type: 'spring', bounce: 0.18, duration: 0.7 }}
                 className="relative"
               >
-                {pager.page === 0 && k === 0 && (
-                  <motion.span
-                    initial={{ opacity: 0, x: -6 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    className="absolute -left-2 -top-2 z-10 rounded-md bg-gold-bright px-1.5 py-0.5 text-[10px] font-extrabold uppercase text-[#2b1d00] shadow"
-                  >
-                    New
-                  </motion.span>
-                )}
                 <RequestCard request={r} />
               </motion.div>
             ))}
@@ -338,12 +358,9 @@ function RequestsSection() {
           <Pager {...pager} className="pt-2" />
         </div>
         <Reveal className="relative overflow-hidden rounded-2xl bg-navy p-6 text-white md:p-7">
-          <div className="absolute -right-16 -top-16 size-56 rounded-full bg-primary/40 blur-3xl" />
-          <div className="bg-grid absolute inset-0 opacity-40" />
           <div className="relative">
-            <p className="text-xs font-bold uppercase tracking-[0.16em] text-gold-bright">{t.home.howItWorks}</p>
+            <h3 className="text-2xl font-extrabold tracking-tight">{t.home.howItWorks}</h3>
             <ol className="relative mt-6 space-y-6">
-              <span className="absolute bottom-3 left-[17px] top-3 w-px bg-gradient-to-b from-gold-bright via-primary to-transparent" />
               {t.home.steps.map((s, i) => (
                 <motion.li
                   key={s.t}
@@ -356,7 +373,7 @@ function RequestsSection() {
                   <span className="relative grid size-9 shrink-0 place-items-center rounded-full bg-navy text-sm font-extrabold ring-2 ring-gold-bright/70">{i + 1}</span>
                   <div>
                     <p className="font-bold">{s.t}</p>
-                    <p className="mt-0.5 text-[13px] leading-relaxed text-white/65">{s.d}</p>
+                    <p className="mt-0.5 text-sm leading-relaxed text-white/80">{s.d}</p>
                   </div>
                 </motion.li>
               ))}
@@ -365,7 +382,7 @@ function RequestsSection() {
               <Link to="/requests" className={buttonClass('gold', 'md')}>{t.requests.sendQuote} <ArrowRight /></Link>
               <Link to="/requests?post=1" className={buttonClass('ghost', 'md', 'text-white hover:bg-white/10')}>{t.nav.postRequest}</Link>
             </div>
-            <div className="mt-6 flex flex-wrap gap-x-4 gap-y-2 border-t border-white/10 pt-5">
+            <div className="mt-7 flex flex-wrap gap-x-4 gap-y-2">
               {importRequests.slice(0, 5).map((r) => (
                 <CountryChip key={r.id} code={r.country} label={L(r.countryName)} className="text-white/70 [&>span:first-child]:bg-white/10 [&>span:first-child]:text-white [&>span:first-child]:ring-white/15" />
               ))}
@@ -383,20 +400,19 @@ function CtaSection() {
   return (
     <section className="container-page mt-24">
       <Reveal>
-        <div className="border-spin relative overflow-hidden rounded-3xl bg-navy p-8 text-white md:p-14">
-          <img src="/imgs/cta-background.png" alt="" className="absolute inset-0 size-full object-cover opacity-25 mix-blend-luminosity" loading="lazy" />
-          <div className="absolute inset-0 bg-gradient-to-r from-navy via-navy/85 to-[#003a5c]/70" />
-          <div className="absolute -bottom-24 right-10 size-80 animate-aurora rounded-full bg-gold-bright/25 blur-3xl" />
+        <div className="relative overflow-hidden rounded-3xl bg-navy p-8 text-white md:p-14">
+          <img src="/imgs/cta-background.png" alt="" className="absolute inset-0 size-full object-cover opacity-30 mix-blend-luminosity" loading="lazy" />
+          <div className="absolute inset-0 bg-navy/70" />
           <div className="relative grid items-center gap-8 md:grid-cols-[1fr_auto]">
             <div>
               <h2 className="max-w-2xl text-3xl font-extrabold tracking-tight text-balance md:text-[42px] md:leading-[1.1]">
                 {t.home.ctaTitle}
               </h2>
-              <p className="mt-4 max-w-xl text-white/75">{t.home.ctaSub}</p>
+              <p className="mt-4 max-w-xl text-white/90">{t.home.ctaSub}</p>
             </div>
             <div className="flex flex-wrap gap-3">
               <Link to="/register" className={buttonClass('gold', 'lg')}>{t.home.ctaPrimary} <ArrowRight /></Link>
-              <Link to="/about" className={buttonClass('ghost', 'lg', 'border border-white/20 text-white hover:bg-white/10')}>{t.home.ctaSecondary}</Link>
+              <Link to="/about" className={buttonClass('ghost', 'lg', 'bg-white/10 text-white hover:bg-white/20')}>{t.home.ctaSecondary}</Link>
             </div>
           </div>
         </div>

@@ -20,7 +20,7 @@ export function ProductCard({ product, className }: { product: Product; classNam
   return (
     <Link
       to={`/products/${product.id}`}
-      className={cn('group flex h-full flex-col overflow-hidden rounded-2xl border bg-card shadow-sm outline-none transition-[box-shadow,border-color,translate] duration-300 hover:-translate-y-1 hover:border-primary/30 hover:shadow-xl hover:shadow-navy/10 focus-visible:ring-2 focus-visible:ring-primary', className)}
+      className={cn('group flex h-full flex-col overflow-hidden rounded-2xl border bg-card outline-none transition-[box-shadow,border-color,translate] duration-300 hover:-translate-y-1 hover:border-primary/30 hover:shadow-xl hover:shadow-navy/10 focus-visible:ring-2 focus-visible:ring-primary active:translate-y-0', className)}
     >
       <SmartImage
         src={img(product.productImages[0]!, 520, 520)}
@@ -29,7 +29,10 @@ export function ProductCard({ product, className }: { product: Product; classNam
         imgClassName="group-hover:scale-105"
       />
       <div className="flex flex-1 flex-col p-3.5">
-        <p className="line-clamp-2 text-[14px] font-semibold leading-snug transition-colors group-hover:text-primary">{L(product.productName)}</p>
+        <p className="line-clamp-2 text-[14px] font-semibold leading-snug transition-colors group-hover:text-primary" title={L(product.productName)}>{L(product.productName)}</p>
+        {/* who sells it and one spec: what tells two similar listings apart */}
+        {product.organizationName && <p className="mt-1 truncate text-[13px] text-muted-foreground" title={product.organizationName}>{product.organizationName}</p>}
+        {product.certificates[0] && <p className="mt-1.5 truncate text-xs font-semibold text-gold">{product.certificates.slice(0, 2).join(' · ')}{product.certificates.length > 2 && ` +${product.certificates.length - 2}`}</p>}
         <p className="mt-auto pt-2.5 text-[17px] font-bold tracking-tight">
           {formatMoney(product.priceFob)} <span className="text-xs font-normal text-muted-foreground">/ {product.unit} FOB</span>
         </p>

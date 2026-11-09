@@ -148,7 +148,7 @@ export function SupportPanel({ conv, onRate }: { conv: ChatConversation | null; 
           ) : (
             <>
               <Stars value={score} onChange={setScore} />
-              <Textarea value={comment} onChange={(e) => setComment(e.target.value)} maxLength={500} aria-label={tx('Nhận xét', 'Comment', '의견')} className="min-h-16" />
+              <Textarea value={comment} placeholder={tx('Chia sẻ trải nghiệm làm việc với doanh nghiệp (không bắt buộc)', 'Share your experience with this company (optional)', '이 기업과의 경험 공유(선택)')} onChange={(e) => setComment(e.target.value)} maxLength={500} aria-label={tx('Nhận xét', 'Comment', '의견')} className="min-h-16" />
               <Button size="sm" disabled={!score} onClick={() => void onRate(score, comment)}>{tx('Gửi đánh giá', 'Submit rating', '평가 보내기')}</Button>
             </>
           )}
@@ -190,13 +190,13 @@ export function NewTicketForm({ status, onCreate }: { status: SupportStatus | nu
       className="mx-auto w-full max-w-lg space-y-3 rounded-2xl border bg-card p-6"
     >
       <h2 className="text-lg font-bold">{tx('Gửi yêu cầu hỗ trợ mới', 'New support request', '새 지원 요청')}</h2>
-      <Field label={tx('Tiêu đề', 'Subject', '제목')} htmlFor="tk-subject"><Input id="tk-subject" required maxLength={200} value={subject} onChange={(e) => setSubject(e.target.value)} /></Field>
+      <Field label={tx('Tiêu đề', 'Subject', '제목')} htmlFor="tk-subject"><Input id="tk-subject" placeholder={tx('VD: Không tải được giấy chứng nhận', 'e.g. Cannot upload my certificate', '예: 인증서 업로드 불가')} required maxLength={200} value={subject} onChange={(e) => setSubject(e.target.value)} /></Field>
       {!!status?.categories.length && (
         <Field label={tx('Lĩnh vực', 'Category', '분야')} htmlFor="tk-cat">
           <Select id="tk-cat" value={category} onValueChange={setCategory} placeholder={tx('Chọn lĩnh vực', 'Select a category', '분야 선택')} options={status.categories.map((c) => ({ value: c.code, label: c.label }))} />
         </Field>
       )}
-      <Field label={tx('Nội dung', 'Details', '내용')} htmlFor="tk-body"><Textarea id="tk-body" maxLength={4000} value={body} onChange={(e) => setBody(e.target.value)} /></Field>
+      <Field label={tx('Nội dung', 'Details', '내용')} htmlFor="tk-body"><Textarea id="tk-body" placeholder={tx('Mô tả chi tiết vấn đề và các bước bạn đã làm…', 'Describe the problem and the steps you took…', '문제와 시도한 단계를 설명…')} maxLength={4000} value={body} onChange={(e) => setBody(e.target.value)} /></Field>
       <Button type="submit" disabled={busy || !subject.trim()} className="w-full">{tx('Gửi yêu cầu', 'Submit request', '요청 보내기')}</Button>
     </form>
   )

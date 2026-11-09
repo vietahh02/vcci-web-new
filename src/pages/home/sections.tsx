@@ -1,20 +1,20 @@
 /** Home sections added in the "less monotonous" pass: varied rhythm, fewer image frames. */
-import { AnimatePresence, motion } from 'motion/react'
+import { motion, MotionConfig } from 'motion/react'
 import {
-  ArrowRight, ArrowUpRight, Bot, CalendarDays, ChevronLeft, ChevronRight, Clock, Crown, Globe2, Handshake,
-  Landmark, MapPin, MessagesSquare, Quote, Radio, ShieldCheck, Star, Ticket, Video,
+  ArrowRight, ArrowUpRight, Bot, CalendarDays, ChevronLeft, ChevronRight, Clock, Globe2, Handshake,
+  Landmark, MessagesSquare, Quote, Radio, ShieldCheck, Star, Ticket, Video,
 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useEvents, useFeaturedBusinesses, useHomeStats, useHomeTestimonials, useOrgProducts } from '@/api'
 import { categories, countryName } from '@/data/mock'
-import { categoryIcons, CompanyMark, SectionHeader, VerifiedBadge } from '@/components/brand'
+import { categoryIcons, SectionHeader, VerifiedBadge } from '@/components/brand'
 import { ReputationStars } from '@/components/reputation/Reputation'
 import { EventCard } from '@/components/cards'
 import { CountUp, Marquee, Reveal, Stagger, StaggerItem } from '@/components/effects'
 import { goldSponsors, mainSponsor, partnerSponsors } from '@/components/sponsor'
 import { Pager, usePaged } from '@/components/ui/pager'
-import { Badge, buttonClass } from '@/components/ui/primitives'
+import { buttonClass } from '@/components/ui/primitives'
 import { eventTimeRange } from '@/lib/eventStatus'
 import { useI18n } from '@/lib/i18n'
 import { cn, formatDate, formatMoney, formatNumber, img } from '@/lib/utils'
@@ -64,8 +64,7 @@ export function CategoryTiles() {
   return (
     <section className="container-page mt-20 grid grid-cols-1 gap-10 lg:grid-cols-[320px_minmax(0,1fr)] lg:items-center">
       <Reveal>
-        <p className="text-xs font-bold uppercase tracking-[0.16em] text-primary">{t.nav.allCategories}</p>
-        <h2 className="mt-2 text-3xl font-extrabold tracking-tight text-balance md:text-[38px] md:leading-[1.1]">{t.home.categoriesTitle}</h2>
+        <h2 className="text-3xl font-extrabold tracking-tight text-balance md:text-[38px] md:leading-[1.1]">{t.home.categoriesTitle}</h2>
         <p className="mt-3 text-muted-foreground">{t.home.categoriesSub}</p>
         <p className="mt-6 text-5xl font-extrabold tracking-tight text-primary">
           <CountUp to={productTotal} format={(n) => formatNumber(Math.round(n), locale) + '+'} />
@@ -82,12 +81,11 @@ export function CategoryTiles() {
                 to={`/search?category=${c.id}`}
                 className="group relative flex h-full flex-col overflow-hidden rounded-2xl bg-muted/60 p-4 transition-colors duration-300 hover:bg-primary"
               >
-                <span className="absolute -right-6 -top-6 size-20 rounded-full bg-primary/5 transition-transform duration-500 group-hover:scale-[3] group-hover:bg-white/10" />
-                <span className="relative grid size-11 place-items-center rounded-xl bg-background text-primary shadow-sm transition-transform duration-500 group-hover:-rotate-12 group-hover:scale-110">
+                <span className="relative grid size-11 place-items-center rounded-xl bg-background text-primary transition-transform duration-300 group-hover:scale-110">
                   <Icon className="size-5" />
                 </span>
                 <span className="relative mt-4 text-[14px] font-bold leading-snug transition-colors group-hover:text-white">{L(c.categoryName)}</span>
-                <span className="relative mt-1 flex items-center gap-1 text-xs text-muted-foreground transition-colors group-hover:text-white/75">
+                <span className="relative mt-1 flex items-center gap-1 text-[13px] text-muted-foreground transition-colors group-hover:text-white/85">
                   {formatNumber(c.productCount, locale)} {t.nav.products_count}
                   <ArrowRight className="size-3.5 -translate-x-2 opacity-0 transition-all group-hover:translate-x-0 group-hover:opacity-100" />
                 </span>
@@ -100,7 +98,7 @@ export function CategoryTiles() {
   )
 }
 
-/* ================================================================ FEATURED BUSINESS SPOTLIGHT */
+/* ================================================================ FEATURED BUSINESSES — honour roll of wide photo panels */
 export function FeaturedBusiness() {
   const { t, L } = useI18n()
   const list = (useFeaturedBusinesses().data ?? []).slice(0, 5)
@@ -111,97 +109,154 @@ export function FeaturedBusiness() {
     const id = setInterval(() => setI((v) => (v + 1) % list.length), 7000)
     return () => clearInterval(id)
   }, [paused, list.length, i])
-  const b = list[i % Math.max(list.length, 1)]
-  const items = useOrgProducts(b?.id ?? '').data ?? []
-  if (!b) return null
+  // hover intent: a mouse sweeping across the row should not open every panel it crosses
+  const hoverTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
+  const hoverOpen = (k: number) => {
+    clearTimeout(hoverTimer.current)
+    hoverTimer.current = setTimeout(() => setI(k), 140)
+  }
+  useEffect(() => () => clearTimeout(hoverTimer.current), [])
+  const active = list[i % Math.max(list.length, 1)]
+  const items = useOrgProducts(active?.id ?? '').data ?? []
+  if (!active) return null
+  const ease = 'ease-[cubic-bezier(0.65,0,0.35,1)]'
 
   return (
-    <section className="relative mt-24 overflow-hidden py-20" onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)}>
-      <div className="absolute inset-0 -z-10 bg-gradient-to-br from-primary-soft via-background to-gold-soft/70" />
-      <div className="bg-dots absolute inset-0 -z-10 opacity-40 [mask-image:radial-gradient(ellipse_at_center,#000,transparent_70%)]" />
+    <section
+      className="motion-keep relative mt-24 bg-navy py-20 text-white md:py-24"
+      onMouseEnter={() => setPaused(true)}
+      onMouseLeave={() => setPaused(false)}
+      onFocusCapture={() => setPaused(true)}
+      onBlurCapture={() => setPaused(false)}
+    >
       <div className="container-page">
-        <SectionHeader eyebrow="VCCI Verified" title={t.home.featuredTitle} sub={t.home.featuredSub} action={{ to: '/suppliers', label: t.supplier.directoryTitle }} />
-
-        <div className="grid grid-cols-1 items-center gap-10 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)]">
-          <AnimatePresence mode="wait">
-            <motion.div key={b.id} initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}>
-              <Badge variant="gold" className="gap-1.5 px-2.5 py-1"><Crown /> {t.home.featuredBadge}</Badge>
-              <div className="mt-5 flex items-center gap-4">
-                <CompanyMark name={b.nameEn} accent={b.accent} className="size-16 rounded-2xl text-xl" />
-                <div className="min-w-0">
-                  <h3 className="text-2xl font-extrabold leading-tight tracking-tight md:text-[30px]">{b.name}</h3>
-                  <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
-                    {b.verified && <VerifiedBadge />} <span className="inline-flex items-center gap-1"><MapPin className="size-3.5" />{b.province}</span>
-                  </p>
-                </div>
-              </div>
-              <p className="mt-5 max-w-xl text-[15px] leading-relaxed text-foreground/80">{L(b.description)}</p>
-              <div className="mt-5 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
-                <ReputationStars orgId={b.id} legacyScore={b.reputationScore} className="text-base" />
-                <span className="text-muted-foreground">{t.supplier.types[b.businessType]}</span>
-                <span className="text-muted-foreground">{b.employees} {t.common.employees.toLowerCase()}</span>
-              </div>
-              {items.length > 0 && (
-                <ul className="mt-6 max-w-xl divide-y border-y">
-                  {items.slice(0, 3).map((p) => (
-                    <li key={p.id}>
-                      <Link to={`/products/${p.id}`} className="group flex items-center justify-between gap-4 py-2.5 text-sm">
-                        <span className="truncate font-medium group-hover:text-primary">{L(p.productName)}</span>
-                        <span className="shrink-0 font-semibold">{formatMoney(p.priceFob)}<span className="font-normal text-muted-foreground"> / {p.unit}</span></span>
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              )}
-              <div className="mt-7 flex flex-wrap gap-3">
-                <Link to={`/suppliers/${b.id}`} className={buttonClass('default', 'lg')}>{t.product.visitProfile} <ArrowRight /></Link>
-                <Link to={`/suppliers/${b.id}`} className={buttonClass('outline', 'lg')}><MessagesSquare /> {t.common.contact}</Link>
-              </div>
-            </motion.div>
-          </AnimatePresence>
-
-          <div className="relative">
-            <div className="relative aspect-[5/4] overflow-hidden rounded-[28px] shadow-2xl shadow-navy/20">
-              <AnimatePresence mode="popLayout" initial={false}>
-                <motion.img
-                  key={b.id}
-                  src={img(b.coverImage, 1000, 800)}
-                  alt=""
-                  initial={{ opacity: 0, scale: 1.12 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
-                  className="absolute inset-0 size-full object-cover"
-                />
-              </AnimatePresence>
-              <div className="absolute inset-0 bg-gradient-to-t from-navy/60 via-transparent to-transparent" />
-            </div>
+        <Reveal className="mb-10 flex flex-wrap items-end justify-between gap-x-10 gap-y-4">
+          <div className="max-w-3xl">
+            <h2 className="text-3xl font-extrabold tracking-[-0.02em] md:text-[44px] md:leading-[1.05]">{t.home.featuredTitle}</h2>
+            <p className="mt-3 text-base text-white/75">{t.home.featuredSub}</p>
           </div>
-        </div>
+          <Link to="/suppliers" className="group inline-flex min-h-11 items-center gap-2 text-[15px] font-semibold text-gold-bright">
+            {t.supplier.directoryTitle}
+            <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" />
+          </Link>
+        </Reveal>
 
-        {/* switcher */}
-        <div className="mt-12">
-          <p className="mb-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">{t.home.featuredMore}</p>
-          {/* Mobile cuộn ngang nên cần -m/p chừa chỗ cho shadow; desktop bỏ overflow để không cắt shadow */}
-          <div className="no-scrollbar -m-4 flex gap-3 overflow-x-auto p-4 md:m-0 md:grid md:grid-cols-5 md:overflow-visible md:p-0">
-            {list.map((x, k) => (
-              <button
-                key={x.id}
-                onClick={() => setI(k)}
-                aria-pressed={k === i}
-                className={cn('relative flex min-w-56 items-center gap-3 overflow-hidden rounded-xl p-3 text-left ring-1 transition md:min-w-0', k === i ? 'bg-background shadow-lg ring-primary/30' : 'bg-background/60 ring-border hover:bg-background')}
-              >
-                <CompanyMark name={x.nameEn} accent={x.accent} className="size-9 shrink-0 rounded-lg text-[11px]" />
-                <span className="min-w-0">
-                  <span className="line-clamp-2 text-[13px] font-semibold leading-snug" title={x.name}>{x.name}</span>
-                  <span className="mt-0.5 block truncate text-[11px] text-muted-foreground">{x.province}</span>
-                </span>
-                {k === i && !paused && (
-                  <motion.span key={`p-${i}`} className="absolute inset-x-0 bottom-0 h-0.5 origin-left bg-primary" initial={{ scaleX: 0 }} animate={{ scaleX: 1 }} transition={{ duration: 7, ease: 'linear' }} />
+        {/* --open: the active panel's final width, so its copy is laid out once and never reflows while the panel grows */}
+        <div
+          className="flex flex-col gap-2 @container lg:h-[560px] lg:flex-row lg:gap-3"
+          style={{ '--open': `calc((100cqw - ${(list.length - 1) * 12}px) * 5.5 / ${list.length + 4.5})` } as React.CSSProperties}
+          onMouseLeave={() => clearTimeout(hoverTimer.current)}
+        >
+          {list.map((b, k) => {
+            const on = k === i
+            const country = countryName[b.country] ? L(countryName[b.country]) : b.country
+            const flag = `https://flagcdn.com/${b.country.toLowerCase()}.svg`
+            // staggered entrance for the open panel's lines; `off` is any extra resting transform (e.g. a tilt)
+            const rise = (n: number, cls: string, off = '') => ({
+              className: cn(cls, 'transition-[opacity,translate,rotate]', ease, on ? 'translate-y-0 rotate-0 opacity-100 duration-[800ms]' : cn('translate-y-6 opacity-0 duration-200', off)),
+              style: { transitionDelay: on ? `${500 + n * 90}ms` : '0ms' },
+            })
+            return (
+              <article
+                key={b.id}
+                onPointerEnter={(e) => e.pointerType === 'mouse' && !on && hoverOpen(k)}
+                onPointerLeave={() => clearTimeout(hoverTimer.current)}
+                className={cn(
+                  'group relative overflow-hidden rounded-3xl bg-navy-2 transition-[flex-grow,height] duration-[1100ms]',
+                  ease,
+                  on ? 'h-[480px] lg:h-auto lg:flex-[5.5]' : 'h-20 lg:h-auto lg:flex-1',
                 )}
-              </button>
-            ))}
-          </div>
+              >
+                <img
+                  src={img(b.coverImage, 1200, 900)}
+                  alt=""
+                  loading="lazy"
+                  className={cn(
+                    'absolute inset-0 size-full object-cover transition-[scale,opacity] duration-[1600ms]',
+                    ease,
+                    on ? 'scale-100 opacity-100' : 'scale-125 opacity-45 group-hover:scale-115 group-hover:opacity-70',
+                  )}
+                />
+                {/* neutral scrims so the white type reads on any photograph; crossfaded, since gradients cannot transition */}
+                <div className={cn('absolute inset-0 bg-navy/55 transition-opacity duration-[900ms]', ease, on && 'opacity-0')} />
+                <div className={cn('absolute inset-0 bg-[linear-gradient(to_top,rgb(8_8_46/0.92)_0%,rgb(8_8_46/0.55)_45%,rgb(8_8_46/0.1)_100%)] transition-opacity duration-[900ms]', ease, !on && 'opacity-0')} />
+
+                <button
+                  type="button"
+                  onClick={() => setI(k)}
+                  aria-label={b.name}
+                  aria-hidden={on || undefined}
+                  tabIndex={on ? -1 : 0}
+                  className={cn('absolute inset-0 focus-visible:outline-2 focus-visible:-outline-offset-4 focus-visible:outline-gold-bright', on && 'pointer-events-none')}
+                >
+                  {/* the name lies on its side in a closed panel and swings level as the panel opens (desktop) */}
+                  <span
+                    className={cn(
+                      'absolute left-5 top-1/2 flex -translate-y-1/2 items-center gap-3 whitespace-nowrap transition-[rotate,opacity,translate] lg:top-auto lg:bottom-6 lg:left-[calc(50%+14px)] lg:origin-bottom-left lg:translate-y-0',
+                      ease,
+                      on ? 'opacity-0 duration-700 lg:translate-x-4 lg:rotate-0' : 'opacity-100 delay-200 duration-[1000ms] lg:-rotate-90',
+                    )}
+                  >
+                    <img src={flag} alt="" width={28} height={20} className="h-5 w-7 shrink-0 rounded-[3px] object-cover lg:rotate-90" />
+                    <span className="max-w-[60vw] truncate text-base font-bold lg:max-w-[440px]">{b.name}</span>
+                  </span>
+                </button>
+
+                {/* always mounted: each line drops out fast on close and rises in turn once the panel has mostly opened */}
+                <div inert={!on} className="absolute inset-y-0 left-0 flex w-full flex-col justify-between p-6 md:p-9 lg:w-(--open)">
+                    <p {...rise(0, 'flex items-center gap-2.5 text-[15px] font-semibold')}>
+                      <img src={flag} alt="" width={28} height={20} className="h-5 w-7 rounded-[3px] object-cover" />
+                      {b.province && b.province !== country ? `${b.province}, ${country}` : country}
+                    </p>
+
+                    <div className="max-w-2xl">
+                      <div {...rise(1, 'flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-white/85')}>
+                        <span>{t.supplier.types[b.businessType]}</span>
+                        {b.verified && <VerifiedBadge />}
+                        <ReputationStars orgId={b.id} legacyScore={b.reputationScore} dark />
+                      </div>
+                      <h3 {...rise(2, 'mt-3 origin-bottom-left text-[28px] font-extrabold leading-[1.05] tracking-[-0.02em] text-balance md:text-[44px]', '-rotate-3')}>
+                        <Link to={`/suppliers/${b.id}`} className="hover:underline hover:decoration-2 hover:underline-offset-4">{b.name}</Link>
+                      </h3>
+                      <p {...rise(3, 'mt-3 line-clamp-3 text-base leading-relaxed text-white/90 md:line-clamp-2')}>{L(b.description)}</p>
+                      {on && items.length > 0 && (
+                        <ul {...rise(4, 'mt-4 hidden flex-wrap gap-2 md:flex')}>
+                          {items.slice(0, 3).map((p) => (
+                            <li key={p.id}>
+                              <Link to={`/products/${p.id}`} className="inline-flex min-h-9 items-center gap-2 rounded-full bg-white/10 px-3.5 text-[13px] transition hover:bg-white hover:text-navy">
+                                {L(p.productName)}
+                                <span className="font-semibold">{formatMoney(p.priceFob)}</span>
+                              </Link>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                      <div {...rise(5, 'mt-6 flex flex-wrap gap-3')}>
+                        <Link to={`/suppliers/${b.id}`} className={buttonClass('default', 'lg', 'rounded-full bg-white text-navy hover:bg-gold-bright')}>
+                          {t.product.visitProfile} <ArrowUpRight />
+                        </Link>
+                        <Link to={`/suppliers/${b.id}`} className={buttonClass('ghost', 'lg', 'rounded-full text-white hover:bg-white/15 hover:text-white')}>
+                          <MessagesSquare /> {t.common.contact}
+                        </Link>
+                      </div>
+                    </div>
+                </div>
+
+                {on && list.length > 1 && (
+                  <MotionConfig reducedMotion="never">
+                  <motion.span
+                    key={`bar-${i}-${paused}`}
+                    aria-hidden
+                    className="absolute inset-x-0 bottom-0 h-1 origin-left bg-gold-bright"
+                    initial={{ scaleX: 0 }}
+                    animate={{ scaleX: paused ? 0 : 1 }}
+                    transition={{ duration: paused ? 0 : 7, ease: 'linear' }}
+                  />
+                  </MotionConfig>
+                )}
+              </article>
+            )
+          })}
         </div>
       </div>
     </section>
@@ -286,13 +341,10 @@ export function Testimonials() {
 
   return (
     <section className="relative isolate mt-24 overflow-hidden bg-navy py-20 text-white">
-      <div className="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_85%_60%,#1e5fae_0%,transparent_55%),radial-gradient(ellipse_at_10%_0%,#2a1c6b_0%,transparent_50%)]" />
-      <div className="absolute -bottom-32 left-1/3 -z-10 size-96 animate-aurora rounded-full bg-gold-bright/15 blur-3xl" />
-      <div className="bg-grid absolute inset-0 -z-10 opacity-30 [mask-image:linear-gradient(to_bottom,transparent,#000_30%,#000_70%,transparent)]" />
       <div className="container-page">
         <Reveal className="mx-auto max-w-3xl text-center">
           <h2 className="text-3xl font-extrabold tracking-tight md:text-[42px]">{t.home.testimonialsTitle}</h2>
-          <p className="mt-4 text-white/75 md:text-lg">{t.home.testimonialsSub}</p>
+          <p className="mt-4 text-white/90 md:text-lg">{t.home.testimonialsSub}</p>
         </Reveal>
 
         <div className="relative mt-6" onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)}>
@@ -308,11 +360,11 @@ export function Testimonials() {
                 viewport={{ once: true }}
                 transition={{ delay: Math.min(i, 3) * 0.1, duration: 0.6 }}
                 whileHover={{ y: -8 }}
-                className="relative flex w-[300px] shrink-0 snap-start flex-col items-center rounded-2xl bg-white px-7 pb-7 pt-12 text-center text-slate-900 shadow-2xl shadow-black/30 sm:w-[360px] lg:w-[calc((100%-40px)/3)]"
+                className="relative flex w-[300px] shrink-0 snap-start flex-col items-center rounded-2xl bg-white px-7 pb-7 pt-12 text-center text-slate-900 sm:w-[360px] lg:w-[calc((100%-40px)/3)]"
               >
                 <span
-                  className="absolute -top-8 grid size-16 place-items-center rounded-full text-lg font-extrabold text-white ring-4 ring-white shadow-lg"
-                  style={{ background: `linear-gradient(140deg, ${q.accent}, #08082e)` }}
+                  className="absolute -top-8 grid size-16 place-items-center rounded-full text-lg font-extrabold text-white ring-4 ring-white"
+                  style={{ background: q.accent }}
                   aria-hidden
                 >
                   {q.name.split(' ').map((w) => w[0]).slice(0, 2).join('')}
@@ -337,8 +389,8 @@ export function Testimonials() {
           </div>
           {/* Desktop hiện đủ 3 thẻ một hàng, nên chỉ cần nút khi có từ 4 thẻ */}
           <div className={cn('mt-6 flex justify-center gap-3', testimonials.length < 2 ? 'hidden' : testimonials.length <= 3 && 'lg:hidden')}>
-            <button onClick={() => scroll(-1)} className="grid size-11 place-items-center rounded-full border border-white/20 bg-white/5 backdrop-blur transition hover:bg-white/15" aria-label={t.ui.previous}><ChevronLeft className="size-5" /></button>
-            <button onClick={() => scroll(1)} className="grid size-11 place-items-center rounded-full border border-white/20 bg-white/5 backdrop-blur transition hover:bg-white/15" aria-label={t.ui.next}><ChevronRight className="size-5" /></button>
+            <button onClick={() => scroll(-1)} className="grid size-11 place-items-center rounded-full bg-white/10 transition hover:bg-white/20" aria-label={t.ui.previous}><ChevronLeft className="size-5" /></button>
+            <button onClick={() => scroll(1)} className="grid size-11 place-items-center rounded-full bg-white/10 transition hover:bg-white/20" aria-label={t.ui.next}><ChevronRight className="size-5" /></button>
           </div>
         </div>
       </div>
@@ -355,7 +407,7 @@ export function WhyList() {
       <Reveal className="lg:sticky lg:top-36 lg:self-start">
         <img src="/imgs/lg1.png" alt="VCCI" className="h-10 w-auto dark:brightness-125" />
         <h2 className="mt-6 text-3xl font-extrabold tracking-tight text-balance md:text-[40px] md:leading-[1.1]">{t.home.whyTitle}</h2>
-        <p className="mt-4 max-w-md text-muted-foreground">{t.home.ctaSub}</p>
+        <p className="mt-4 max-w-md text-foreground/80">{t.home.ctaSub}</p>
         <Link to="/register" className={buttonClass('default', 'lg', 'mt-7')}>{t.home.ctaPrimary} <ArrowRight /></Link>
       </Reveal>
       <ol>
@@ -368,15 +420,12 @@ export function WhyList() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: '-40px' }}
               transition={{ duration: 0.5 }}
-              className="group flex gap-5 border-b py-6 first:pt-0"
+              className="group flex gap-5 py-5 first:pt-0"
             >
-              <span className="w-10 shrink-0 font-mono text-sm font-bold text-muted-foreground/60 transition-colors group-hover:text-gold">0{i + 1}</span>
+              <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-primary-soft text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground"><Icon className="size-5" /></span>
               <div className="flex-1">
-                <h3 className="flex items-center gap-3 text-xl font-bold transition-colors group-hover:text-primary">
-                  {w.t}
-                  <Icon className="size-5 -translate-x-2 text-primary opacity-0 transition-all duration-300 group-hover:translate-x-0 group-hover:opacity-100" />
-                </h3>
-                <p className="mt-2 leading-relaxed text-muted-foreground">{w.d}</p>
+                <h3 className="text-xl font-bold">{w.t}</h3>
+                <p className="mt-1.5 leading-relaxed text-foreground/80">{w.d}</p>
               </div>
             </motion.li>
           )

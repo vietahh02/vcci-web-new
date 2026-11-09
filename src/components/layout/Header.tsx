@@ -1,6 +1,6 @@
 import * as DialogPrimitive from '@radix-ui/react-dialog'
 import { AnimatePresence, motion, useMotionValueEvent, useScroll } from 'motion/react'
-import { ChevronDown, ChevronRight, LayoutGrid, LogOut, Menu, MessageSquare, Moon, Phone, Sun } from 'lucide-react'
+import { ChevronDown, ChevronRight, LayoutGrid, LogOut, Menu, MessageSquare, Moon, Phone, Search, Sun } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { chatApi, chatConfigured } from '@/api/chat'
@@ -17,6 +17,7 @@ import { useI18n } from '@/lib/i18n'
 import { useTheme } from '@/lib/theme'
 import { completion, useProfile } from '@/lib/profile'
 import { tx } from '@/lib/tx'
+import { CONTACT } from '@/lib/contact'
 import { cn, formatNumber, img } from '@/lib/utils'
 
 export function Header() {
@@ -28,6 +29,7 @@ export function Header() {
   const [scrolled, setScrolled] = useState(false)
   const [megaOpen, setMegaOpen] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [searchFocus, setSearchFocus] = useState(false)
   const location = useLocation()
   const isHome = location.pathname === '/'
   const [chatUnread, setChatUnread] = useState(0)
@@ -68,32 +70,36 @@ export function Header() {
           <div className="hidden shrink-0 items-center gap-5 whitespace-nowrap lg:flex">
             <Link to="/search" className="hover:text-white">{t.top.buyers}</Link>
             <Link to="/register" className="hover:text-white">{t.top.suppliers}</Link>
-            <Link to="/about" className="hover:text-white">{t.top.help}</Link>
-            <span className="inline-flex items-center gap-1.5"><Phone className="size-3" /> {t.top.hotline}: 1900 6 1111</span>
+            <Link to="/help" className="hover:text-white">{t.top.help}</Link>
+            <a href={CONTACT.hotlineHref} className="inline-flex items-center gap-1.5 hover:text-white"><Phone className="size-3" /> {t.top.hotline}: {CONTACT.hotline}</a>
           </div>
         </div>
       </div>
 
       {/* main bar */}
-      <div className={cn('border-b transition-[background,box-shadow] duration-300', scrolled ? 'glass shadow-[0_8px_30px_-12px_rgb(8_8_46/0.18)]' : 'bg-background')}>
+      <div className={cn('border-b transition-[background,box-shadow] duration-300', scrolled ? 'bg-background shadow-[0_8px_30px_-12px_rgb(8_8_46/0.18)]' : 'bg-background')}>
         <div className="container-page flex h-[68px] items-center gap-3 sm:gap-4 lg:gap-6 xl:gap-8">
-          <button className="-ml-2 rounded-full p-2 transition-all duration-200 hover:bg-primary-soft hover:text-primary lg:hidden" onClick={() => setMobileOpen(true)} aria-label={t.ui.menu}>
+          <button className="-ml-3 grid size-11 place-items-center rounded-full transition-colors duration-200 hover:bg-primary-soft hover:text-primary lg:hidden" onClick={() => setMobileOpen(true)} aria-label={t.ui.menu}>
             <Menu className="size-5" />
           </button>
           <Logo className="shrink-0" />
           <div className={cn('hidden flex-1 transition-all duration-500 md:block', isHome && !scrolled && 'pointer-events-none opacity-0 md:-translate-y-1')}>
             <SearchBar autoFocusKey={!isHome || scrolled} />
           </div>
-          <div className="ml-auto flex items-center gap-1">
+          <div className="ml-auto flex items-center gap-0.5 sm:gap-1">
+            {/* phones: the search lives in the menu sheet; this opens it with the field focused */}
+            <button onClick={() => { setSearchFocus(true); setMobileOpen(true) }} className="grid size-11 place-items-center rounded-full text-muted-foreground transition-colors duration-200 hover:bg-primary-soft hover:text-primary md:hidden" aria-label={t.search.submit}>
+              <Search className="size-5" />
+            </button>
             <Tooltip content={t.nav.messages}>
-              <Link to="/messages" className="relative hidden rounded-full p-2.5 text-muted-foreground transition-all duration-200 hover:bg-primary-soft hover:text-primary hover:shadow-sm sm:block" aria-label={t.nav.messages}>
+              <Link to="/messages" className="relative hidden size-11 place-items-center rounded-full text-muted-foreground transition-colors duration-200 hover:bg-primary-soft hover:text-primary sm:grid" aria-label={t.nav.messages}>
                 <MessageSquare className="size-[18px]" />
-                {unreadShown > 0 && <span className="absolute right-1.5 top-1.5 grid size-4 place-items-center rounded-full bg-live text-[9px] font-bold text-white">{unreadShown > 9 ? '9+' : unreadShown}</span>}
+                {unreadShown > 0 && <span className="absolute right-2 top-2 grid size-4 place-items-center rounded-full bg-live text-[9px] font-bold text-white">{unreadShown > 9 ? '9+' : unreadShown}</span>}
               </Link>
             </Tooltip>
             <NotificationBell />
             <LangSwitcher />
-            <button onClick={toggle} className="rounded-full p-2.5 text-muted-foreground transition-all duration-200 hover:bg-primary-soft hover:text-primary hover:shadow-sm" aria-label={t.ui.theme}>
+            <button onClick={toggle} className="grid size-11 place-items-center rounded-full text-muted-foreground transition-colors duration-200 hover:bg-primary-soft hover:text-primary max-sm:hidden" aria-label={t.ui.theme}>
               <AnimatePresence mode="wait" initial={false}>
                 <motion.span key={theme} initial={{ rotate: -90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: 90, opacity: 0 }} transition={{ duration: 0.2 }} className="block">
                   {theme === 'dark' ? <Sun className="size-[18px]" /> : <Moon className="size-[18px]" />}
@@ -115,7 +121,7 @@ export function Header() {
               <Tooltip content={tx('Đăng xuất', 'Sign out', '로그아웃')}>
                 <button
                   onClick={() => { signOut(); navigate('/') }}
-                  className="rounded-full p-2.5 text-muted-foreground transition-all duration-200 hover:bg-primary-soft hover:text-primary hover:shadow-sm"
+                  className="grid size-11 place-items-center rounded-full text-muted-foreground transition-colors duration-200 hover:bg-primary-soft hover:text-primary"
                   aria-label={tx('Đăng xuất', 'Sign out', '로그아웃')}
                 >
                   <LogOut className="size-[18px]" />
@@ -167,7 +173,7 @@ export function Header() {
         </nav>
       </div>
 
-      <MobileNav open={mobileOpen} onOpenChange={setMobileOpen} items={navItems} />
+      <MobileNav open={mobileOpen} onOpenChange={(v) => { setMobileOpen(v); if (!v) setSearchFocus(false) }} items={navItems} focusSearch={searchFocus} />
     </header>
   )
 }
@@ -211,7 +217,7 @@ function MegaMenu({ open, onClose }: { open: boolean; onClose: () => void }) {
               </ul>
               <AnimatePresence mode="wait">
                 <motion.div key={cat.id} initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }} transition={{ duration: 0.2 }} className="p-6">
-                  <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                  <p className="text-sm font-semibold text-muted-foreground">
                     {formatNumber(cat.productCount, locale)} {t.nav.products_count}
                   </p>
                   <h3 className="mt-1 text-xl font-extrabold">{L(cat.categoryName)}</h3>
@@ -246,7 +252,7 @@ function MegaMenu({ open, onClose }: { open: boolean; onClose: () => void }) {
                     className="absolute inset-0 size-full object-cover"
                   />
                 </AnimatePresence>
-                <div className="absolute inset-0 bg-gradient-to-t from-navy/90 via-navy/20 to-transparent" />
+                <div className="absolute inset-0 bg-navy/45" />
                 <div className="absolute inset-x-0 bottom-0 p-5 text-white">
                   <p className="text-xs font-semibold text-gold-bright">{t.common.verified}</p>
                   <p className="mt-1 text-lg font-bold leading-snug">{L(cat.categoryName)}</p>
@@ -260,15 +266,16 @@ function MegaMenu({ open, onClose }: { open: boolean; onClose: () => void }) {
   )
 }
 
-function MobileNav({ open, onOpenChange, items }: { open: boolean; onOpenChange: (v: boolean) => void; items: { to: string; label: string; live?: boolean }[] }) {
+function MobileNav({ open, onOpenChange, items, focusSearch }: { open: boolean; onOpenChange: (v: boolean) => void; items: { to: string; label: string; live?: boolean }[]; focusSearch?: boolean }) {
   const { t, L } = useI18n()
   const { session, signOut } = useProfile()
+  const { theme, toggle } = useTheme()
   const navigate = useNavigate()
   return (
     <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
       <SheetContent side="left" title={t.brand.name} description={t.brand.tagline}>
         <div className="p-4">
-          <SearchBar />
+          <SearchBar autoFocus={focusSearch} onSubmitted={() => onOpenChange(false)} />
           <nav className="mt-4 flex flex-col">
             {items.map((n) => (
               <NavLink
@@ -282,17 +289,21 @@ function MobileNav({ open, onOpenChange, items }: { open: boolean; onOpenChange:
               </NavLink>
             ))}
           </nav>
-          <p className="mb-2 mt-5 px-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">{t.nav.allCategories}</p>
+          <p className="mb-2 mt-5 px-3 text-sm font-bold text-muted-foreground">{t.nav.allCategories}</p>
           <div className="grid grid-cols-2 gap-1">
             {categories.map((c) => {
               const Icon = categoryIcons[c.icon]
               return (
-                <Link key={c.id} to={`/search?category=${c.id}`} onClick={() => onOpenChange(false)} className="flex items-center gap-2 rounded-lg px-3 py-2 text-[13px] hover:bg-muted">
+                <Link key={c.id} to={`/search?category=${c.id}`} onClick={() => onOpenChange(false)} className="flex min-h-11 items-center gap-2 rounded-lg px-3 text-[13px] hover:bg-muted">
                   <Icon className="size-4 text-primary" /> <span className="truncate">{L(c.categoryName)}</span>
                 </Link>
               )
             })}
           </div>
+          <button onClick={toggle} className="mt-4 flex min-h-11 w-full items-center gap-2 rounded-lg px-3 text-[15px] font-semibold hover:bg-muted sm:hidden">
+            {theme === 'dark' ? <Sun className="size-4" /> : <Moon className="size-4" />} {t.ui.theme}
+          </button>
+          <Link to="/help" onClick={() => onOpenChange(false)} className="flex min-h-11 items-center rounded-lg px-3 text-[15px] font-semibold hover:bg-muted">{t.top.help}</Link>
           <div className="mt-6 grid grid-cols-2 gap-2">
             {session ? (
               <>

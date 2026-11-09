@@ -286,22 +286,22 @@ function GeneralForm({ p, set }: FP<'general'>) {
         <Field label={(tx('Tên tiếng Việt', 'Vietnamese name')) + ' *'} htmlFor="g-vi"><Input id="g-vi" placeholder={tx('VD: Công ty TNHH ABC', 'e.g. Công ty TNHH ABC', '예: Công ty TNHH ABC')} value={g.nameVi} onChange={f('nameVi')} /></Field>
         <Field label={(tx('Tên tiếng Anh', 'English name')) + ' *'} htmlFor="g-en"><Input id="g-en" placeholder={tx('VD: ABC Import Export Co., Ltd.', 'e.g. ABC Import Export Co., Ltd.', '예: ABC Import Export Co., Ltd.')} value={g.nameEn} onChange={f('nameEn')} /></Field>
         <Field label={tx('Tên viết tắt', 'Short name', '약칭')} htmlFor="g-short"><Input id="g-short" maxLength={255} placeholder={tx('VD: SOUTHWOOD', 'e.g. SOUTHWOOD', '예: SOUTHWOOD')} value={g.shortName} onChange={f('shortName')} /></Field>
-        <Field label={tx('Mã số thuế', 'Tax code')} htmlFor="g-tax" hint={tx('Lấy từ hồ sơ đăng ký, không sửa tại đây', 'From registration, read-only')}><Input id="g-tax" value={g.taxCode} readOnly className="bg-muted" /></Field>
+        <Field label={tx('Mã số thuế', 'Tax code')} htmlFor="g-tax" hint={tx('Lấy từ hồ sơ đăng ký, không sửa tại đây', 'From registration, read-only')}><Input id="g-tax" placeholder={tx('Chưa cung cấp', 'Not provided', '미제공')} value={g.taxCode} readOnly className="bg-muted" /></Field>
         <Field label={tx('Năm thành lập', 'Year founded')} htmlFor="g-year"><Input id="g-year" placeholder={tx('VD: 2010', 'e.g. 2010', '예: 2010')} inputMode="numeric" value={g.foundedYear} onChange={f('foundedYear')} /></Field>
         <Field label={tx('Tổng tài sản', 'Total assets', '총자산') + ` (${reg.totalAssetsCurrency || reg.charterCurrency || 'VND'})`} htmlFor="g-assets" hint={tx('Chỉ nhập số', 'Digits only', '숫자만 입력')}><Input id="g-assets" placeholder={tx('VD: 50000000000', 'e.g. 50000000000', '예: 50000000000')} inputMode="numeric" maxLength={30} value={g.totalAssets} onChange={(e) => set({ ...g, totalAssets: e.target.value.replace(/\D/g, '') })} /></Field>
-        <Field label={tx('Loại hình hoạt động', 'Business type', '사업 유형')} htmlFor="g-type" hint={tx('Lấy từ hồ sơ đăng ký, không sửa tại đây', 'From registration, read-only')} className="sm:col-span-2"><Input id="g-type" value={businessType} readOnly className="bg-muted" /></Field>
+        <Field label={tx('Loại hình hoạt động', 'Business type', '사업 유형')} htmlFor="g-type" hint={tx('Lấy từ hồ sơ đăng ký, không sửa tại đây', 'From registration, read-only')} className="sm:col-span-2"><Input id="g-type" placeholder={tx('Chưa cung cấp', 'Not provided', '미제공')} value={businessType} readOnly className="bg-muted" /></Field>
       </div>
       <div>
         <p className="mb-3 text-[14px] font-semibold">{tx('Đăng ký kinh doanh', 'Business registration', '사업자 등록')}</p>
         <div className="grid gap-4 sm:grid-cols-2">
           {reg.businessRegNo && (
             <>
-              <Field label={tx('Số đăng ký kinh doanh', 'Registration number', '등록 번호')} htmlFor="g-regno" hint={fromReg}><Input id="g-regno" value={reg.businessRegNo} readOnly className="bg-muted" /></Field>
+              <Field label={tx('Số đăng ký kinh doanh', 'Registration number', '등록 번호')} htmlFor="g-regno" hint={fromReg}><Input id="g-regno" placeholder={tx('Chưa cung cấp', 'Not provided', '미제공')} value={reg.businessRegNo} readOnly className="bg-muted" /></Field>
               <Field label={tx('Ngày cấp', 'Issue date', '발급일')} htmlFor="g-regdate" hint={fromReg}><Input id="g-regdate" type="date" value={reg.businessRegDate} readOnly className="bg-muted" /></Field>
-              <Field label={tx('Nơi cấp', 'Issued by', '발급 기관')} htmlFor="g-regplace" hint={fromReg}><Input id="g-regplace" value={reg.businessRegPlace} readOnly className="bg-muted" /></Field>
+              <Field label={tx('Nơi cấp', 'Issued by', '발급 기관')} htmlFor="g-regplace" hint={fromReg}><Input id="g-regplace" placeholder={tx('Chưa cung cấp', 'Not provided', '미제공')} value={reg.businessRegPlace} readOnly className="bg-muted" /></Field>
             </>
           )}
-          <Field label={tx('Loại hình doanh nghiệp', 'Legal form', '기업 형태')} htmlFor="g-form" hint={fromReg}><Input id="g-form" value={businessForm} readOnly className="bg-muted" /></Field>
+          <Field label={tx('Loại hình doanh nghiệp', 'Legal form', '기업 형태')} htmlFor="g-form" hint={fromReg}><Input id="g-form" placeholder={tx('Chưa cung cấp', 'Not provided', '미제공')} value={businessForm} readOnly className="bg-muted" /></Field>
         </div>
       </div>
       <Q label={tx('Loại hình sở hữu', 'Ownership')} required><Choice cols={3} options={OPTIONS.ownership} value={g.ownership} onChange={(v) => set({ ...g, ownership: v })} /></Q>
@@ -348,9 +348,9 @@ function CapabilityForm({ p, set }: FP<'capability'>) {
   return (
     <div className="space-y-7">
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field label={tx('Loại hình doanh nghiệp', 'Legal form', '기업 형태')} htmlFor="c-form" hint={fromReg}><Input id="c-form" value={businessForm} readOnly className="bg-muted" /></Field>
-        <Field label={tx('Hình thức doanh nghiệp', 'Business type', '사업 유형')} htmlFor="c-type" hint={fromReg}><Input id="c-type" value={businessType} readOnly className="bg-muted" /></Field>
-        <Field label={tx('Ngành hàng', 'Industries', '업종')} htmlFor="c-ind" hint={fromReg} className="sm:col-span-2"><Input id="c-ind" value={industries} readOnly className="bg-muted" /></Field>
+        <Field label={tx('Loại hình doanh nghiệp', 'Legal form', '기업 형태')} htmlFor="c-form" hint={fromReg}><Input id="c-form" placeholder={tx('Chưa cung cấp', 'Not provided', '미제공')} value={businessForm} readOnly className="bg-muted" /></Field>
+        <Field label={tx('Hình thức doanh nghiệp', 'Business type', '사업 유형')} htmlFor="c-type" hint={fromReg}><Input id="c-type" placeholder={tx('Chưa cung cấp', 'Not provided', '미제공')} value={businessType} readOnly className="bg-muted" /></Field>
+        <Field label={tx('Ngành hàng', 'Industries', '업종')} htmlFor="c-ind" hint={fromReg} className="sm:col-span-2"><Input id="c-ind" placeholder={tx('Chưa cung cấp', 'Not provided', '미제공')} value={industries} readOnly className="bg-muted" /></Field>
       </div>
       <Q label={tx('Tối đa 5 sản phẩm chủ lực', 'Up to 5 key products')} required>
         <div className="grid gap-2 sm:grid-cols-2">
@@ -446,9 +446,9 @@ function FinanceForm({ p, set }: FP<'finance'>) {
               </span>
             </div>
             <div className="grid gap-3 md:grid-cols-[1fr_140px_1.3fr]">
-              <Select value={r.band} onValueChange={(band) => row(i, { band })} aria-label={tx('Khoảng doanh thu', 'Revenue band')} placeholder={tx('Khoảng doanh thu…', 'Revenue band…')} options={[{ value: '', label: '—' }, ...OPTIONS.revenueBand.map((o) => ({ value: o.value, label: L(o) }))]} />
+              <Select value={r.band} onValueChange={(band) => row(i, { band })} aria-label={tx('Khoảng doanh thu', 'Revenue band')} placeholder={tx('Khoảng doanh thu…', 'Revenue band…')} options={[{ value: '', label: tx('Không chọn', 'None', '선택 안 함') }, ...OPTIONS.revenueBand.map((o) => ({ value: o.value, label: L(o) }))]} />
               <Input placeholder={tx('Số chính xác (tỷ đ)', 'Exact (VND bn)')} inputMode="decimal" value={r.amount} onChange={(e) => row(i, { amount: e.target.value })} />
-              <Select value={r.proofType} onValueChange={(proofType) => row(i, { proofType })} aria-label={tx('Loại chứng từ', 'Evidence type')} placeholder={tx('Loại chứng từ…', 'Evidence type…')} options={[{ value: '', label: '—' }, ...OPTIONS.revenueProof.map((o) => ({ value: o.value, label: L(o) }))]} />
+              <Select value={r.proofType} onValueChange={(proofType) => row(i, { proofType })} aria-label={tx('Loại chứng từ', 'Evidence type')} placeholder={tx('Loại chứng từ…', 'Evidence type…')} options={[{ value: '', label: tx('Không chọn', 'None', '선택 안 함') }, ...OPTIONS.revenueProof.map((o) => ({ value: o.value, label: L(o) }))]} />
             </div>
             {r.status === 'SELF' && r.reviewReason && (
               <p className="mt-3 rounded-lg border border-red-200 bg-red-50 p-2.5 text-xs text-red-700">
