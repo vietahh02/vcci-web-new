@@ -219,11 +219,9 @@ export const addShowProducts = (showId: string, productIds: string[], consentPub
 /** DELETE /api/shows/{id}/my-products/{productId} */
 export const removeShowProduct = (showId: string, productId: string) => apiFetch(`/api/shows/${encodeURIComponent(showId)}/my-products/${encodeURIComponent(productId)}`, { method: 'DELETE' })
 
-/* ------------------------------------------- show participation application (kèm sản phẩm mới ra mắt) */
-export interface ParticipationLaunchInput { productName: string; categoryId: number; shortDescription?: string; launchDate: string; startTime: string; endTime: string }
-export interface ParticipationLaunch { productId: string; productName?: string; productImage?: string; categoryName?: string; shortDescription?: string; productModerationStatus?: string; launchDate: string; startTime: string; endTime: string
-  /** Show HOSTED: phiên phát của DN cho mốc này (có sau khi VCCI xác nhận đơn) và route Studio trên CMS */
-  streamSessionId?: string; streamStatus?: string; hostPath?: string }
+/* ------------------------------------------- show participation application (kèm sản phẩm chọn từ danh mục của DN) */
+/** Sản phẩm kèm đơn. Mốc ngày giờ chỉ có ở đơn cũ (sản phẩm mới ra mắt); đơn chọn từ danh mục để trống. */
+export interface ParticipationLaunch { productId: string; productName?: string; productImage?: string; categoryName?: string; shortDescription?: string; productModerationStatus?: string; launchDate: string; startTime: string; endTime: string }
 export interface MyParticipation {
   id: string; showId: string; status: string; rejectReason?: string; submittedAt?: string; reviewedAt?: string
   contactName: string; contactPhone: string; note: string; launches: ParticipationLaunch[]
@@ -247,8 +245,6 @@ const toParticipation = (r: Raw): MyParticipation => ({
     productId: String(l.productId), productName: l.productName ?? undefined, productImage: l.productImage ?? undefined,
     categoryName: l.categoryName ?? undefined, shortDescription: l.shortDescription ?? undefined, productModerationStatus: l.productModerationStatus ?? undefined,
     launchDate: l.launchDate ?? '', startTime: l.startTime ?? '', endTime: l.endTime ?? '',
-    streamSessionId: l.streamSessionId == null ? undefined : String(l.streamSessionId), streamStatus: l.streamStatus ?? undefined,
-    hostPath: typeof l.hostPath === 'string' && l.hostPath.startsWith('/') ? l.hostPath : undefined,
   })),
   days: Array.isArray(r.days) ? r.days.map(String) : [],
   feeAmount: r.feeAmount == null ? undefined : Number(r.feeAmount), feeCurrency: r.feeCurrency ?? undefined,
@@ -284,11 +280,10 @@ export const myParticipation = async (showId: string) => {
   const r = await apiFetch<Raw | null>(`/api/shows/${encodeURIComponent(showId)}/participation`)
   return r ? toParticipation(r) : null
 }
-/** POST /api/shows/{id}/participation: multipart `data` (JSON) + `images[i]` is the image of `launches[i]` */
-export async function submitParticipation(showId: string, data: { contactName: string; contactPhone: string; note?: string; launches: ParticipationLaunchInput[]; days?: string[] }, images: File[]) {
+/** POST /api/shows/{id}/participation: multipart `data` (JSON). Sản phẩm là id trong danh mục của chính DN. */
+export async function submitParticipation(showId: string, data: { contactName: string; contactPhone: string; note?: string; productIds: string[]; days?: string[] }) {
   const fd = new FormData()
-  fd.append('data', new Blob([JSON.stringify(data)], { type: 'application/json' }))
-  images.forEach((f) => fd.append('images', f))
+  fd.append('data', new Blob([JSON.stringify({ ...data, productIds: data.productIds.map(Number) })], { type: 'application/json' }))
   return toParticipation(await apiFetch<Raw>(`/api/shows/${encodeURIComponent(showId)}/participation`, { method: 'POST', form: fd }))
 }
 
