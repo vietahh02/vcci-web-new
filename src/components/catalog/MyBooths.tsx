@@ -6,6 +6,7 @@
 import { Plus, Send, Trash2, Undo2 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { catalogApi } from '@/api'
+import { CMS_URL } from '@/api/config'
 import { MyInquiries } from '@/components/catalog/MyInquiries'
 import type { BoothInput, MyBooth, MyParticipation, OnlineShow, OpenShow, ParticipationOptions, ShowKind, ShowProductRow } from '@/api/catalogApi'
 import { fileSrc, uploadFile } from '@/api/uploads'
@@ -274,6 +275,24 @@ function ShowParticipations() {
                 {p?.paymentStatus === 'EXPIRED' && <p className="mt-2 text-sm text-red-600">{tx('Đơn đã quá hạn nộp phí và trả lại suất. Bạn có thể gửi lại đơn.', 'The payment deadline passed and the seat was released. You can apply again.', '결제 기한이 지나 자리가 반환되었습니다. 다시 신청할 수 있습니다.')}</p>}
                 {!!p?.days.length && <p className="mt-2 text-sm">{tx('Ngày đồng tổ chức', 'Co-organising days', '공동 주최일')}: <b>{p.days.map(dayLabel).join(', ')}</b></p>}
                 {owesFee && p && <ParticipationPaymentBox showId={s.id} p={p} onDone={load} />}
+                {!!p?.streams.length && (
+                  <div className="mt-4">
+                    <p className="mb-2 text-sm font-semibold">{tx('Khung phát trực tiếp của bạn', 'Your live slots', '내 라이브 시간')}</p>
+                    <ul className="space-y-1.5 text-sm">
+                      {p.streams.map((x) => (
+                        <li key={x.slotId} className="flex flex-wrap items-center gap-2">
+                          <span>{dayLabel(x.date)} {x.startTime}-{x.endTime}</span>
+                          {x.streamStatus === 'ENDED' ? <Badge variant="secondary">{tx('Đã kết thúc', 'Ended', '종료')}</Badge>
+                            : CMS_URL && x.hostPath ? (
+                              <a href={`${CMS_URL}${x.hostPath}`} target="_blank" rel="noopener noreferrer" className="font-semibold text-primary underline">
+                                {x.streamStatus === 'LIVE' ? tx('Đang phát · vào Studio', 'Live · open Studio', '방송 중 · 스튜디오') : tx('Vào Studio phát trực tiếp', 'Open live Studio', '라이브 스튜디오 열기')}
+                              </a>
+                            ) : null}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
                 {!!p?.launches.length && (
                   <div className="mt-4">
                     <p className="mb-2 text-sm font-semibold">{tx('Sản phẩm tham gia', 'Products in the application', '신청 제품')} ({p.launches.length})</p>

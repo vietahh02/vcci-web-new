@@ -229,7 +229,10 @@ export interface MyParticipation {
   days: string[]; feeAmount?: number; feeCurrency?: string
   paymentStatus?: 'PENDING' | 'SUBMITTED' | 'VERIFIED' | 'EXPIRED' | 'REJECTED'; paymentDueAt?: string
   transactionCode?: string; paymentSubmittedAt?: string; paymentRejectReason?: string
+  /** Show HOSTED: khung phát của DN theo ngày đồng tổ chức; hostPath = route Studio trên CMS (có khi đã có phiên) */
+  streams: ParticipationStream[]
 }
+export interface ParticipationStream { slotId: string; date: string; startTime: string; endTime: string; streamStatus?: string; hostPath?: string }
 export type ShowKind = 'VCCI' | 'ORGANIZATION' | 'HOSTED'
 /** Cấu hình form đăng ký của một Show: loại, phí, suất đồng tổ chức, có cho kèm sản phẩm ra mắt không. */
 export interface ParticipationOptions {
@@ -251,6 +254,11 @@ const toParticipation = (r: Raw): MyParticipation => ({
   paymentStatus: r.paymentStatus ?? undefined, paymentDueAt: r.paymentDueAt ?? undefined,
   transactionCode: r.transactionCode ?? undefined, paymentSubmittedAt: r.paymentSubmittedAt ?? undefined,
   paymentRejectReason: r.paymentRejectReason ?? undefined,
+  streams: (Array.isArray(r.streams) ? r.streams : []).map((x: Raw) => ({
+    slotId: String(x.slotId), date: x.date ?? '', startTime: x.startTime ?? '', endTime: x.endTime ?? '',
+    streamStatus: x.streamStatus ?? undefined,
+    hostPath: typeof x.hostPath === 'string' && x.hostPath.startsWith('/') ? x.hostPath : undefined,
+  })),
 })
 /** GET /api/shows/{id}/participation/options */
 export const participationOptions = async (showId: string): Promise<ParticipationOptions> => {
