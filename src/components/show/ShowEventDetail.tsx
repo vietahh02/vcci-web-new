@@ -69,6 +69,7 @@ export function ShowEventDetail({ show }: { show: Show }) {
   const productCount = show.booths.reduce((n, b) => n + b.products.length, 0)
   // the API's label also closes registration while the show is upcoming (mock data computes FULL from booths, which says nothing about visitors)
   const regClosed = show.status === 'ENDED' || show.status === 'CANCELED' || show.displayLabel === 'FULL' || show.displayLabel === 'REG_NOT_OPEN' || show.displayLabel === 'REG_CLOSED'
+    || (show.registrationState != null && show.registrationState !== 'OPEN')
   const hasValidBadge = visitor.badge?.status === 'ISSUED'
   const time = eventTimeRange({ startTime: show.startTime ?? '00:00', endTime: show.endTime ?? '23:59' })
 
