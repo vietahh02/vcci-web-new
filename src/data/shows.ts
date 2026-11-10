@@ -104,6 +104,8 @@ export interface Show {
   endTime?: string
   /** Label from the API, same value as GET /api/public/shows. */
   displayLabel?: ShowLabel
+  /** API registration state (NOT_OPEN | OPEN | FULL | CLOSED); the label of an ONGOING show does not say registration closed. */
+  registrationState?: string
   organizer: Bilingual
   /** Virtual venue only: Show Hub is online-only (BR-SHB-15). */
   virtualVenue: Bilingual

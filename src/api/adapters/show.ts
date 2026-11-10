@@ -64,6 +64,7 @@ export function toShow(r: Raw): Show {
     title: biAny(r.title), tagline: biAny(r.tagline), introduction: biAny(r.introduction), cover: url(r.cover, IMG.handshake),
     status: str(r.status, 'UPCOMING') as Show['status'],
     displayLabel: toShowLabel(r.displayLabel),
+    registrationState: r.registrationState ? str(r.registrationState) : undefined,
     direction: str(r.direction, 'EXPORT') === 'IMPORT' ? 'IMPORT' : 'EXPORT',
     exhibitorScope: str(r.exhibitorScope, 'DOMESTIC') === 'FOREIGN' ? 'FOREIGN' : 'DOMESTIC',
     targetMarkets: arr<string>(r.targetMarkets), industries: arr<string>(r.industries),
