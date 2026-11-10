@@ -3,7 +3,7 @@ import { AnimatePresence, motion } from 'motion/react'
 import { AlertTriangle, ArrowLeft, ArrowRight, BadgeCheck, Check, Info, Lock, Plus, ShieldCheck, Trash2 } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { liveApi, USE_MOCK, useEvent } from '@/api'
+import { catalogApi, liveApi, USE_MOCK, useEvent } from '@/api'
 import { useToast } from '@/components/ui/overlay'
 import { Button, buttonClass, Field, Input, Textarea, Req } from '@/components/ui/primitives'
 import { DateField } from '@/components/ui/DateField'
@@ -347,6 +347,11 @@ function CapabilityForm({ p, set }: FP<'capability'>) {
   const c = p.capability
   const { fromReg, businessType, businessForm, industries } = useRegistrationLabels(p)
   const manufacturer = profileKind(p) === 'SELLER' // nhà phân phối không khai OEM, công suất, nhà xưởng
+  const [productNames, setProductNames] = useState<string[]>([])
+  useEffect(() => {
+    // shortcut: chỉ lấy 100 sản phẩm đầu, đủ cho chọn 5 sản phẩm chủ lực; nếu DN có nhiều hơn thì đổi sang ô tìm kiếm
+    catalogApi.myProducts('', 'all', 0, 100).then((r) => setProductNames([...new Set(r.items.map((x) => x.productName).filter(Boolean))]), () => setProductNames([]))
+  }, [])
   return (
     <div className="space-y-7">
       <div className="grid gap-4 sm:grid-cols-2">
@@ -356,10 +361,23 @@ function CapabilityForm({ p, set }: FP<'capability'>) {
       </div>
       <Q label={tx('Tối đa 5 sản phẩm chủ lực', 'Up to 5 key products')} required>
         <div className="grid gap-2 sm:grid-cols-2">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <Input key={i} placeholder={`${tx('Sản phẩm', 'Product')} ${i + 1}`} value={c.mainProducts[i] ?? ''} onChange={(e) => { const m = [...c.mainProducts]; m[i] = e.target.value; set({ ...c, mainProducts: m }) }} />
-          ))}
+          {Array.from({ length: 5 }).map((_, i) => {
+            const cur = c.mainProducts[i] ?? ''
+            // giữ giá trị cũ (nhập tay trước đây / sản phẩm đã xoá) để không mất khi lưu
+            const names = cur && !productNames.includes(cur) ? [cur, ...productNames] : productNames
+            return (
+              <Select key={i} aria-label={`${tx('Sản phẩm', 'Product')} ${i + 1}`} placeholder={`${tx('Sản phẩm', 'Product')} ${i + 1}`} value={cur}
+                onValueChange={(v) => { const m = [...c.mainProducts]; m[i] = v; set({ ...c, mainProducts: m }) }}
+                options={[{ value: '', label: tx('Không chọn', 'None', '선택 안 함') }, ...names.map((n) => ({ value: n, label: n, disabled: n !== cur && c.mainProducts.includes(n) }))]} />
+            )
+          })}
         </div>
+        {productNames.length === 0 && (
+          <p className="mt-2 text-xs text-muted-foreground">
+            {tx('Doanh nghiệp chưa có sản phẩm nào.', 'Your company has no products yet.', '등록된 제품이 없습니다.')}{' '}
+            <Link to="/account/catalog/products/new" className="font-semibold text-primary underline-offset-4 hover:underline">{tx('Thêm sản phẩm', 'Add a product', '제품 추가')}</Link>
+          </p>
+        )}
       </Q>
       <Q label={tx('Năng lực cung ứng hiện tại', 'Current supply capacity')} required><Choice options={OPTIONS.supplyCapacity} value={c.supplyCapacity} onChange={(v) => set({ ...c, supplyCapacity: v })} /></Q>
       {manufacturer && <Q label={tx('Sản xuất theo thiết kế / thông số của khách hàng (OEM/ODM)?', 'Produce to customer design (OEM/ODM)?')} required><Choice options={OPTIONS.oem} value={c.oem} onChange={(v) => set({ ...c, oem: v })} /></Q>}

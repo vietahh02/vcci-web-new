@@ -121,7 +121,9 @@ export default function RequestDetail() {
               </div>
               <div className="p-5">
                 <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t.requests.buyer}</p>
-                <p className="mt-2 font-bold">{r.organizationName}</p>
+                {r.organizationId
+                  ? <Link to={`/suppliers/${r.organizationId}`} className="mt-2 block font-bold hover:text-primary hover:underline">{r.organizationName}</Link>
+                  : <p className="mt-2 font-bold">{r.organizationName}</p>}
                 <CountryChip code={r.country} label={L(r.countryName)} className="mt-1" />
                 {quoteBlock === null ? (
                   <Button size="lg" className="mt-5 w-full" onClick={openQuote}><Send /> {t.requests.sendQuote}</Button>
