@@ -1,23 +1,20 @@
 /** Home sections added in the "less monotonous" pass: varied rhythm, fewer image frames. */
-import { motion, MotionConfig } from 'motion/react'
+import { AnimatePresence, motion } from 'motion/react'
 import {
-  ArrowRight, ArrowUpRight, Bot, CalendarDays, ChevronLeft, ChevronRight, Clock, Globe2, Handshake,
-  Landmark, MessagesSquare, Quote, Radio, ShieldCheck, Star, Ticket, Video,
+  ArrowRight, ArrowUpRight, Bot, CalendarDays, ChevronLeft, ChevronRight, Globe2, Handshake,
+  Landmark, MessagesSquare, Quote, Radio, SearchX, ShieldCheck, Star,
 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { useEvents, useFeaturedBusinesses, useHomeStats, useHomeTestimonials, useOrgProducts } from '@/api'
-import { categories, countryName } from '@/data/mock'
-import { categoryIcons, SectionHeader, VerifiedBadge } from '@/components/brand'
-import { ReputationStars } from '@/components/reputation/Reputation'
-import { EventCard } from '@/components/cards'
-import { CountUp, Marquee, Reveal, Stagger, StaggerItem } from '@/components/effects'
+import { searchBusinesses, useEvents, useFeaturedBusinesses, useHomeTestimonials, useOrgProducts, useRemote } from '@/api'
+import { countryName, type Business } from '@/data/mock'
+import { SectionHeader, VerifiedBadge } from '@/components/brand'
+import { LiveDot, Marquee, Reveal, Stagger, StaggerItem } from '@/components/effects'
 import { goldSponsors, mainSponsor, partnerSponsors } from '@/components/sponsor'
-import { Pager, usePaged } from '@/components/ui/pager'
 import { buttonClass } from '@/components/ui/primitives'
-import { eventTimeRange } from '@/lib/eventStatus'
+import { eventTimeRange, isOnAir } from '@/lib/eventStatus'
 import { useI18n } from '@/lib/i18n'
-import { cn, formatDate, formatMoney, formatNumber, img } from '@/lib/utils'
+import { cn, daysLeft, formatDate, formatMoney, formatNumber, img } from '@/lib/utils'
 
 /* ================================================================ TRUST BAND — no boxes */
 export function TrustBand() {
@@ -56,261 +53,208 @@ export function TrustBand() {
   )
 }
 
-/* ================================================================ CATEGORIES — icon tiles, split layout */
-export function CategoryTiles() {
-  const { t, L, locale } = useI18n()
-  const productTotal = useHomeStats().data?.products ?? 0
-  if (!categories.length) return null
+/** Shown in a home section when its API returned nothing (never while it is still loading). */
+export function HomeEmpty({ what, dark, className }: { what: keyof ReturnType<typeof useI18n>['t']['common']['notFound']; dark?: boolean; className?: string }) {
+  const { t } = useI18n()
   return (
-    <section className="container-page mt-20 grid grid-cols-1 gap-10 lg:grid-cols-[320px_minmax(0,1fr)] lg:items-center">
-      <Reveal>
-        <h2 className="text-3xl font-extrabold tracking-tight text-balance md:text-[38px] md:leading-[1.1]">{t.home.categoriesTitle}</h2>
-        <p className="mt-3 text-muted-foreground">{t.home.categoriesSub}</p>
-        <p className="mt-6 text-5xl font-extrabold tracking-tight text-primary">
-          <CountUp to={productTotal} format={(n) => formatNumber(Math.round(n), locale) + '+'} />
-        </p>
-        <p className="text-sm text-muted-foreground">{t.home.stats.products}</p>
-        <Link to="/search" className={buttonClass('outline', 'md', 'mt-6 rounded-full')}>{t.common.viewAll} <ArrowRight /></Link>
+    <div role="status" className={cn('flex flex-col items-center gap-2 rounded-2xl px-6 py-14 text-center', dark ? 'bg-white/[0.06] text-white/75' : 'bg-muted/60 text-muted-foreground', className)}>
+      <SearchX className="size-7" aria-hidden />
+      <p className={cn('font-semibold', dark ? 'text-white' : 'text-foreground')}>{t.common.notFound[what]}</p>
+    </div>
+  )
+}
+
+/* ================================================================ FEATURED BUSINESSES — three suppliers, each with three of its products */
+export function FeaturedBusiness() {
+  const { t } = useI18n()
+  const { data: featured, loading: featuredLoading } = useFeaturedBusinesses()
+  // featured suppliers may have no products (BE currently returns importers only), so the directory fills the gaps
+  const { data: directory, loading: directoryLoading } = useRemote('home:biz-directory', searchBusinesses)
+  const list = [...(featured ?? []), ...(directory ?? []).filter((d) => !featured?.some((f) => f.id === d.id))]
+  return (
+    <section className="container-page mt-24">
+      <Reveal className="mb-8 flex flex-wrap items-end justify-between gap-x-10 gap-y-4">
+        <div className="max-w-3xl">
+          <h2 className="text-3xl font-extrabold tracking-[-0.02em] md:text-[38px] md:leading-[1.1]">{t.home.featuredTitle}</h2>
+          <p className="mt-3 text-muted-foreground">{t.home.featuredSub}</p>
+        </div>
+        <Link to="/suppliers" className="group inline-flex min-h-11 items-center gap-2 text-[15px] font-semibold text-primary">
+          {t.supplier.directoryTitle}
+          <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" />
+        </Link>
       </Reveal>
-      <Stagger className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 xl:grid-cols-5">
-        {categories.map((c) => {
-          const Icon = categoryIcons[c.icon]
-          return (
-            <StaggerItem key={c.id}>
-              <Link
-                to={`/search?category=${c.id}`}
-                className="group relative flex h-full flex-col overflow-hidden rounded-2xl bg-muted/60 p-4 transition-colors duration-300 hover:bg-primary"
-              >
-                <span className="relative grid size-11 place-items-center rounded-xl bg-background text-primary transition-transform duration-300 group-hover:scale-110">
-                  <Icon className="size-5" />
-                </span>
-                <span className="relative mt-4 text-[14px] font-bold leading-snug transition-colors group-hover:text-white">{L(c.categoryName)}</span>
-                <span className="relative mt-1 flex items-center gap-1 text-[13px] text-muted-foreground transition-colors group-hover:text-white/85">
-                  {formatNumber(c.productCount, locale)} {t.nav.products_count}
-                  <ArrowRight className="size-3.5 -translate-x-2 opacity-0 transition-all group-hover:translate-x-0 group-hover:opacity-100" />
-                </span>
-              </Link>
-            </StaggerItem>
-          )
-        })}
-      </Stagger>
+      {/* rows without products render nothing (a hidden marker while loading), so nth-of-type keeps the first three articles.
+          shortcut: one product request per candidate (up to 12); upgrade when the BE returns featured suppliers with products */}
+      <div className="peer grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3 [&>article:nth-of-type(n+4)]:hidden">
+        {list.slice(0, 12).map((b) => <FeaturedBusinessRow key={b.id} business={b} />)}
+      </div>
+      {!featuredLoading && !directoryLoading && <HomeEmpty what="businesses" className="hidden peer-[:not(:has(article,[data-loading]))]:flex" />}
     </section>
   )
 }
 
-/* ================================================================ FEATURED BUSINESSES — honour roll of wide photo panels */
-export function FeaturedBusiness() {
+function FeaturedBusinessRow({ business: b }: { business: Business }) {
   const { t, L } = useI18n()
-  const list = (useFeaturedBusinesses().data ?? []).slice(0, 5)
-  const [i, setI] = useState(0)
-  const [paused, setPaused] = useState(false)
-  useEffect(() => {
-    if (paused || list.length < 2) return
-    const id = setInterval(() => setI((v) => (v + 1) % list.length), 7000)
-    return () => clearInterval(id)
-  }, [paused, list.length, i])
-  // hover intent: a mouse sweeping across the row should not open every panel it crosses
-  const hoverTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
-  const hoverOpen = (k: number) => {
-    clearTimeout(hoverTimer.current)
-    hoverTimer.current = setTimeout(() => setI(k), 140)
-  }
-  useEffect(() => () => clearTimeout(hoverTimer.current), [])
-  const active = list[i % Math.max(list.length, 1)]
-  const items = useOrgProducts(active?.id ?? '').data ?? []
-  if (!active) return null
-  const ease = 'ease-[cubic-bezier(0.65,0,0.35,1)]'
-
+  const { data, loading } = useOrgProducts(b.id)
+  const items = (data ?? []).slice(0, 3)
+  if (loading) return <span data-loading hidden />
+  if (!items.length) return null
+  const country = countryName[b.country] ? L(countryName[b.country]) : b.country
   return (
-    <section
-      className="motion-keep relative mt-24 bg-navy py-20 text-white md:py-24"
-      onMouseEnter={() => setPaused(true)}
-      onMouseLeave={() => setPaused(false)}
-      onFocusCapture={() => setPaused(true)}
-      onBlurCapture={() => setPaused(false)}
-    >
-      <div className="container-page">
-        <Reveal className="mb-10 flex flex-wrap items-end justify-between gap-x-10 gap-y-4">
-          <div className="max-w-3xl">
-            <h2 className="text-3xl font-extrabold tracking-[-0.02em] md:text-[44px] md:leading-[1.05]">{t.home.featuredTitle}</h2>
-            <p className="mt-3 text-base text-white/75">{t.home.featuredSub}</p>
-          </div>
-          <Link to="/suppliers" className="group inline-flex min-h-11 items-center gap-2 text-[15px] font-semibold text-gold-bright">
-            {t.supplier.directoryTitle}
-            <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" />
-          </Link>
-        </Reveal>
-
-        {/* --open: the active panel's final width, so its copy is laid out once and never reflows while the panel grows */}
-        <div
-          className="flex flex-col gap-2 @container lg:h-[560px] lg:flex-row lg:gap-3"
-          style={{ '--open': `calc((100cqw - ${(list.length - 1) * 12}px) * 5.5 / ${list.length + 4.5})` } as React.CSSProperties}
-          onMouseLeave={() => clearTimeout(hoverTimer.current)}
-        >
-          {list.map((b, k) => {
-            const on = k === i
-            const country = countryName[b.country] ? L(countryName[b.country]) : b.country
-            const flag = `https://flagcdn.com/${b.country.toLowerCase()}.svg`
-            // staggered entrance for the open panel's lines; `off` is any extra resting transform (e.g. a tilt)
-            const rise = (n: number, cls: string, off = '') => ({
-              className: cn(cls, 'transition-[opacity,translate,rotate]', ease, on ? 'translate-y-0 rotate-0 opacity-100 duration-[800ms]' : cn('translate-y-6 opacity-0 duration-200', off)),
-              style: { transitionDelay: on ? `${500 + n * 90}ms` : '0ms' },
-            })
-            return (
-              <article
-                key={b.id}
-                onPointerEnter={(e) => e.pointerType === 'mouse' && !on && hoverOpen(k)}
-                onPointerLeave={() => clearTimeout(hoverTimer.current)}
-                className={cn(
-                  'group relative overflow-hidden rounded-3xl bg-navy-2 transition-[flex-grow,height] duration-[1100ms]',
-                  ease,
-                  on ? 'h-[480px] lg:h-auto lg:flex-[5.5]' : 'h-20 lg:h-auto lg:flex-1',
-                )}
-              >
-                <img
-                  src={img(b.coverImage, 1200, 900)}
-                  alt=""
-                  loading="lazy"
-                  className={cn(
-                    'absolute inset-0 size-full object-cover transition-[scale,opacity] duration-[1600ms]',
-                    ease,
-                    on ? 'scale-100 opacity-100' : 'scale-125 opacity-45 group-hover:scale-115 group-hover:opacity-70',
-                  )}
-                />
-                {/* neutral scrims so the white type reads on any photograph; crossfaded, since gradients cannot transition */}
-                <div className={cn('absolute inset-0 bg-navy/55 transition-opacity duration-[900ms]', ease, on && 'opacity-0')} />
-                <div className={cn('absolute inset-0 bg-[linear-gradient(to_top,rgb(8_8_46/0.92)_0%,rgb(8_8_46/0.55)_45%,rgb(8_8_46/0.1)_100%)] transition-opacity duration-[900ms]', ease, !on && 'opacity-0')} />
-
-                <button
-                  type="button"
-                  onClick={() => setI(k)}
-                  aria-label={b.name}
-                  aria-hidden={on || undefined}
-                  tabIndex={on ? -1 : 0}
-                  className={cn('absolute inset-0 focus-visible:outline-2 focus-visible:-outline-offset-4 focus-visible:outline-gold-bright', on && 'pointer-events-none')}
-                >
-                  {/* the name lies on its side in a closed panel and swings level as the panel opens (desktop) */}
-                  <span
-                    className={cn(
-                      'absolute left-5 top-1/2 flex -translate-y-1/2 items-center gap-3 whitespace-nowrap transition-[rotate,opacity,translate] lg:top-auto lg:bottom-6 lg:left-[calc(50%+14px)] lg:origin-bottom-left lg:translate-y-0',
-                      ease,
-                      on ? 'opacity-0 duration-700 lg:translate-x-4 lg:rotate-0' : 'opacity-100 delay-200 duration-[1000ms] lg:-rotate-90',
-                    )}
-                  >
-                    <img src={flag} alt="" width={28} height={20} className="h-5 w-7 shrink-0 rounded-[3px] object-cover lg:rotate-90" />
-                    <span className="max-w-[60vw] truncate text-base font-bold lg:max-w-[440px]">{b.name}</span>
-                  </span>
-                </button>
-
-                {/* always mounted: each line drops out fast on close and rises in turn once the panel has mostly opened */}
-                <div inert={!on} className="absolute inset-y-0 left-0 flex w-full flex-col justify-between p-6 md:p-9 lg:w-(--open)">
-                    <p {...rise(0, 'flex items-center gap-2.5 text-[15px] font-semibold')}>
-                      <img src={flag} alt="" width={28} height={20} className="h-5 w-7 rounded-[3px] object-cover" />
-                      {b.province && b.province !== country ? `${b.province}, ${country}` : country}
-                    </p>
-
-                    <div className="max-w-2xl">
-                      <div {...rise(1, 'flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-white/85')}>
-                        <span>{t.supplier.types[b.businessType]}</span>
-                        {b.verified && <VerifiedBadge />}
-                        <ReputationStars orgId={b.id} legacyScore={b.reputationScore} dark />
-                      </div>
-                      <h3 {...rise(2, 'mt-3 origin-bottom-left text-[28px] font-extrabold leading-[1.05] tracking-[-0.02em] text-balance md:text-[44px]', '-rotate-3')}>
-                        <Link to={`/suppliers/${b.id}`} className="hover:underline hover:decoration-2 hover:underline-offset-4">{b.name}</Link>
-                      </h3>
-                      <p {...rise(3, 'mt-3 line-clamp-3 text-base leading-relaxed text-white/90 md:line-clamp-2')}>{L(b.description)}</p>
-                      {on && items.length > 0 && (
-                        <ul {...rise(4, 'mt-4 hidden flex-wrap gap-2 md:flex')}>
-                          {items.slice(0, 3).map((p) => (
-                            <li key={p.id}>
-                              <Link to={`/products/${p.id}`} className="inline-flex min-h-9 items-center gap-2 rounded-full bg-white/10 px-3.5 text-[13px] transition hover:bg-white hover:text-navy">
-                                {L(p.productName)}
-                                <span className="font-semibold">{formatMoney(p.priceFob)}</span>
-                              </Link>
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                      <div {...rise(5, 'mt-6 flex flex-wrap gap-3')}>
-                        <Link to={`/suppliers/${b.id}`} className={buttonClass('default', 'lg', 'rounded-full bg-white text-navy hover:bg-gold-bright')}>
-                          {t.product.visitProfile} <ArrowUpRight />
-                        </Link>
-                        <Link to={`/suppliers/${b.id}`} className={buttonClass('ghost', 'lg', 'rounded-full text-white hover:bg-white/15 hover:text-white')}>
-                          <MessagesSquare /> {t.common.contact}
-                        </Link>
-                      </div>
-                    </div>
-                </div>
-
-                {on && list.length > 1 && (
-                  <MotionConfig reducedMotion="never">
-                  <motion.span
-                    key={`bar-${i}-${paused}`}
-                    aria-hidden
-                    className="absolute inset-x-0 bottom-0 h-1 origin-left bg-gold-bright"
-                    initial={{ scaleX: 0 }}
-                    animate={{ scaleX: paused ? 0 : 1 }}
-                    transition={{ duration: paused ? 0 : 7, ease: 'linear' }}
-                  />
-                  </MotionConfig>
-                )}
-              </article>
-            )
-          })}
+    <article className="flex flex-col rounded-3xl bg-muted/60 p-4 md:p-5">
+      <div className="flex items-center gap-4">
+        <img src={img(b.coverImage, 160, 160)} alt="" loading="lazy" className="size-16 shrink-0 rounded-2xl object-cover" />
+        <div className="min-w-0">
+          <p className="flex items-center gap-2 text-sm text-muted-foreground">
+            <img src={`https://flagcdn.com/${b.country.toLowerCase()}.svg`} alt="" width={20} height={14} className="h-3.5 w-5 rounded-[2px] object-cover" />
+            {country} · {t.supplier.types[b.businessType]}
+            {b.verified && <VerifiedBadge compact />}
+          </p>
+          <h3 className="mt-0.5 line-clamp-2 text-base font-bold leading-snug">
+            <Link to={`/suppliers/${b.id}`} className="hover:text-primary">{b.name}</Link>
+          </h3>
         </div>
       </div>
-    </section>
+      <ul className="mt-4 grid grid-cols-3 gap-2.5">
+        {items.map((p) => (
+          <li key={p.id}>
+            {/* image only at rest; name and price show on hover or keyboard focus (touch opens the product) */}
+            <Link to={`/products/${p.id}`} aria-label={`${L(p.productName)}, ${formatMoney(p.priceFob)} / ${p.unit}`} className="group relative block aspect-square overflow-hidden rounded-2xl bg-background outline-none focus-visible:ring-2 focus-visible:ring-primary">
+              <img src={img(p.productImages[0]!, 320, 320)} alt="" loading="lazy" className="size-full object-cover transition-transform duration-500 group-hover:scale-105" />
+              <span aria-hidden className="absolute inset-0 flex flex-col justify-end bg-navy/80 p-2.5 text-white opacity-0 transition-opacity duration-300 group-hover:opacity-100 group-focus-visible:opacity-100">
+                <span className="line-clamp-3 text-[13px] font-semibold leading-snug">{L(p.productName)}</span>
+                <span className="mt-1 text-[13px] font-bold">{formatMoney(p.priceFob)} <span className="font-normal text-white/75">/ {p.unit}</span></span>
+              </span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+      <Link to={`/suppliers/${b.id}`} className="group mt-4 inline-flex min-h-9 items-center gap-1.5 self-start text-sm font-semibold text-primary">
+        {t.product.visitProfile}
+        <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" />
+      </Link>
+    </article>
   )
 }
-
-/* ================================================================ EVENTS — featured + calendar list */
+/* ================================================================ EVENTS — one event on show, its date set large; the strip below picks the next */
 export function EventsAgenda() {
   const { t, L, locale } = useI18n()
-  const events = useEvents().data ?? []
-  const upcoming = events.filter((e) => e.eventStatus === 'UPCOMING')
-  const live = events.find((e) => e.eventStatus === 'ONGOING') ?? upcoming[0]
-  const { items: pageEvents, ...pager } = usePaged(upcoming)
-  if (!live) return null
+  const { data: events = [], loading } = useEvents()
+  const list = [...events.filter((e) => e.eventStatus === 'ONGOING'), ...events.filter((e) => e.eventStatus === 'UPCOMING')].slice(0, 5)
+  const [activeId, setActiveId] = useState<string>()
+  const idx = Math.max(0, list.findIndex((e) => e.id === activeId))
+  const ev = list[idx]
+  if (!ev) return loading ? null : (
+    <section className="container-page mt-24">
+      <h2 className="mb-8 text-3xl font-extrabold tracking-[-0.02em] md:text-[38px] md:leading-[1.1]">{t.home.eventsTitle}</h2>
+      <HomeEmpty what="events" />
+    </section>
+  )
+  const go = (step: number) => setActiveId(list[(idx + step + list.length) % list.length]!.id)
+  const time = eventTimeRange(ev)
+  const left = daysLeft(ev.startDate)
+  const d = new Date(ev.startDate)
+  const ease = [0.22, 1, 0.36, 1] as const
 
   return (
     <section className="container-page mt-24">
-      <SectionHeader title={t.home.eventsTitle} sub={t.home.eventsSub} action={{ to: '/events', label: t.events.viewCalendar }} />
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
-        <Reveal><EventCard event={live} /></Reveal>
-        <Reveal delay={0.1}>
-          <p className="mb-3 flex items-center gap-2 text-sm font-bold"><CalendarDays className="size-4 text-primary" /> {t.home.upcoming}</p>
-          <ol className="divide-y border-y">
-            {pageEvents.map((e, i) => {
-              const d = new Date(e.startDate)
-              return (
-                <motion.li key={e.id} initial={{ opacity: 0, y: 14 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.08 }}>
-                  <Link to={`/events/${e.id}`} className="group flex items-center gap-4 py-4 transition-colors">
-                    <div className="grid w-16 shrink-0 place-items-center rounded-2xl bg-navy py-2.5 text-white transition-transform duration-300 group-hover:-rotate-3 group-hover:scale-105">
-                      <span className="text-[10px] font-semibold uppercase tracking-wider text-gold-bright">{formatDate(e.startDate, locale, { month: 'short' })}</span>
-                      <span className="text-2xl font-extrabold leading-none">{String(d.getDate()).padStart(2, '0')}</span>
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-2 text-[11px] font-semibold text-muted-foreground">
-                        <span className="inline-flex items-center gap-1">{e.eventType === 'LIVESTREAM' ? <Radio className="size-3" /> : <Video className="size-3" />}{t.events.type[e.eventType]}</span>
-                        {eventTimeRange(e) && <span className="inline-flex items-center gap-1"><Clock className="size-3" />{eventTimeRange(e)}</span>}
-                      </div>
-                      <p className="mt-1 line-clamp-2 font-bold leading-snug transition-colors group-hover:text-primary">{L(e.title)}</p>
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        {e.participationFee ? formatMoney(e.participationFee, e.participationFeeCurrency, locale) : t.common.free} · {formatNumber(e.registeredSlots, locale)}{e.maxSlots > 0 && `/${formatNumber(e.maxSlots, locale)}`} {t.events.registered}
-                      </p>
-                    </div>
-                    <span className="grid size-10 shrink-0 place-items-center rounded-full border transition-all group-hover:border-primary group-hover:bg-primary group-hover:text-primary-foreground">
-                      <ArrowUpRight className="size-4" />
-                    </span>
-                  </Link>
-                </motion.li>
-              )
-            })}
-          </ol>
-          <Pager {...pager} className="mt-4" />
-          <Link to="/events" className={buttonClass('gold', 'md', 'mt-5')}><Ticket /> {t.events.register}</Link>
-        </Reveal>
-      </div>
+      <Reveal className="mb-8 flex flex-wrap items-end justify-between gap-x-10 gap-y-4">
+        <div className="max-w-3xl">
+          <h2 className="text-3xl font-extrabold tracking-[-0.02em] md:text-[38px] md:leading-[1.1]">{t.home.eventsTitle}</h2>
+          <p className="mt-3 text-muted-foreground">{t.home.eventsSub}</p>
+        </div>
+        <Link to="/events" className="group inline-flex min-h-11 items-center gap-2 text-[15px] font-semibold text-primary">
+          {t.events.viewCalendar}
+          <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" />
+        </Link>
+      </Reveal>
+
+      <Reveal className="grid overflow-hidden rounded-3xl bg-muted/60 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
+        {/* the picture */}
+        <Link to={`/events/${ev.id}`} tabIndex={-1} aria-hidden className="relative block aspect-[16/10] overflow-hidden bg-muted lg:aspect-auto lg:min-h-[480px]">
+          <AnimatePresence initial={false}>
+            <motion.img
+              key={ev.id}
+              src={img(ev.coverImage, 1100, 800)}
+              alt=""
+              initial={{ opacity: 0, scale: 1.05 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.8, ease }}
+              className="absolute inset-0 size-full object-cover"
+            />
+          </AnimatePresence>
+          <span className="absolute bottom-4 left-4 inline-flex items-center gap-2 rounded-full bg-background px-3.5 py-1.5 text-sm font-semibold text-foreground">
+            {isOnAir(ev) ? <><LiveDot /> {t.events.live}</> : ev.eventStatus === 'ONGOING' ? t.events.status.ONGOING : `${left} ${t.common.daysLeft}`}
+          </span>
+        </Link>
+
+        {/* the details, with the date as the largest thing */}
+        <div className="flex min-w-0 flex-col p-6 md:p-10" aria-live="polite">
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.div
+              key={ev.id}
+              initial={{ opacity: 0, y: 14 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.35, ease }}
+            >
+              <div className="flex items-center gap-4">
+                <span className="text-[56px] font-extrabold leading-[0.9] tracking-[-0.05em] text-primary tabular-nums md:text-[72px]">{String(d.getDate()).padStart(2, '0')}</span>
+                <span className="text-sm leading-relaxed text-muted-foreground">
+                  <span className="block font-semibold text-foreground first-letter:uppercase">{formatDate(ev.startDate, locale, { month: 'long', year: 'numeric' })}</span>
+                  {[time, L(ev.location)].filter(Boolean).join(' · ')}
+                </span>
+              </div>
+              <h3 className="mt-6 line-clamp-2 text-2xl font-extrabold leading-tight tracking-[-0.02em] md:text-[28px]">
+                <Link to={`/events/${ev.id}`} className="transition-colors hover:text-primary">{L(ev.title)}</Link>
+              </h3>
+              <p className="mt-3 line-clamp-3 leading-relaxed text-foreground/80">{L(ev.introduction)}</p>
+              <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-3">
+                <Link to={`/events/${ev.id}`} className={buttonClass('default', 'lg', 'rounded-full')}>
+                  {ev.eventStatus === 'ONGOING' ? t.common.viewDetail : t.events.register}
+                </Link>
+                <span className="text-sm text-muted-foreground">
+                  {ev.participationFee ? formatMoney(ev.participationFee, ev.participationFeeCurrency, locale) : t.common.free} · {formatNumber(ev.registeredSlots, locale)}{ev.maxSlots > 0 && `/${formatNumber(ev.maxSlots, locale)}`} {t.events.registered}
+                </span>
+              </div>
+            </motion.div>
+          </AnimatePresence>
+
+          {/* the other events: pick one to bring it to the front */}
+          {list.length > 1 && (
+            <div className="mt-8 flex items-center gap-2 lg:mt-auto lg:pt-8">
+              <button type="button" onClick={() => go(-1)} aria-label={t.ui.previous} className="grid size-9 shrink-0 place-items-center rounded-full text-foreground/70 transition-colors hover:bg-background hover:text-foreground">
+                <ChevronLeft className="size-5" />
+              </button>
+              <ol className="flex min-w-0 flex-1 gap-2 overflow-x-auto">
+                {list.map((e) => {
+                  const on = e.id === ev.id
+                  return (
+                    <li key={e.id} className="min-w-16 flex-1">
+                      <button
+                        type="button"
+                        onClick={() => setActiveId(e.id)}
+                        aria-pressed={on}
+                        aria-label={`${L(e.title)}, ${formatDate(e.startDate, locale)}`}
+                        className="group block w-full text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                      >
+                        <span className="block aspect-[4/3] overflow-hidden rounded-xl">
+                          <img src={img(e.coverImage, 200, 150)} alt="" loading="lazy" className={cn('size-full object-cover transition-[opacity,scale] duration-500', on ? 'opacity-100' : 'opacity-50 group-hover:scale-105 group-hover:opacity-85')} />
+                        </span>
+                        <span className={cn('mt-1.5 block h-0.5 rounded-full transition-colors duration-500', on ? 'bg-primary' : 'bg-transparent')} />
+                      </button>
+                    </li>
+                  )
+                })}
+              </ol>
+              <button type="button" onClick={() => go(1)} aria-label={t.ui.next} className="grid size-9 shrink-0 place-items-center rounded-full text-foreground/70 transition-colors hover:bg-background hover:text-foreground">
+                <ChevronRight className="size-5" />
+              </button>
+            </div>
+          )}
+        </div>
+      </Reveal>
     </section>
   )
 }
@@ -318,7 +262,7 @@ export function EventsAgenda() {
 /* ================================================================ TESTIMONIALS */
 export function Testimonials() {
   const { t, L } = useI18n()
-  const testimonials = useHomeTestimonials().data ?? []
+  const { data: testimonials = [], loading } = useHomeTestimonials()
   const scroller = useRef<HTMLDivElement>(null)
   const [paused, setPaused] = useState(false)
 
@@ -336,8 +280,7 @@ export function Testimonials() {
     return () => clearInterval(id)
   }, [paused])
 
-  // Live mode with no testimonials authored in the CMS yet: hide the block instead of rendering an empty carousel.
-  if (!testimonials.length) return null
+  if (loading && !testimonials.length) return null
 
   return (
     <section className="relative isolate mt-24 overflow-hidden bg-navy py-20 text-white">
@@ -347,7 +290,8 @@ export function Testimonials() {
           <p className="mt-4 text-white/90 md:text-lg">{t.home.testimonialsSub}</p>
         </Reveal>
 
-        <div className="relative mt-6" onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)}>
+        {!testimonials.length && <HomeEmpty what="testimonials" dark className="mt-10" />}
+        <div className={cn('relative mt-6', !testimonials.length && 'hidden')} onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)}>
           {/* safe center: canh giữa khi ít thẻ, tự về đầu hàng khi tràn để không mất thẻ đầu */}
           {/* overflow-x cắt luôn chiều dọc: pt/pb phải đủ chỗ cho avatar nhô lên, viền trắng, thẻ nhấc khi hover và shadow */}
           <div ref={scroller} className="no-scrollbar -mx-4 -mb-8 flex snap-x snap-mandatory gap-5 overflow-x-auto scroll-smooth px-4 pb-12 pt-14 [justify-content:safe_center] md:-mx-7 md:px-7">
@@ -440,12 +384,12 @@ export function WhyList() {
 export function SponsorTiers() {
   const { t, L } = useI18n()
   const s = mainSponsor
-  // only what the CMS has published: no sponsors, no section
-  if (!s && !goldSponsors.length && !partnerSponsors.length) return null
+  const none = !s && !goldSponsors.length && !partnerSponsors.length
   const nameLink = 'rounded-sm decoration-gold decoration-2 underline-offset-[6px] outline-none [&[href]:hover]:underline focus-visible:ring-2 focus-visible:ring-primary'
   return (
     <section className="container-page mt-24">
       <SectionHeader title={`${s ? t.home.sponsorMain : t.live.sponsors} & ${t.home.sponsorPartners.toLowerCase()}`} />
+      {none && <HomeEmpty what="sponsors" />}
 
       <Reveal>
         <dl className="divide-y border-y border-t-2 border-t-foreground">

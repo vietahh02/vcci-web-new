@@ -18,7 +18,7 @@ import { isOnAir } from '@/lib/eventStatus'
 import { useI18n } from '@/lib/i18n'
 import { useProfile } from '@/lib/profile'
 import { tx } from '@/lib/tx'
-import { CategoryTiles, EventsAgenda, FeaturedBusiness, SponsorTiers, Testimonials, WhyList } from '@/pages/home/sections'
+import { EventsAgenda, FeaturedBusiness, HomeEmpty, SponsorTiers, Testimonials, WhyList } from '@/pages/home/sections'
 import { formatNumber, img } from '@/lib/utils'
 
 export default function Home() {
@@ -27,7 +27,6 @@ export default function Home() {
       <Hero />
       <SourcingDock />
       {/* TrustBand (legal verification / 63 provinces / B2B support / languages) hidden on home; component kept in home/sections.tsx */}
-      <CategoryTiles />
       <ProductsSection />
       <FeaturedBusiness />
       <RequestsSection />
@@ -294,7 +293,7 @@ function SourcingDock() {
 function ProductsSection() {
   const { t } = useI18n()
   const [tab, setTab] = useState<'popular' | 'newest' | 'certified'>('popular')
-  const list = useHomeProducts(tab).data ?? []
+  const { data: list = [], loading } = useHomeProducts(tab)
 
   return (
     <section className="container-page mt-24">
@@ -310,6 +309,7 @@ function ProductsSection() {
           { value: 'certified', label: t.home.productTabs.certified },
         ]}
       />
+      {!loading && !list.length && <HomeEmpty what="products" />}
       <motion.div layout className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4 lg:grid-cols-5">
         <AnimatePresence mode="popLayout">
           {list.map((p, i) => (
@@ -332,7 +332,7 @@ function ProductsSection() {
 /* ================================================================ IMPORT REQUESTS */
 function RequestsSection() {
   const { t, L } = useI18n()
-  const importRequests = useHomeRequests().data ?? []
+  const { data: importRequests = [], loading } = useHomeRequests()
   const { items: list, ...pager } = usePaged(importRequests)
 
   return (
@@ -340,6 +340,7 @@ function RequestsSection() {
       <SectionHeader title={t.home.requestsTitle} sub={t.home.requestsSub} action={{ to: '/requests', label: t.common.viewAll }} />
       <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
         <div className="relative space-y-3">
+          {!loading && !importRequests.length && <HomeEmpty what="requests" />}
           <AnimatePresence mode="popLayout" initial={false}>
             {list.map((r) => (
               <motion.div
