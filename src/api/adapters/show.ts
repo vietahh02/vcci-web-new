@@ -42,7 +42,7 @@ export function toShow(r: Raw): Show {
     products: arr(b.products).map((p) => ({ id: id(p.id), name: biAny(p.name), image: url(p.image, IMG.warehouse), blurb: biAny(p.blurb), featured: Boolean(p.featured), moq: p.moq ? str(p.moq) : undefined, linkId: p.linkId ? id(p.linkId) : undefined })),
   }))
   const launches: ShowLaunch[] = arr(r.launches).map((l) => ({ id: id(l.id), boothId: id(l.boothId), productId: id(l.productId), stage: biAny(l.stage), start: str(l.start), end: str(l.end), live: Boolean(l.live), followers: num(l.followers),
-    streamEventId: l.streamEventId != null ? id(l.streamEventId) : undefined, streamSessionId: l.streamSessionId != null ? id(l.streamSessionId) : undefined }))
+    streamEventId: l.streamEventId != null ? id(l.streamEventId) : undefined, streamSessionId: l.streamSessionId != null ? id(l.streamSessionId) : undefined, organizationName: l.organizationName ? str(l.organizationName) : undefined }))
   const speakers: ShowSpeaker[] = arr(r.speakers).map((s) => ({ id: id(s.id), name: str(s.name), title: biAny(s.title), org: biAny(s.org), country: str(s.country), bio: biAny(s.bio), accent: str(s.accent, '#0b4f8a') }))
   const sessions: ShowSession[] = arr(r.sessions).map((s) => ({
     id: id(s.id), kind: str(s.kind, 'SEMINAR') as ShowSession['kind'], title: biAny(s.title), summary: biAny(s.summary), speakerIds: arr(s.speakerIds).map(id), room: biAny(s.room),
