@@ -53,9 +53,9 @@ export function MyRegistrationActions({ ev, onChanged }: { ev: EventItem; onChan
 
   return (
     <div className="mt-4 flex flex-wrap items-center gap-2" data-testid="my-registration">
-      <Badge variant="outline" className="border-white/30 text-white">{statusText(my.status)}</Badge>
-      <Button size="sm" variant="white" onClick={openCard}><Ticket /> {tx('Xem thẻ', 'View my card', '내 배지 보기')}</Button>
-      {canCancel && <Button size="sm" variant="outline" className="border-white/30 text-white hover:bg-white/10" onClick={() => { setErr(null); setCancelOpen(true) }}><XCircle /> {tx('Huỷ đăng ký', 'Cancel registration', '등록 취소')}</Button>}
+      <Badge variant="outline">{statusText(my.status)}</Badge>
+      <Button size="sm" onClick={openCard}><Ticket /> {tx('Xem thẻ', 'View my card', '내 배지 보기')}</Button>
+      {canCancel && <Button size="sm" variant="outline" onClick={() => { setErr(null); setCancelOpen(true) }}><XCircle /> {tx('Huỷ đăng ký', 'Cancel registration', '등록 취소')}</Button>}
 
       <Dialog open={cardOpen} onOpenChange={setCardOpen}>
         <DialogContent title={tx('Thẻ tham dự', 'Your badge', '참가 배지')} description={L(ev.title)}>

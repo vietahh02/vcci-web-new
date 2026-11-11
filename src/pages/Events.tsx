@@ -7,6 +7,7 @@ import { searchEvents } from '@/api'
 import type { EventItem } from '@/data/mock'
 import { EventExplorer, formatLabel } from '@/components/event/EventExplorer'
 import { LiveDot, useCountdown } from '@/components/effects'
+import { PageHero } from '@/components/PageHero'
 import { ErrorBlock } from '@/components/ui/StateViews'
 import { buttonClass, Skeleton } from '@/components/ui/primitives'
 import { eventTimeRange, isOnAir } from '@/lib/eventStatus'
@@ -64,46 +65,57 @@ function CountdownHero({ ev }: { ev: EventItem }) {
   const parts: [number, string][] = [[c.d, t.common.countdown[0]], [c.h, t.common.countdown[1]], [c.m, t.common.countdown[2]], [c.s, t.common.countdown[3]]]
 
   return (
-    <section className="relative isolate overflow-hidden bg-navy text-white">
-      <img src={img(ev.coverImage, 1920, 1000)} alt="" className="absolute inset-0 -z-20 size-full animate-kenburns object-cover opacity-45" />
-      <div className="absolute inset-0 -z-10 bg-navy/65" />
-      {/* a tool page: the hero stays short so the event finder starts on the first screen */}
-      <div className="container-page flex min-h-[300px] flex-col justify-end py-8 md:min-h-[420px] md:py-12">
-        <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-[15px] font-semibold text-gold-bright">
+    <PageHero
+      tone="azure"
+      crumbs={[{ label: t.common.home, to: '/' }, { label: t.nav.events }]}
+      kicker={
+        <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mb-2 inline-flex items-center gap-2 rounded-full bg-white/80 px-3.5 py-1 text-[13px] font-bold text-primary ring-1 ring-primary/25 backdrop-blur dark:bg-white/10 dark:text-[#7cc7ee] dark:ring-white/15">
+          <span aria-hidden className="size-2 rounded-full bg-primary" />
           {t.home.upcoming} · {t.events.type[ev.eventType]}
         </motion.p>
-        <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7 }} className="mt-2 line-clamp-2 max-w-4xl text-[28px] font-extrabold leading-[1.05] tracking-tight text-balance md:text-6xl">
-          {L(ev.title)}
-        </motion.h1>
-        <p className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-white/90">
+      }
+      title={L(ev.title)}
+      titleKey={ev.id}
+      subtitle={
+        <span className="flex flex-wrap gap-x-5 gap-y-1">
           <span>{formatDate(ev.startDate, locale, { day: '2-digit', month: 'long', year: 'numeric' })}{time && ` · ${time}`}</span>
           {/* online-first: format/platform first, venue secondary and only when set */}
           {ev.format !== 'OFFLINE' && <span className="inline-flex items-center gap-1.5"><Video className="size-4" /> {formatLabel(ev.format)}{ev.platform ? ` · ${ev.platform}` : ''}</span>}
-          {L(ev.location) && <span className="inline-flex items-center gap-1.5 text-white/80"><MapPin className="size-4" /> {L(ev.location)}</span>}
-        </p>
-        <div className="mt-6 flex flex-wrap items-end justify-between gap-5 md:mt-10 md:gap-8">
-          <div className="flex flex-wrap gap-3 md:gap-6">
-            {parts.map(([v, label]) => {
-              const digits = String(v).padStart(2, '0')
-              return (
-                <div key={label} className="text-center">
-                  {/* Be Vietnam Pro has no tabular figures, so each digit gets its own fixed slot */}
-                  <div className="relative h-[40px] overflow-hidden text-[32px] font-extrabold leading-[40px] md:h-[88px] md:text-[84px] md:leading-[88px]" style={{ width: `${digits.length * 0.68}em` }}>
-                    <motion.span key={v} initial={{ y: '-100%' }} animate={{ y: 0 }} transition={{ type: 'spring', bounce: 0.25, duration: 0.5 }} className="absolute inset-0 flex">
-                      {[...digits].map((d, i) => <span key={i} className="flex-1 text-center">{d}</span>)}
-                    </motion.span>
-                  </div>
-                  <p className="mt-1 text-[13px] font-semibold text-white/75">{label}</p>
-                </div>
-              )
-            })}
-          </div>
-          <div className="flex flex-wrap gap-3">
-            <Link to={`/events/${ev.id}`} className={buttonClass('gold', 'lg')}><Ticket /> {t.events.register}</Link>
-            <Link to={`/events/${ev.id}`} className={buttonClass('ghost', 'lg', 'bg-white/10 text-white hover:bg-white/20 hover:text-white max-sm:hidden')}>{t.common.viewDetail}</Link>
-          </div>
-        </div>
+          {L(ev.location) && <span className="inline-flex items-center gap-1.5 opacity-80"><MapPin className="size-4" /> {L(ev.location)}</span>}
+        </span>
+      }
+      aside={
+        <Link
+          to={`/events/${ev.id}`}
+          className="group relative block aspect-[16/10] w-full max-w-[560px] overflow-hidden rounded-3xl bg-muted shadow-[0_30px_60px_-30px_rgba(0,70,110,0.5)] ring-1 ring-white/70 dark:ring-white/10"
+        >
+          <img src={img(ev.coverImage, 1200, 760)} alt="" className="size-full object-cover transition-transform duration-700 group-hover:scale-105" />
+          <span aria-hidden className="absolute inset-0 bg-gradient-to-t from-[#041a2b]/55 via-transparent to-transparent" />
+          <span className="absolute left-4 top-4 grid min-w-14 place-items-center rounded-2xl bg-white/95 px-3 py-2 text-center shadow-md">
+            <span className="text-[11px] font-bold uppercase leading-none tracking-wide text-primary">{formatDate(ev.startDate, locale, { month: 'short' })}</span>
+            <span className="mt-1 text-2xl font-extrabold leading-none text-[#06344d]">{formatDate(ev.startDate, locale, { day: '2-digit' })}</span>
+          </span>
+        </Link>
+      }
+    >
+      {/* countdown: four tiles; Be Vietnam Pro has no tabular figures, so each digit gets its own fixed slot */}
+      <div className="flex w-full gap-2 md:gap-3">
+        {parts.map(([v, label]) => {
+          const digits = String(v).padStart(2, '0')
+          return (
+            <div key={label} className="min-w-0 rounded-2xl bg-white/85 px-3 pb-2.5 pt-3 text-center shadow-[0_14px_30px_-20px_rgba(0,80,125,0.45)] ring-1 ring-primary/15 backdrop-blur md:px-4 dark:bg-white/5 dark:ring-white/10">
+              <div className="relative mx-auto h-[36px] overflow-hidden text-[30px] font-extrabold leading-[36px] text-primary md:h-[56px] md:text-[48px] md:leading-[56px] dark:text-[#7cc7ee]" style={{ width: `${digits.length * 0.68}em` }}>
+                <motion.span key={v} initial={{ y: '-100%' }} animate={{ y: 0 }} transition={{ type: 'spring', bounce: 0.25, duration: 0.5 }} className="absolute inset-0 flex">
+                  {[...digits].map((d, i) => <span key={i} className="flex-1 text-center">{d}</span>)}
+                </motion.span>
+              </div>
+              <p className="mt-0.5 text-[12px] font-semibold text-[#12384d]/75 dark:text-white/70">{label}</p>
+            </div>
+          )
+        })}
       </div>
-    </section>
+      <Link to={`/events/${ev.id}`} className={buttonClass('default', 'lg')}><Ticket /> {t.events.register}</Link>
+      <Link to={`/events/${ev.id}`} className={buttonClass('ghost', 'lg', 'border border-primary/40 bg-white/70 text-primary hover:bg-white hover:text-primary dark:border-white/25 dark:bg-white/10 dark:text-white dark:hover:bg-white/20 dark:hover:text-white')}>{t.common.viewDetail}</Link>
+    </PageHero>
   )
 }

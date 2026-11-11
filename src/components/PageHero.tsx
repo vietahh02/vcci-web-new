@@ -12,39 +12,41 @@ export type Crumb = { label: string; to?: string }
  * Hero + breadcrumb + title + optional tab bar. The mesh covers hero and tab bar, then fades into the page, so there is no horizontal seam.
  * `children` (search box, filters…) sit in the left column under the subtitle; `tabs` straddles the hero's bottom edge.
  */
-export function PageHero({ crumbs, title, titleKey, subtitle, children, tabs, aside, below, tone = 'sky' }: { crumbs: Crumb[]; title: ReactNode; titleKey?: string; subtitle?: ReactNode; children?: ReactNode; tabs?: ReactNode; aside?: ReactNode; below?: ReactNode; tone?: HeroTone }) {
+export function PageHero({ crumbs, title, titleKey, subtitle, kicker, children, tabs, aside, below, tone = 'sky' }: { crumbs: Crumb[]; title: ReactNode; titleKey?: string; subtitle?: ReactNode; kicker?: ReactNode; children?: ReactNode; tabs?: ReactNode; aside?: ReactNode; below?: ReactNode; tone?: HeroTone }) {
   const { t } = useI18n()
   const navy = tone === 'navy'
   const violet = tone === 'violet'
   const warm = tone === 'warm'
+  const azure = tone === 'azure'
   const nav = (
-    <nav aria-label={t.ui.breadcrumb} className={cn('flex flex-wrap items-center gap-1 text-[13px]', navy ? 'text-white/65' : violet ? 'text-[#3d2f8f]/70 dark:text-white/70' : warm ? 'text-[#7a3b1c]/70 dark:text-white/70' : 'text-navy/65 dark:text-white/70')}>
+    <nav aria-label={t.ui.breadcrumb} className={cn('flex flex-wrap items-center gap-1 text-[13px]', navy ? 'text-white/65' : violet ? 'text-[#3d2f8f]/70 dark:text-white/70' : warm ? 'text-[#7a3b1c]/70 dark:text-white/70' : azure ? 'text-[#0b5d85]/70 dark:text-white/70' : 'text-navy/65 dark:text-white/70')}>
       {crumbs.map((c, i) => (
         <span key={c.label + i} className="inline-flex items-center gap-1">
           {i > 0 && <ChevronRight className="size-3.5" aria-hidden />}
           {c.to && i < crumbs.length - 1
-            ? <Link to={c.to} className={navy ? 'hover:text-white' : violet ? 'hover:text-[#5a31e0] dark:hover:text-white' : warm ? 'hover:text-[#c2410c] dark:hover:text-white' : 'hover:text-primary dark:hover:text-white'}>{c.label}</Link>
-            : <span className={i === crumbs.length - 1 ? cn('font-semibold', navy ? 'text-white' : violet ? 'text-[#2a1b7a] dark:text-white' : warm ? 'text-[#4a1d0a] dark:text-white' : 'text-navy dark:text-white') : undefined}>{c.label}</span>}
+            ? <Link to={c.to} className={navy ? 'hover:text-white' : violet ? 'hover:text-[#5a31e0] dark:hover:text-white' : warm ? 'hover:text-[#c2410c] dark:hover:text-white' : azure ? 'hover:text-primary dark:hover:text-white' : 'hover:text-primary dark:hover:text-white'}>{c.label}</Link>
+            : <span className={i === crumbs.length - 1 ? cn('font-semibold', navy ? 'text-white' : violet ? 'text-[#2a1b7a] dark:text-white' : warm ? 'text-[#4a1d0a] dark:text-white' : azure ? 'text-[#06344d] dark:text-white' : 'text-navy dark:text-white') : undefined}>{c.label}</span>}
         </span>
       ))}
     </nav>
   )
 
-  // warm: nền kem → cam đào, ảnh cảng mờ dần bên phải; cột trái là tiêu đề + nút, cột phải là số liệu (aside); `below` là phần mở rộng (các bước)
-  if (warm) {
+  // warm / azure: hai cột — trái là tiêu đề + nút (children), phải là khối nổi (aside); `below` là phần mở rộng. warm: kem → cam đào + ảnh cảng; azure: xanh primary nhạt
+  if (warm || azure) {
     return (
       <div className="relative isolate pb-10">
-        <WarmArt />
+        {azure ? <AzureArt /> : <WarmArt />}
         <section className="pb-8 pt-7 md:pt-8">
           <div className="container-page">
             {nav}
-            <div className="mt-6 grid items-end gap-8 md:mt-10 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] lg:gap-14">
+            <div className="mt-6 grid items-center gap-8 md:mt-10 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] lg:gap-14">
               <div className="min-w-0">
-                <motion.h1 key={titleKey} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="py-1.5 text-4xl font-extrabold leading-[1.2] tracking-tight text-balance text-[#3b1507] md:text-[52px] md:leading-[1.15] dark:text-white">
+                {kicker}
+                <motion.h1 key={titleKey} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className={cn('py-1.5 text-4xl font-extrabold leading-[1.2] tracking-tight text-balance md:text-[52px] md:leading-[1.15] dark:text-white', azure ? 'text-primary' : 'text-[#3b1507]')}>
                   {title}
                 </motion.h1>
-                <span aria-hidden className="mt-1 block h-1 w-14 rounded-full bg-gradient-to-r from-[#e8383d] to-[#f59e0b]" />
-                {subtitle && <p className="mt-4 max-w-xl text-base font-medium leading-relaxed text-[#4a2a1a]/85 md:text-lg dark:text-white/85">{subtitle}</p>}
+                <span aria-hidden className={cn('mt-1 block h-1 w-14 rounded-full bg-gradient-to-r', azure ? 'from-[#1a8cc4] to-[#7cc7ee]' : 'from-[#e8383d] to-[#f59e0b]')} />
+                {subtitle && <p className={cn('mt-4 max-w-xl text-base font-medium leading-relaxed md:text-lg dark:text-white/85', azure ? 'text-[#12384d]/85' : 'text-[#4a2a1a]/85')}>{subtitle}</p>}
                 {children && <div className="mt-7 flex flex-wrap gap-3">{children}</div>}
               </div>
               {aside && <div className="lg:justify-self-end">{aside}</div>}
@@ -248,7 +250,30 @@ const HERO_FADE = { maskImage: 'linear-gradient(to bottom, #000 0%, #000 55%, tr
 const HERO_IMG_FADE = 'linear-gradient(to right, transparent 0%, #000 38%), linear-gradient(to bottom, transparent 0%, #000 14%, #000 66%, transparent 100%)'
 const HERO_IMG_MASK = { maskImage: HERO_IMG_FADE, maskComposite: 'intersect', WebkitMaskImage: HERO_IMG_FADE, WebkitMaskComposite: 'source-in' } as const
 
-export type HeroTone = 'sky' | 'navy' | 'violet' | 'warm'
+export type HeroTone = 'sky' | 'navy' | 'violet' | 'warm' | 'azure'
+
+/** Bản "azure" (trang hội chợ & sự kiện): nền xanh primary nhạt, không ảnh nền (ảnh sự kiện nằm trong khối aside), tan dần ở đáy. */
+const AZURE_MESH_LIGHT = [
+  'radial-gradient(42% 90% at 0% 0%, rgba(170,216,244,.95) 0%, rgba(170,216,244,0) 70%)',
+  'radial-gradient(44% 100% at 100% 0%, rgba(130,200,240,.7) 0%, rgba(130,200,240,0) 70%)',
+  'radial-gradient(40% 80% at 58% 110%, rgba(200,230,250,.85) 0%, rgba(200,230,250,0) 70%)',
+  'linear-gradient(100deg, #e1f0fa 0%, #edf6fc 50%, #daecf8 100%)',
+].join(',')
+const AZURE_MESH_DARK = [
+  'radial-gradient(42% 90% at 0% 0%, rgba(42,159,216,.3) 0%, rgba(42,159,216,0) 70%)',
+  'radial-gradient(44% 100% at 100% 0%, rgba(56,189,248,.22) 0%, rgba(56,189,248,0) 70%)',
+  'linear-gradient(100deg, #06152e 0%, #0a2a4a 55%, #0d2540 100%)',
+].join(',')
+const AZURE_FADE = 'linear-gradient(to bottom, #000 0%, #000 62%, transparent 100%)'
+
+function AzureArt() {
+  return (
+    <>
+      <div aria-hidden className="absolute inset-0 -z-20 dark:hidden" style={{ background: AZURE_MESH_LIGHT, maskImage: AZURE_FADE, WebkitMaskImage: AZURE_FADE }} />
+      <div aria-hidden className="absolute inset-0 -z-20 hidden dark:block" style={{ background: AZURE_MESH_DARK, maskImage: AZURE_FADE, WebkitMaskImage: AZURE_FADE }} />
+    </>
+  )
+}
 
 /** Bản "warm" (trang yêu cầu nhập khẩu): nền kem → cam đào, ảnh cảng biển có sẵn mờ dần về nền, tan dần ở đáy. */
 const WARM_MESH_LIGHT = [

@@ -12,6 +12,7 @@ import { RejectedRegistrationNotice } from '@/components/event/RejectedRegistrat
 import { getShow } from '@/data/shows'
 import { ShowEventDetail } from '@/components/show/ShowEventDetail'
 import { SectionHeader } from '@/components/brand'
+import { PageHero } from '@/components/PageHero'
 import { SponsorVerticalBanner } from '@/components/sponsor'
 import { ScheduleGrid } from '@/components/event/ScheduleGrid'
 import { AddToCalendar } from '@/components/event/AddToCalendar'
@@ -29,7 +30,7 @@ import { eventTimeRange, registrationState } from '@/lib/eventStatus'
 import { isRegistered } from '@/lib/eventUser'
 import { useProfile } from '@/lib/profile'
 import { tx } from '@/lib/tx'
-import { formatDate, formatMoney, formatNumber, img } from '@/lib/utils'
+import { formatDate, formatMoney, formatNumber } from '@/lib/utils'
 
 type DetailTab = 'overview' | 'program' | 'speakers' | 'products' | 'participants' | 'journey'
 
@@ -89,71 +90,59 @@ function WebinarView({ ev }: { ev: EventItem }) {
 
   return (
     <>
-      <section className="relative isolate overflow-hidden bg-navy text-white">
-        <img src={img(ev.coverImage, 1800, 800)} alt="" className="absolute inset-0 -z-20 size-full animate-kenburns object-cover opacity-40" />
-        <div className="absolute inset-0 -z-10 bg-navy/75" />
-        <div className="container-page grid gap-10 py-12 md:py-20 lg:grid-cols-[1fr_380px]">
-          <Reveal>
-            <nav className="mb-5 text-[13px] text-white/60"><Link to="/events" className="hover:text-white">{t.nav.events}</Link> / {t.events.type[ev.eventType]}</nav>
-            <div className="flex flex-wrap gap-2">
-              {ev.eventStatus === 'ONGOING' ? (
-                <Badge variant="live" className="gap-1.5"><LiveDot /> {t.events.live}</Badge>
-              ) : (
-                <Badge variant="outline" className="border-white/30 text-white">{t.events.status[ev.eventStatus]}</Badge>
-              )}
-              <Badge variant="outline" className="border-white/30 text-white">{ev.eventType === 'LIVESTREAM' ? <Radio /> : <Video />} {t.events.type[ev.eventType]}</Badge>
-              <Badge variant="outline" className="border-white/30 text-white">{formatLabel(ev.format)}{ev.platform ? ` · ${ev.platform}` : ''}</Badge>
-              <RegBadge ev={ev} />
-              {programme?.phases.map((p) => <Badge key={p.id} variant="outline" className="border-gold-bright/40 text-gold-bright">{L(p.name)} · {L(p.theme)}</Badge>)}
-            </div>
-            <h1 className="mt-4 max-w-3xl text-3xl font-extrabold leading-tight tracking-tight text-balance md:text-5xl">{L(ev.title)}</h1>
-            <p className="mt-4 max-w-2xl text-white/75 md:text-lg">{L(ev.introduction)}</p>
-            <div className="mt-6 flex flex-wrap gap-x-6 gap-y-2 text-sm text-white/80">
-              <span className="inline-flex items-center gap-2">
-                <CalendarDays className="size-4 text-gold-bright" />
-                {formatDate(ev.startDate, locale, { day: '2-digit', month: 'long', year: 'numeric' })}
-                {ev.endDate.slice(0, 10) !== ev.startDate.slice(0, 10) && ` – ${formatDate(ev.endDate, locale, { day: '2-digit', month: 'long', year: 'numeric' })}`}
-              </span>
-              {eventTimeRange(ev) && <span className="inline-flex items-center gap-2"><Clock className="size-4 text-gold-bright" /> {eventTimeRange(ev)} (GMT+7)</span>}
-              {/* online-first (Leader 01/11/2026): joining online is the main path, the venue is secondary and only shown when set */}
-              {ev.format !== 'OFFLINE' && <span className="inline-flex items-center gap-2 font-semibold text-white"><Video className="size-4 text-gold-bright" /> {formatLabel(ev.format)}{ev.platform ? ` · ${ev.platform}` : ` · ${tx('trên hệ thống VCCI', 'on the VCCI platform', 'VCCI 플랫폼')}`}</span>}
-              {L(ev.location) && <span className={ev.format === 'OFFLINE' ? 'inline-flex items-center gap-2' : 'inline-flex items-center gap-2 text-xs text-white/60'}><MapPin className={ev.format === 'OFFLINE' ? 'size-4 text-gold-bright' : 'size-3.5'} /> {L(ev.location)}</span>}
-            </div>
-          </Reveal>
-
-          <Reveal delay={0.15} className="h-fit rounded-2xl bg-navy/80 p-6 ring-1 ring-white/10">
+      <PageHero
+        tone="azure"
+        crumbs={[{ label: t.common.home, to: '/' }, { label: t.nav.events, to: '/events' }, { label: t.events.type[ev.eventType] }]}
+        kicker={
+          <div className="mb-3 flex flex-wrap gap-2">
+            {ev.eventStatus === 'ONGOING' ? (
+              <Badge variant="live" className="gap-1.5"><LiveDot /> {t.events.live}</Badge>
+            ) : (
+              <Badge variant="outline" className="border-primary/25 bg-white/80 text-primary dark:bg-white/10">{t.events.status[ev.eventStatus]}</Badge>
+            )}
+            <Badge variant="outline" className="border-primary/25 bg-white/80 text-primary dark:bg-white/10">{ev.eventType === 'LIVESTREAM' ? <Radio /> : <Video />} {t.events.type[ev.eventType]}</Badge>
+            <Badge variant="outline" className="border-primary/25 bg-white/80 text-primary dark:bg-white/10">{formatLabel(ev.format)}{ev.platform ? ` · ${ev.platform}` : ''}</Badge>
+            <RegBadge ev={ev} />
+            {programme?.phases.map((p) => <Badge key={p.id} variant="outline" className="border-[#d9a62a]/50 bg-[#fff6dc] text-[#8a5a00]">{L(p.name)} · {L(p.theme)}</Badge>)}
+          </div>
+        }
+        title={L(ev.title)}
+        titleKey={ev.id}
+        subtitle={L(ev.introduction)}
+        aside={
+          <Reveal delay={0.15} className="h-fit w-full max-w-[400px] rounded-3xl bg-white/90 p-6 shadow-[0_30px_60px_-34px_rgba(0,70,110,0.55)] ring-1 ring-primary/15 backdrop-blur dark:bg-white/5 dark:ring-white/10">
             {ev.eventStatus === 'UPCOMING' && (
               <>
-                <p className="text-xs font-semibold uppercase tracking-wider text-white/60">{t.events.startsIn}</p>
-                <Countdown target={ev.startDate} labels={t.common.countdown} dark className="mt-2" />
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t.events.startsIn}</p>
+                <Countdown target={ev.startDate} labels={t.common.countdown} className="mt-2" />
               </>
             )}
             <div className="mt-5 flex items-baseline justify-between">
-              <span className="text-sm text-white/65">{t.events.fee}</span>
+              <span className="text-sm text-muted-foreground">{t.events.fee}</span>
               <span className="text-2xl font-extrabold">{ev.participationFee ? formatMoney(ev.participationFee, ev.participationFeeCurrency, locale) : t.common.free}</span>
             </div>
             {ev.eventStatus !== 'ENDED' && <div className="mt-4">
-              <div className="mb-1.5 flex justify-between text-xs text-white/70">
+              <div className="mb-1.5 flex justify-between text-xs text-muted-foreground">
                 <span className="inline-flex items-center gap-1.5"><Users className="size-3.5" /> {formatNumber(ev.registeredSlots, locale)}{ev.maxSlots > 0 && `/${formatNumber(ev.maxSlots, locale)}`} {t.events.slots}</span>
                 {ev.maxSlots > 0 && <span>{Math.round(pct)}%</span>}
               </div>
-              {ev.maxSlots > 0 && <Progress value={pct} className="bg-white/15" barClassName="bg-gradient-to-r from-gold-bright to-amber-400" />}
+              {ev.maxSlots > 0 && <Progress value={pct} barClassName="bg-gradient-to-r from-[#1a8cc4] to-primary" />}
             </div>}
-            {ev.eventStatus === 'ENDED' && <p className="mt-4 flex items-center gap-2 text-sm text-white/80"><Users className="size-4" /> {USE_MOCK ? <>{formatNumber(Math.round(ev.registeredSlots * 0.85), locale)} {tx('người đã tham dự', 'attended', '명 참석')}</> : <>{formatNumber(ev.registeredSlots, locale)} {tx('đơn vị đăng ký', 'registrations', '등록')}</>}</p>}
+            {ev.eventStatus === 'ENDED' && <p className="mt-4 flex items-center gap-2 text-sm text-muted-foreground"><Users className="size-4" /> {USE_MOCK ? <>{formatNumber(Math.round(ev.registeredSlots * 0.85), locale)} {tx('người đã tham dự', 'attended', '명 참석')}</> : <>{formatNumber(ev.registeredSlots, locale)} {tx('đơn vị đăng ký', 'registrations', '등록')}</>}</p>}
             {ev.eventStatus === 'ONGOING' && canJoinOnline && (registered || ev.eventType === 'LIVESTREAM') ? (
               <Link to={`/live/${ev.id}`} className={buttonClass('default', 'lg', 'mt-6 w-full bg-live hover:bg-live/90')}><LiveDot /> {t.events.watchNow}</Link>
             ) : ev.eventStatus === 'ENDED' ? (
-              <a href="#materials" onClick={goJourney('materials')} className={buttonClass('white', 'lg', 'mt-6 w-full')}><PlayCircle /> {t.events.watchRecording}</a>
+              <a href="#materials" onClick={goJourney('materials')} className={buttonClass('default', 'lg', 'mt-6 w-full')}><PlayCircle /> {t.events.watchRecording}</a>
             ) : registered ? (
-              <a href="#prep" onClick={goJourney('prep')} className={buttonClass('gold', 'lg', 'mt-6 w-full')}><Check /> {tx('Đã đăng ký — Chuẩn bị của tôi', 'Registered — My preparation', '등록 완료 — 내 준비')}</a>
+              <a href="#prep" onClick={goJourney('prep')} className={buttonClass('default', 'lg', 'mt-6 w-full')}><Check /> {tx('Đã đăng ký — Chuẩn bị của tôi', 'Registered — My preparation', '등록 완료 — 내 준비')}</a>
             ) : regState === 'FULL' || regState === 'CLOSED' ? (
-              <Button variant="white" size="lg" className="mt-6 w-full" disabled>{regState === 'FULL' ? tx('Đã hết chỗ', 'Fully booked', '정원 마감') : tx('Đã đóng đăng ký', 'Registration closed', '등록 마감')}</Button>
+              <Button variant="outline" size="lg" className="mt-6 w-full" disabled>{regState === 'FULL' ? tx('Đã hết chỗ', 'Fully booked', '정원 마감') : tx('Đã đóng đăng ký', 'Registration closed', '등록 마감')}</Button>
             ) : (
-              <Link to={`/events/${ev.id}/register`} className={buttonClass('gold', 'lg', 'mt-6 w-full')}><Ticket /> {ev.eventType === 'SUPPORT_1TO1' ? tx('Đặt lịch hỗ trợ', 'Book support', '지원 예약') : t.events.register}</Link>
+              <Link to={`/events/${ev.id}/register`} className={buttonClass('default', 'lg', 'mt-6 w-full')}><Ticket /> {ev.eventType === 'SUPPORT_1TO1' ? tx('Đặt lịch hỗ trợ', 'Book support', '지원 예약') : t.events.register}</Link>
             )}
             {canJoinOnline && ev.eventStatus === 'UPCOMING' && (
-              <p className="mt-3 flex items-start gap-2 text-xs text-white/70">
-                <Video className="mt-0.5 size-3.5 shrink-0 text-gold-bright" />
+              <p className="mt-3 flex items-start gap-2 text-xs text-muted-foreground">
+                <Video className="mt-0.5 size-3.5 shrink-0 text-primary" />
                 {ev.eventType === 'WEBINAR' && !registered
                   ? tx('Đăng ký để nhận nút "Xem trực tiếp" — tham gia ngay trên hệ thống VCCI khi sự kiện bắt đầu.', 'Register to get the "Watch live" button — join right here on the VCCI platform when the event starts.', '등록하면 행사 시작 시 VCCI 플랫폼에서 바로 "라이브 시청"할 수 있습니다.')
                   : tx('Nút "Xem trực tiếp" mở tại đây khi sự kiện bắt đầu — không cần cài đặt phần mềm.', 'The "Watch live" button opens here when the event starts — nothing to install.', '행사가 시작되면 여기에서 "라이브 시청" 버튼이 열립니다 — 설치 불필요.')}
@@ -161,11 +150,23 @@ function WebinarView({ ev }: { ev: EventItem }) {
             )}
             {!USE_MOCK && registered && <MyRegistrationActions ev={ev} />}
             {!USE_MOCK && !registered && <RejectedRegistrationNotice eventId={ev.id} />}
-            {ev.eventStatus !== 'ENDED' && <AddToCalendar ev={ev} className="mt-3" />}
-            <p className="mt-4 flex items-center gap-2 text-xs text-white/60"><Building2 className="size-3.5" /> {t.events.organizer}: {L(ev.organizedBy)}</p>
+            {ev.eventStatus !== 'ENDED' && <AddToCalendar ev={ev} tone="light" className="mt-4" />}
+            <p className="mt-4 flex items-center gap-2 border-t pt-4 text-xs text-muted-foreground"><Building2 className="size-3.5" /> {t.events.organizer}: {L(ev.organizedBy)}</p>
           </Reveal>
+        }
+      >
+        <div className="flex w-full flex-wrap gap-x-6 gap-y-2 text-sm text-[#12384d]/85 dark:text-white/80">
+          <span className="inline-flex items-center gap-2">
+            <CalendarDays className="size-4 text-primary" />
+            {formatDate(ev.startDate, locale, { day: '2-digit', month: 'long', year: 'numeric' })}
+            {ev.endDate.slice(0, 10) !== ev.startDate.slice(0, 10) && ` – ${formatDate(ev.endDate, locale, { day: '2-digit', month: 'long', year: 'numeric' })}`}
+          </span>
+          {eventTimeRange(ev) && <span className="inline-flex items-center gap-2"><Clock className="size-4 text-primary" /> {eventTimeRange(ev)} (GMT+7)</span>}
+          {/* online-first (Leader 01/11/2026): joining online is the main path, the venue is secondary and only shown when set */}
+          {ev.format !== 'OFFLINE' && <span className="inline-flex items-center gap-2 font-semibold text-[#06344d] dark:text-white"><Video className="size-4 text-primary" /> {formatLabel(ev.format)}{ev.platform ? ` · ${ev.platform}` : ` · ${tx('trên hệ thống VCCI', 'on the VCCI platform', 'VCCI 플랫폼')}`}</span>}
+          {L(ev.location) && <span className={ev.format === 'OFFLINE' ? 'inline-flex items-center gap-2' : 'inline-flex items-center gap-2 text-xs opacity-70'}><MapPin className={ev.format === 'OFFLINE' ? 'size-4 text-primary' : 'size-3.5'} /> {L(ev.location)}</span>}
         </div>
-      </section>
+      </PageHero>
 
       <div className="container-page mt-8">
         <UnderlineTabs layoutId="ev-tabs" value={tab} onValueChange={(v) => setTab(v as DetailTab)} items={tabs} />
