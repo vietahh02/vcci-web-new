@@ -126,11 +126,14 @@ function Group({ title, count, tone, children, sub }: { title: string; count: nu
 }
 
 /* ---------------------------------------------------------------- explorer */
-export function EventExplorer({ list }: { list: EventItem[] }) {
+/** `search`: when the page header already hosts the search box it passes the state in and the explorer hides its own box. */
+export function EventExplorer({ list, search }: { list: EventItem[]; search?: { q: string; setQ: (v: string) => void } }) {
   const { t, L } = useI18n()
   const { session, registrations, profile } = useProfile()
   const { offlineFormatsEnabled } = useEventOptions()
-  const [q, setQ] = useState('')
+  const [ownQ, setOwnQ] = useState('')
+  const q = search ? search.q : ownQ
+  const setQ = search ? search.setQ : setOwnQ
   const [type, setType] = useState<'ALL' | EventType>('ALL')
   const [format, setFormat] = useState<'ALL' | EventFormat>('ALL')
   const [free, setFree] = useState(false)
@@ -218,10 +221,10 @@ export function EventExplorer({ list }: { list: EventItem[] }) {
         </div>
       </div>
 
-      <div className={cn('mt-5 grid gap-3', hasTypes && hasFormats ? 'md:grid-cols-[1fr_220px_160px_auto]' : hasTypes ? 'md:grid-cols-[1fr_220px_auto]' : hasFormats ? 'md:grid-cols-[1fr_160px_auto]' : 'md:grid-cols-[1fr_auto]')}>
-        <div className="relative"><Search className="absolute left-3 top-3 size-4 text-muted-foreground" /><Input className="pl-9" value={q} onChange={(e) => setQ(e.target.value)} placeholder={onlyShows
+      <div className={cn('mt-5 grid gap-3', search ? (hasTypes && hasFormats ? 'md:grid-cols-[220px_160px_auto]' : hasTypes ? 'md:grid-cols-[220px_auto]' : hasFormats ? 'md:grid-cols-[160px_auto]' : 'md:grid-cols-[auto]') : hasTypes && hasFormats ? 'md:grid-cols-[1fr_220px_160px_auto]' : hasTypes ? 'md:grid-cols-[1fr_220px_auto]' : hasFormats ? 'md:grid-cols-[1fr_160px_auto]' : 'md:grid-cols-[1fr_auto]')}>
+        {!search && <div className="relative"><Search className="absolute left-3 top-3 size-4 text-muted-foreground" /><Input className="pl-9" value={q} onChange={(e) => setQ(e.target.value)} placeholder={onlyShows
           ? (hasVenue ? tx('Tìm hội chợ, đơn vị tổ chức, địa điểm…', 'Search trade shows, organizers, venues…', '박람회, 주최, 장소 검색…') : tx('Tìm hội chợ, đơn vị tổ chức…', 'Search trade shows, organizers…', '박람회, 주최 검색…'))
-          : (hasVenue ? tx('Tìm sự kiện, đơn vị tổ chức, địa điểm…', 'Search events, organizers, venues…', '행사, 주최, 장소 검색…') : tx('Tìm sự kiện, đơn vị tổ chức…', 'Search events, organizers…', '행사, 주최 검색…'))} aria-label="search" /></div>
+          : (hasVenue ? tx('Tìm sự kiện, đơn vị tổ chức, địa điểm…', 'Search events, organizers, venues…', '행사, 주최, 장소 검색…') : tx('Tìm sự kiện, đơn vị tổ chức…', 'Search events, organizers…', '행사, 주최 검색…'))} aria-label="search" /></div>}
         {hasTypes && <Select value={type} onValueChange={setType} aria-label={tx('Loại sự kiện', 'Event type', '행사 유형')} options={[{ value: 'ALL', label: tx('Mọi loại sự kiện', 'All event types', '모든 유형') }, ...TYPES.map((x) => ({ value: x, label: t.events.type[x] }))]} />}
         {hasFormats && <Select value={fmt} onValueChange={setFormat} aria-label={tx('Hình thức', 'Format', '형식')} options={[{ value: 'ALL', label: tx('Mọi hình thức', 'Any format', '모든 형식') }, ...(['ONLINE', 'OFFLINE', 'HYBRID'] as const).map((x) => ({ value: x, label: formatLabel(x) }))]} />}
         <label className="flex h-10 items-center gap-2 whitespace-nowrap text-sm font-medium"><input type="checkbox" checked={free} onChange={(e) => setFree(e.target.checked)} /> {tx('Miễn phí', 'Free only', '무료만')}</label>

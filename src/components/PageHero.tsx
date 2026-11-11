@@ -12,20 +12,20 @@ export type Crumb = { label: string; to?: string }
  * Hero + breadcrumb + title + optional tab bar. The mesh covers hero and tab bar, then fades into the page, so there is no horizontal seam.
  * `children` (search box, filters…) sit in the left column under the subtitle; `tabs` straddles the hero's bottom edge.
  */
-export function PageHero({ crumbs, title, titleKey, subtitle, kicker, children, tabs, aside, below, tone = 'sky' }: { crumbs: Crumb[]; title: ReactNode; titleKey?: string; subtitle?: ReactNode; kicker?: ReactNode; children?: ReactNode; tabs?: ReactNode; aside?: ReactNode; below?: ReactNode; tone?: HeroTone }) {
+export function PageHero({ crumbs, title, titleKey, subtitle, kicker, search, children, tabs, flatTabs, aside, below, tone = 'sky' }: { crumbs: Crumb[]; title: ReactNode; titleKey?: string; subtitle?: ReactNode; kicker?: ReactNode; search?: ReactNode; children?: ReactNode; tabs?: ReactNode; flatTabs?: boolean; aside?: ReactNode; below?: ReactNode; tone?: HeroTone }) {
   const { t } = useI18n()
   const navy = tone === 'navy'
-  const violet = tone === 'violet'
+  const brand = tone === 'brand'
   const warm = tone === 'warm'
   const azure = tone === 'azure'
   const nav = (
-    <nav aria-label={t.ui.breadcrumb} className={cn('flex flex-wrap items-center gap-1 text-[13px]', navy ? 'text-white/65' : violet ? 'text-[#3d2f8f]/70 dark:text-white/70' : warm ? 'text-[#7a3b1c]/70 dark:text-white/70' : azure ? 'text-[#0b5d85]/70 dark:text-white/70' : 'text-navy/65 dark:text-white/70')}>
+    <nav aria-label={t.ui.breadcrumb} className={cn('flex flex-wrap items-center gap-1 text-[13px]', navy ? 'text-white/65' : brand ? 'text-[#0b5d85]/70 dark:text-white/70' : warm ? 'text-[#7a3b1c]/70 dark:text-white/70' : azure ? 'text-[#0b5d85]/70 dark:text-white/70' : 'text-navy/65 dark:text-white/70')}>
       {crumbs.map((c, i) => (
         <span key={c.label + i} className="inline-flex items-center gap-1">
           {i > 0 && <ChevronRight className="size-3.5" aria-hidden />}
           {c.to && i < crumbs.length - 1
-            ? <Link to={c.to} className={navy ? 'hover:text-white' : violet ? 'hover:text-[#5a31e0] dark:hover:text-white' : warm ? 'hover:text-[#c2410c] dark:hover:text-white' : azure ? 'hover:text-primary dark:hover:text-white' : 'hover:text-primary dark:hover:text-white'}>{c.label}</Link>
-            : <span className={i === crumbs.length - 1 ? cn('font-semibold', navy ? 'text-white' : violet ? 'text-[#2a1b7a] dark:text-white' : warm ? 'text-[#4a1d0a] dark:text-white' : azure ? 'text-[#06344d] dark:text-white' : 'text-navy dark:text-white') : undefined}>{c.label}</span>}
+            ? <Link to={c.to} className={navy ? 'hover:text-white' : brand ? 'hover:text-primary dark:hover:text-white' : warm ? 'hover:text-[#c2410c] dark:hover:text-white' : azure ? 'hover:text-primary dark:hover:text-white' : 'hover:text-primary dark:hover:text-white'}>{c.label}</Link>
+            : <span className={i === crumbs.length - 1 ? cn('font-semibold', navy ? 'text-white' : brand ? 'text-[#06344d] dark:text-white' : warm ? 'text-[#4a1d0a] dark:text-white' : azure ? 'text-[#06344d] dark:text-white' : 'text-navy dark:text-white') : undefined}>{c.label}</span>}
         </span>
       ))}
     </nav>
@@ -51,6 +51,7 @@ export function PageHero({ crumbs, title, titleKey, subtitle, kicker, children, 
               </div>
               {aside && <div className="lg:justify-self-end">{aside}</div>}
             </div>
+            {search && <div className="mt-8">{search}</div>}
             {below}
           </div>
         </section>
@@ -58,19 +59,19 @@ export function PageHero({ crumbs, title, titleKey, subtitle, kicker, children, 
     )
   }
 
-  // violet: tiêu đề căn giữa, nền tím lavender có dải bóng; ô tìm kiếm và bộ lọc nằm ngay trong hero (không có thanh tab chồng mép)
-  if (violet) {
+  // brand: tiêu đề căn trái, nền xanh VCCI nhạt có vòng tròn mạng lưới; ô tìm kiếm và bộ lọc nằm ngay trong hero (không có thanh tab chồng mép)
+  if (brand) {
     return (
       <div className="relative isolate pb-10">
-        <VioletArt />
+        <BrandArt />
         <section className="pb-8 pt-7 md:pt-8">
           <div className="container-page">
             {nav}
             <div className="mt-6 max-w-3xl md:mt-10">
-              <motion.h1 key={titleKey} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="line-clamp-2 py-1.5 text-4xl font-extrabold leading-[1.25] tracking-tight text-[#5a31e0] md:text-5xl md:leading-[1.25] dark:text-[#c3b8ff]">
+              <motion.h1 key={titleKey} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="line-clamp-2 py-1.5 text-4xl font-extrabold leading-[1.25] tracking-tight text-primary md:text-5xl md:leading-[1.25] dark:text-[#7cc7ee]">
                 {title}
               </motion.h1>
-              {subtitle && <p className="mt-6 text-base font-medium text-[#1f1a45]/85 md:text-lg dark:text-white/80" aria-live="polite">{subtitle}</p>}
+              {subtitle && <p className="mt-6 text-base font-medium text-[#12384d]/85 md:text-lg dark:text-white/80" aria-live="polite">{subtitle}</p>}
             </div>
             {children && <div className="mt-7">{children}</div>}
           </div>
@@ -82,7 +83,7 @@ export function PageHero({ crumbs, title, titleKey, subtitle, kicker, children, 
   return (
     <div className="relative isolate pb-12">
       <HeroArt tone={tone} />
-      <section className={cn('pt-7 md:min-h-[300px] md:pt-8', tabs ? 'pb-16 md:pb-20' : 'pb-12 md:pb-14')}>
+      <section className={cn('pt-7 md:min-h-[300px] md:pt-8', tabs && !flatTabs ? 'pb-16 md:pb-20' : flatTabs ? 'pb-4 md:pb-6' : 'pb-12 md:pb-14')}>
         <div className="container-page">
           <div className="min-w-0 max-w-2xl">
             {nav}
@@ -93,51 +94,37 @@ export function PageHero({ crumbs, title, titleKey, subtitle, kicker, children, 
             {subtitle && <p className={cn(navy ? 'mt-4' : 'mt-6', 'text-base font-medium md:text-lg', navy ? 'text-white/80' : 'text-navy/75 dark:text-white/80')} aria-live="polite">{subtitle}</p>}
             {children && <div className="mt-6">{children}</div>}
           </div>
+          {search && <div className="mt-6">{search}</div>}
         </div>
       </section>
-      {tabs && <div className="container-page relative z-10 -mt-8 md:-mt-9">{tabs}</div>}
+      {tabs && <div className={flatTabs ? "container-page relative z-10" : "container-page relative z-10 -mt-8 md:-mt-9"}>{tabs}</div>}
     </div>
   )
 }
 
-/** Nền tím lavender → xanh ngọc nhạt, thêm vài tấm "lụa" bán trong suốt cong nhẹ. Thuần CSS + SVG, tan dần ở đáy. */
-const VIOLET_MESH_LIGHT = [
-  'radial-gradient(38% 80% at 0% 0%, rgba(205,196,255,.95) 0%, rgba(205,196,255,0) 70%)',
-  'radial-gradient(34% 90% at 100% 12%, rgba(170,236,255,.95) 0%, rgba(170,236,255,0) 70%)',
-  'radial-gradient(45% 60% at 52% 100%, rgba(226,216,255,.8) 0%, rgba(226,216,255,0) 70%)',
-  'linear-gradient(100deg, #e9e6ff 0%, #f1f0ff 50%, #e0f4ff 100%)',
+/** Bản "brand" (trang Doanh nghiệp): nền xanh VCCI rất nhạt + ảnh 3D toà nhà kính và huy hiệu xác thực ở bên phải, tan dần ở đáy. */
+const BRAND_MESH_LIGHT = [
+  'radial-gradient(34% 85% at 84% 14%, rgba(255,255,255,.7) 0%, rgba(255,255,255,0) 70%)',
+  'radial-gradient(40% 90% at 0% 0%, rgba(170,215,243,.32) 0%, rgba(170,215,243,0) 70%)',
+  'radial-gradient(42% 90% at 100% 0%, rgba(140,200,238,.24) 0%, rgba(140,200,238,0) 70%)',
+  'radial-gradient(50% 60% at 40% 105%, rgba(205,232,249,.5) 0%, rgba(205,232,249,0) 70%)',
+  'linear-gradient(100deg, #eef6fc 0%, #f6fafe 50%, #ecf5fc 100%)',
 ].join(',')
-const VIOLET_MESH_DARK = [
-  'radial-gradient(38% 80% at 0% 0%, rgba(110,86,255,.42) 0%, rgba(110,86,255,0) 70%)',
-  'radial-gradient(34% 90% at 100% 12%, rgba(42,180,230,.3) 0%, rgba(42,180,230,0) 70%)',
-  'linear-gradient(100deg, #0f0d2c 0%, #15143c 55%, #0d1f3a 100%)',
+const BRAND_MESH_DARK = [
+  'radial-gradient(34% 85% at 84% 14%, rgba(80,170,240,.25) 0%, rgba(80,170,240,0) 70%)',
+  'radial-gradient(40% 90% at 0% 0%, rgba(42,120,220,.35) 0%, rgba(42,120,220,0) 70%)',
+  'linear-gradient(100deg, #061f4a 0%, #052250 55%, #031e48 100%)',
 ].join(',')
-const VIOLET_FADE = 'linear-gradient(to bottom, #000 0%, #000 60%, transparent 100%)'
+const BRAND_FADE = 'linear-gradient(to bottom, #000 0%, #000 60%, transparent 100%)'
 
-function VioletArt() {
+// ảnh minh hoạ 3D (Figma AI): cụm toà nhà kính với huy hiệu khiên "đã xác thực"; bản sáng và bản tối, mờ dần ở mọi mép để hoà vào nền
+function BrandArt() {
   return (
     <>
-      <div aria-hidden className="absolute inset-0 -z-20 dark:hidden" style={{ background: VIOLET_MESH_LIGHT, maskImage: VIOLET_FADE, WebkitMaskImage: VIOLET_FADE }} />
-      <div aria-hidden className="absolute inset-0 -z-20 hidden dark:block" style={{ background: VIOLET_MESH_DARK, maskImage: VIOLET_FADE, WebkitMaskImage: VIOLET_FADE }} />
-      <svg aria-hidden viewBox="0 0 1440 420" preserveAspectRatio="xMidYMin slice" className="pointer-events-none absolute inset-x-0 top-0 -z-10 hidden h-[420px] w-full md:block dark:opacity-40" style={{ maskImage: VIOLET_FADE, WebkitMaskImage: VIOLET_FADE }}>
-        <defs>
-          <linearGradient id="vi-sheet" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0" stopColor="#7aa8ff" stopOpacity=".55" />
-            <stop offset=".6" stopColor="#b9b0ff" stopOpacity=".28" />
-            <stop offset="1" stopColor="#ffffff" stopOpacity=".12" />
-          </linearGradient>
-          <linearGradient id="vi-ribbon" x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0" stopColor="#ffffff" stopOpacity=".05" />
-            <stop offset=".5" stopColor="#ffffff" stopOpacity=".85" />
-            <stop offset="1" stopColor="#c7bdff" stopOpacity=".25" />
-          </linearGradient>
-        </defs>
-        <path d="M-40 150 C 180 140 330 60 560 -30 L 610 -30 C 380 90 220 190 -40 215 Z" fill="url(#vi-ribbon)" />
-        <path d="M-40 215 C 220 190 380 90 610 -30" fill="none" stroke="#fff" strokeOpacity=".7" strokeWidth="1.5" />
-        <path d="M960 330 C 1030 190 1110 70 1165 40 C 1250 80 1370 160 1480 250 L 1480 330 Z" fill="url(#vi-sheet)" />
-        <path d="M1165 40 C 1250 80 1370 160 1480 250" fill="none" stroke="#fff" strokeOpacity=".85" strokeWidth="2" />
-        <path d="M1165 40 C 1100 90 1030 190 975 300" fill="none" stroke="#fff" strokeOpacity=".5" strokeWidth="1.5" />
-      </svg>
+      <div aria-hidden className="absolute inset-0 -z-20 dark:hidden" style={{ background: BRAND_MESH_LIGHT, maskImage: BRAND_FADE, WebkitMaskImage: BRAND_FADE }} />
+      <div aria-hidden className="absolute inset-0 -z-20 hidden dark:block" style={{ background: BRAND_MESH_DARK, maskImage: BRAND_FADE, WebkitMaskImage: BRAND_FADE }} />
+      <img src="/imgs/hero-directory.webp" alt="" aria-hidden width={1536} height={864} className="pointer-events-none absolute right-0 top-0 -z-10 hidden h-[285px] w-auto max-w-[66%] object-cover object-right md:block dark:md:hidden" style={HERO_IMG_MASK} />
+      <img src="/imgs/hero-directory-dark.webp" alt="" aria-hidden width={1536} height={864} className="pointer-events-none absolute right-0 top-0 -z-10 hidden h-[285px] w-auto max-w-[66%] object-cover object-right dark:md:block" style={HERO_IMG_MASK} />
     </>
   )
 }
@@ -251,7 +238,7 @@ const HERO_FADE = { maskImage: 'linear-gradient(to bottom, #000 0%, #000 55%, tr
 const HERO_IMG_FADE = 'linear-gradient(to right, transparent 0%, #000 38%), linear-gradient(to bottom, transparent 0%, #000 14%, #000 66%, transparent 100%)'
 const HERO_IMG_MASK = { maskImage: HERO_IMG_FADE, maskComposite: 'intersect', WebkitMaskImage: HERO_IMG_FADE, WebkitMaskComposite: 'source-in' } as const
 
-export type HeroTone = 'sky' | 'navy' | 'violet' | 'warm' | 'azure' | 'pearl'
+export type HeroTone = 'sky' | 'navy' | 'brand' | 'warm' | 'azure' | 'pearl'
 
 /** Bản "pearl" (trang Về VCCI): nền trắng ngọc xanh xám có lưới chấm mờ và vệt tím nhạt, ảnh bản đồ Việt Nam kết nối bằng kính xanh đậm, chữ navy. */
 const PEARL_MESH_LIGHT = [
@@ -347,3 +334,79 @@ function HeroArt({ tone }: { tone: HeroTone }) {
     </>
   )
 }
+
+/** Hàng tab dạng viên thuốc (cùng kiểu với bộ lọc loại hình ở trang Doanh nghiệp), một hàng cuộn ngang, mũi tên lướt từng tab. */
+export function PillTabs({ items, value, onChange, label }: { items: { id: string; name: string }[]; value: string; onChange: (id: string) => void; label: string }) {
+  const ref = useRef<HTMLDivElement>(null)
+  const [edge, setEdge] = useState({ start: true, end: true })
+  const sync = () => {
+    const el = ref.current
+    if (!el) return
+    setEdge({ start: el.scrollLeft <= 2, end: el.scrollLeft + el.clientWidth >= el.scrollWidth - 2 })
+  }
+  // tự chạy hiệu ứng trượt (xem CategoryTabs: cuộn mượt của trình duyệt bị ép tắt khi hệ điều hành bật "giảm chuyển động")
+  const raf = useRef(0)
+  const stop = () => cancelAnimationFrame(raf.current)
+  const glide = (to: number) => {
+    const el = ref.current
+    if (!el) return
+    stop()
+    const from = el.scrollLeft
+    const target = Math.max(0, Math.min(el.scrollWidth - el.clientWidth, to))
+    const dist = target - from
+    if (Math.abs(dist) < 1) return
+    const dur = Math.min(560, 280 + Math.abs(dist) * 0.3)
+    const t0 = performance.now()
+    const step = (now: number) => {
+      const p = Math.min(1, (now - t0) / dur)
+      el.scrollLeft = from + dist * (p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2)
+      if (p < 1) raf.current = requestAnimationFrame(step)
+    }
+    raf.current = requestAnimationFrame(step)
+  }
+  useEffect(() => {
+    document.fonts.ready.then(() => {
+      const el = ref.current
+      const tab = el?.querySelector<HTMLElement>('[aria-pressed="true"]')
+      if (el && tab) glide(tab.offsetLeft - (el.clientWidth - tab.offsetWidth) / 2)
+      sync()
+    })
+    window.addEventListener('resize', sync)
+    return () => window.removeEventListener('resize', sync)
+  }, [value, items.length])
+  useEffect(() => stop, [])
+  const nudge = (dir: 1 | -1) => {
+    const el = ref.current
+    if (!el) return
+    const tabs = [...el.querySelectorAll<HTMLElement>('button[aria-pressed]')]
+    const left = el.scrollLeft + 20
+    const target = dir === 1 ? tabs.find((t) => t.offsetLeft > left + 1) : [...tabs].reverse().find((t) => t.offsetLeft < left - 1)
+    if (target) glide(target.offsetLeft - 20)
+  }
+  const arrow = 'hidden size-11 shrink-0 place-items-center rounded-full border border-primary/40 bg-white/70 text-primary shadow-sm transition-colors enabled:hover:border-primary enabled:hover:bg-white disabled:cursor-default disabled:opacity-35 md:grid dark:border-white/25 dark:bg-white/5 dark:text-[#cfe9f8]'
+  return (
+    <div className="flex items-center gap-3">
+      <button type="button" aria-label="‹" disabled={edge.start} onClick={() => nudge(-1)} className={arrow}><ChevronLeft className="size-5" strokeWidth={2.5} /></button>
+      <div ref={ref} onScroll={sync} onWheel={stop} onTouchStart={stop} role="group" aria-label={label} className="no-scrollbar relative -my-2 flex min-w-0 flex-1 gap-3 overflow-x-auto px-5 py-4" style={PILL_FADE}>
+        {items.map(({ id, name }) => {
+          const on = value === id
+          return (
+            <button
+              key={id}
+              type="button"
+              aria-pressed={on}
+              onClick={() => onChange(id)}
+              className={cn('h-11 shrink-0 whitespace-nowrap rounded-full border px-5 text-[15px] font-semibold transition-colors', on ? 'border-primary bg-primary text-primary-foreground shadow-[0_8px_18px_-10px_rgba(0,102,153,0.9)]' : 'border-primary/50 bg-white/50 text-primary hover:border-primary hover:bg-white dark:border-white/25 dark:bg-white/5 dark:text-[#cfe9f8] dark:hover:bg-white/10')}
+            >
+              {name}
+            </button>
+          )
+        })}
+      </div>
+      <button type="button" aria-label="›" disabled={edge.end} onClick={() => nudge(1)} className={arrow}><ChevronRight className="size-5" strokeWidth={2.5} /></button>
+    </div>
+  )
+}
+
+// hai mép của hàng tab mờ dần thay vì bị cắt thẳng; padding ngang 20px giữ tab đầu/cuối rõ nét khi chưa cuộn, padding dọc chừa chỗ cho bóng đổ
+const PILL_FADE = { maskImage: 'linear-gradient(to right, transparent 0, #000 20px, #000 calc(100% - 20px), transparent 100%)', WebkitMaskImage: 'linear-gradient(to right, transparent 0, #000 20px, #000 calc(100% - 20px), transparent 100%)' }

@@ -7,7 +7,8 @@ import { catalogApi, searchProductsPage, tokens, USE_MOCK, type ProductQuery } f
 import { ErrorBlock } from '@/components/ui/StateViews'
 import { categories, products, type Product } from '@/data/mock'
 import { ProductCard } from '@/components/cards'
-import { CategoryTabs, PageHero } from '@/components/PageHero'
+import { HeroSearch } from '@/components/HeroSearch'
+import { PageHero, PillTabs } from '@/components/PageHero'
 import { Pagination } from '@/components/Pagination'
 import { Badge, Button, buttonClass, Skeleton } from '@/components/ui/primitives'
 import { Select } from '@/components/ui/select'
@@ -30,6 +31,15 @@ export default function SearchPage() {
   const maxMoq = MOQ_STEPS.includes(moqParam) ? moqParam : 0
   // đổi bộ lọc thì quay về trang 1
   const patchFilter = (fn: (n: URLSearchParams) => void) => patch((n) => { fn(n); n.delete('page') })
+  // hero search box: typing writes ?q= after a short pause; an outside change of ?q= (header search, Back) refills the box
+  const [text, setText] = useState(keyword)
+  useEffect(() => setText(keyword), [keyword])
+  useEffect(() => {
+    const next = text.trim()
+    if (next === keyword.trim()) return
+    const h = setTimeout(() => setParams((p) => { const n = new URLSearchParams(p); if (next) n.set('q', next); else n.delete('q'); n.delete('page'); return n }, { replace: true }), 350)
+    return () => clearTimeout(h)
+  }, [text, keyword, setParams])
   const setMaxMoq = (v: number) => patchFilter((n) => (v ? n.set('moq', String(v)) : n.delete('moq')))
   const certsKey = params.getAll('cert').join('|')
   const certs = useMemo(() => (certsKey ? certsKey.split('|') : []), [certsKey])
@@ -163,9 +173,11 @@ export default function SearchPage() {
           ...(cat ? [{ label: L(cat.categoryName) }] : []),
         ]}
         title={keyword ? `“${keyword}”` : cat ? L(cat.categoryName) : t.nav.products}
-        subtitle={loadError ? '' : !results ? t.common.loading : countLabel}
+        subtitle={tx('Sản phẩm xuất khẩu của doanh nghiệp hội viên VCCI: so sánh giá FOB, MOQ và chứng nhận, rồi gửi yêu cầu báo giá.', 'Export products from VCCI member businesses: compare FOB prices, MOQ and certificates, then send a quote request.', 'VCCI 회원 기업의 수출 제품: FOB 가격, MOQ, 인증을 비교하고 견적을 요청하세요.')}
+        search={<HeroSearch value={text} onChange={setText} placeholder={tx('Tìm tên sản phẩm, mã sản phẩm…', 'Search products or product codes…', '제품명, 제품 코드 검색…')} label={tx('Tìm sản phẩm', 'Search products', '제품 검색')} />}
+        flatTabs
         tabs={
-          <CategoryTabs
+          <PillTabs
             label={t.searchPage.all}
             value={categoryId}
             onChange={setCategory}
@@ -186,6 +198,7 @@ export default function SearchPage() {
           <div ref={listTop} className="mb-6 flex flex-wrap items-center gap-3">
             <Button variant="outline" className="h-11 lg:hidden" onClick={() => setFiltersOpen(true)}><SlidersHorizontal /> {t.searchPage.filters}{activeFilters.length > 0 && ` (${activeFilters.length})`}</Button>
             <div className="flex flex-1 flex-wrap items-center gap-2">
+              <p className="mr-1 text-sm font-semibold text-foreground/80" aria-live="polite">{loadError ? "" : !results ? t.common.loading : countLabel}</p>
               {activeFilters.map((f) => <Badge key={f} variant="secondary" className="py-1">{f}</Badge>)}
               {activeFilters.length > 0 && <button onClick={clearAll} className="min-h-9 px-1 text-[13px] font-semibold text-primary hover:underline">{t.searchPage.clear}</button>}
             </div>

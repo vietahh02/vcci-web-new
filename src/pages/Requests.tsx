@@ -1,7 +1,7 @@
 /** RFQ layout: split header (pitch + inline post form) + tabular board. */
 import { motion } from 'motion/react'
 import type { ReactNode } from 'react'
-import { ArrowUpRight, ChevronDown, FilePlus2, Search, X } from 'lucide-react'
+import { ArrowUpRight, ChevronDown, FilePlus2 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { browseImportRequests, getCategory, liveApi, tokens, USE_MOCK } from '@/api'
@@ -9,6 +9,7 @@ import { useProfile } from '@/lib/profile'
 import { LoginRequiredDialog } from '@/components/auth/LoginRequiredDialog'
 import { categories, type ImportRequest } from '@/data/mock'
 import { CountryChip } from '@/components/brand'
+import { HeroSearch } from '@/components/HeroSearch'
 import { PageHero } from '@/components/PageHero'
 import { Pagination } from '@/components/Pagination'
 import { Dialog, DialogContent, useToast } from '@/components/ui/overlay'
@@ -86,6 +87,7 @@ export default function Requests() {
     <>
       {/* 1. intro: harbour photo on navy (same language as the Events hero) + live figures from the open requests */}
       <RequestsHero
+        search={<HeroSearch tone="warm" value={text} onChange={setText} label={tx("Tìm yêu cầu nhập khẩu", "Search import requests", "수입 요청 검색")} placeholder={tx("Tìm tên hàng, loại sản phẩm…", "Search goods, product type…", "상품명, 제품 유형 검색…")} />}
         action={!authed ? (
           <button type="button" onClick={() => setAskLogin(true)} className={buttonClass('warm', 'lg')}><FilePlus2 /> {t.nav.postRequest}</button>
         ) : canPost ? (
@@ -101,22 +103,6 @@ export default function Requests() {
           </div>
 
           <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
-            <form role="search" className="relative w-full sm:w-72" onSubmit={(e) => e.preventDefault()}>
-              <Search className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                type="search"
-                value={text}
-                onChange={(e) => setText(e.target.value)}
-                aria-label={tx('Tìm yêu cầu nhập khẩu', 'Search import requests', '수입 요청 검색')}
-                placeholder={tx('Tìm tên hàng, loại sản phẩm', 'Search goods, product type', '상품명, 제품 유형 검색')}
-                className="h-11 pl-10 pr-10 text-[14px] sm:h-10 [&::-webkit-search-cancel-button]:hidden"
-              />
-              {text && (
-                <button type="button" onClick={() => setText('')} aria-label={tx('Xoá từ khoá', 'Clear search', '검색어 지우기')} className="absolute right-1.5 top-1/2 grid size-8 -translate-y-1/2 place-items-center rounded-full text-muted-foreground transition hover:bg-muted hover:text-foreground">
-                  <X className="size-4" />
-                </button>
-              )}
-            </form>
             <Select value={cat} onValueChange={changeCat} className="h-11 w-full text-[13px] sm:h-10 sm:w-auto sm:min-w-52" aria-label={t.requests.category} options={[{ value: '', label: t.requests.allCats }, ...categories.map((c) => ({ value: c.id, label: L(c.categoryName) }))]} />
           </div>
         </div>
@@ -185,7 +171,7 @@ export default function Requests() {
 }
 
 /** Page intro. The figures are counted from the open requests (browse API, unfiltered), never typed in. */
-function RequestsHero({ action }: { action: ReactNode }) {
+function RequestsHero({ action, search }: { action: ReactNode; search: ReactNode }) {
   const { t, lang, locale } = useI18n()
   const [all, setAll] = useState<ImportRequest[] | null>(null)
   const [howOpen, setHowOpen] = useState(false)
@@ -207,6 +193,7 @@ function RequestsHero({ action }: { action: ReactNode }) {
 
   return (
     <PageHero
+      search={search}
       tone="warm"
       crumbs={[{ label: t.common.home, to: '/' }, { label: t.nav.requests }]}
       title={t.requests.title}

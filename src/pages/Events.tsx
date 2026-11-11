@@ -1,17 +1,19 @@
 /** Trade-show layout: immersive countdown hero + live strip + month-grouped schedule + past recordings. */
 import { motion } from 'motion/react'
 import { ArrowRight, MapPin, Ticket, Video } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { searchEvents } from '@/api'
 import type { EventItem } from '@/data/mock'
 import { EventExplorer, formatLabel } from '@/components/event/EventExplorer'
 import { LiveDot, useCountdown } from '@/components/effects'
+import { HeroSearch } from '@/components/HeroSearch'
 import { PageHero } from '@/components/PageHero'
 import { ErrorBlock } from '@/components/ui/StateViews'
 import { buttonClass, Skeleton } from '@/components/ui/primitives'
 import { eventTimeRange, isOnAir } from '@/lib/eventStatus'
 import { useI18n } from '@/lib/i18n'
+import { tx } from '@/lib/tx'
 import { formatDate, img } from '@/lib/utils'
 
 export default function Events() {
@@ -19,6 +21,7 @@ export default function Events() {
   const [list, setList] = useState<EventItem[] | null>(null)
   const [error, setError] = useState<Error>()
   const [attempt, setAttempt] = useState(0)
+  const [q, setQ] = useState('')
 
   useEffect(() => {
     searchEvents().then((r) => { setError(undefined); setList(r) }, (e: Error) => setError(e))
@@ -35,9 +38,14 @@ export default function Events() {
   return (
     <>
       {live && <LiveStrip ev={live} />}
-      {next && <CountdownHero ev={next} />}
+      {next && (
+        <CountdownHero
+          ev={next}
+          search={<HeroSearch value={q} onChange={setQ} onSubmit={() => document.getElementById('explorer')?.scrollIntoView({ behavior: 'smooth' })} label={tx('Tìm sự kiện', 'Search events', '행사 검색')} placeholder={tx('Tìm sự kiện, đơn vị tổ chức, địa điểm…', 'Search events, organizers, venues…', '행사, 주최, 장소 검색…')} />}
+        />
+      )}
 
-      <EventExplorer list={list} />
+      <EventExplorer list={list} search={next ? { q, setQ } : undefined} />
 
       <div className="h-16" />
     </>
@@ -58,7 +66,7 @@ function LiveStrip({ ev }: { ev: EventItem }) {
   )
 }
 
-function CountdownHero({ ev }: { ev: EventItem }) {
+function CountdownHero({ ev, search }: { ev: EventItem; search: ReactNode }) {
   const { t, L, locale } = useI18n()
   const c = useCountdown(ev.startDate)
   const time = eventTimeRange(ev)
@@ -67,6 +75,7 @@ function CountdownHero({ ev }: { ev: EventItem }) {
   return (
     <PageHero
       tone="azure"
+      search={search}
       crumbs={[{ label: t.common.home, to: '/' }, { label: t.nav.events }]}
       kicker={
         <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mb-2 inline-flex items-center gap-2 rounded-full bg-white/80 px-3.5 py-1 text-[13px] font-bold text-primary ring-1 ring-primary/25 backdrop-blur dark:bg-white/10 dark:text-[#7cc7ee] dark:ring-white/15">

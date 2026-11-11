@@ -1,12 +1,13 @@
 /** Directory layout: light header + business-type tabs + industry rail + horizontal rows. */
 import { AnimatePresence, motion } from 'motion/react'
-import { LayoutGrid, List, Search } from 'lucide-react'
+import { LayoutGrid, List } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { searchBusinesses } from '@/api'
 import { categories, type Business, type BusinessType } from '@/data/mock'
 import { categoryIcons } from '@/components/brand'
 import { SupplierCard, SupplierRow } from '@/components/cards'
+import { HeroSearch } from '@/components/HeroSearch'
 import { PageHero } from '@/components/PageHero'
 import { Skeleton } from '@/components/ui/primitives'
 import { useI18n } from '@/lib/i18n'
@@ -36,23 +37,12 @@ export default function Suppliers() {
   return (
     <>
       <PageHero
-        tone="violet"
+        tone="brand"
         crumbs={[{ label: t.common.home, to: '/' }, { label: t.nav.suppliers }]}
         title={t.supplier.directoryTitle}
         subtitle={t.supplier.directorySub}
       >
-        <form role="search" onSubmit={(e) => e.preventDefault()} className="flex h-14 items-center rounded-full bg-background pl-6 pr-2 shadow-[0_10px_30px_-14px_rgba(60,40,160,0.45)] ring-1 ring-[#5a31e0]/10 focus-within:ring-2 focus-within:ring-[#5a31e0]/50">
-          <input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder={t.search.scopes.suppliers + '…'}
-            aria-label={t.search.scopes.suppliers}
-            className="h-full min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-muted-foreground"
-          />
-          <button type="submit" className="inline-flex h-10 items-center gap-2 rounded-full bg-gradient-to-r from-[#e8383d] to-[#f26d4f] px-6 text-[15px] font-bold text-white shadow-sm transition-transform hover:-translate-y-0.5">
-            <Search className="size-4" aria-hidden /> {t.search.submit}
-          </button>
-        </form>
+        <HeroSearch value={q} onChange={setQ} placeholder={t.search.scopes.suppliers + '…'} label={t.search.scopes.suppliers} />
         <div role="group" aria-label={t.supplier.businessType} className="mt-5 flex flex-wrap gap-x-3 gap-y-2.5">
           {TYPES.map((k) => {
             const on = type === k
@@ -62,7 +52,7 @@ export default function Suppliers() {
                 type="button"
                 aria-pressed={on}
                 onClick={() => setType(k)}
-                className={cn('h-11 rounded-full border px-5 text-[15px] font-semibold transition-colors', on ? 'border-[#5a31e0] bg-[#5a31e0] text-white shadow-[0_8px_18px_-10px_rgba(90,49,224,0.9)]' : 'border-[#5a31e0]/80 bg-white/40 text-[#5a31e0] hover:bg-white dark:border-[#a99bff]/70 dark:bg-white/5 dark:text-[#cfc6ff] dark:hover:bg-white/10')}
+                className={cn('h-11 rounded-full border px-5 text-[15px] font-semibold transition-colors', on ? 'border-primary bg-primary text-primary-foreground shadow-[0_8px_18px_-10px_rgba(0,102,153,0.9)]' : 'border-primary/50 bg-white/50 text-primary hover:border-primary hover:bg-white dark:border-white/25 dark:bg-white/5 dark:text-[#cfe9f8] dark:hover:bg-white/10')}
               >
                 {k === 'ALL' ? t.searchPage.all : t.supplier.types[k]}
               </button>
