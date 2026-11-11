@@ -596,6 +596,8 @@ export interface EventAgendaOption { agendaStartTime: string; agendaEndTime: str
 
 export interface EventItem {
   id: string
+  /** Webinar / livestream that is a session of a Show (`s-3`): the live room sends viewers to the Show's badge-checked room. */
+  showId?: string
   eventType: EventType
   title: Bilingual
   introduction: Bilingual

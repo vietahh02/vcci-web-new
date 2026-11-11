@@ -15,6 +15,7 @@ export function toEvent(r: Raw): EventItem {
   const fee = r.participationFee == null ? 0 : num(r.participationFee)
   const ev: EventItem = {
     id: id(r.id),
+    showId: r.showId ? str(r.showId) : undefined,
     eventType: str(r.eventType, 'WEBINAR') as EventType,
     title: bi(r.title),
     introduction: bi(r.introduction),

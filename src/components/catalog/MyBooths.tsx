@@ -5,6 +5,7 @@
  */
 import { Plus, Send, Trash2, Undo2 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { catalogApi } from '@/api'
 import { CMS_URL } from '@/api/config'
 import { MyInquiries } from '@/components/catalog/MyInquiries'
@@ -398,6 +399,12 @@ function ParticipationDialog({ show, options, existing, onClose }: { show: Onlin
     <Dialog open onOpenChange={(v) => { if (!v) onClose(false) }}>
       <DialogContent title={`${title} - ${show.name}`} description={description}>
         <form onSubmit={submit} className="max-h-[75dvh] space-y-4 overflow-y-auto p-6">
+          {hosted && (
+            <p className="rounded-xl bg-muted p-3 text-xs text-muted-foreground" data-testid="hosted-visit-hint">
+              {tx('Đơn này dành cho doanh nghiệp đồng tổ chức và tự phát live (có phí). Chỉ muốn xem các phiên live thì không cần đơn này: hãy đăng ký tham gia xem ở ', 'This application is for businesses that co-organise and stream live (fee applies). To only watch the live sessions you need no application: register to watch on ', '이 신청은 공동 주최 및 라이브 방송 기업용입니다(유료). 라이브 세션만 시청하려면 이 신청이 필요 없습니다. ')}
+              <Link to={`/events/s-${show.id}`} className="font-semibold text-primary hover:underline">{tx('trang Show', 'the show page', '쇼 페이지에서 관람 등록하세요')}</Link>.
+            </p>
+          )}
           {hosted && (
             <fieldset>
               <legend className="mb-1.5 block text-[13px] font-semibold">{tx('Ngày đồng tổ chức', 'Co-organising days', '공동 주최일')}<Req /></legend>

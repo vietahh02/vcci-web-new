@@ -2,7 +2,7 @@
 import { AnimatePresence, motion } from 'motion/react'
 import { ArrowLeft, CircleOff, Heart, ThumbsUp, Ticket, Users } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
-import { Link, useParams, useSearchParams } from 'react-router-dom'
+import { Link, Navigate, useParams, useSearchParams } from 'react-router-dom'
 import { USE_MOCK, useEvent, useShow } from '@/api'
 import { isShowId } from '@/api/adapters/show'
 import { CHAT_URL } from '@/api/chat'
@@ -42,10 +42,14 @@ interface LiveTarget {
 }
 
 /** Chọn phiên của Show theo tham số đường dẫn; không chỉ định thì lấy phiên đang phát, rồi đến khung ra mắt đang phát. */
-function showTarget(show: Show, sessionParam: string | null, launchParam: string | null): LiveTarget {
+function showTarget(show: Show, sessionParam: string | null, launchParam: string | null, stream?: { eventId: string; sessionId: string | null }): LiveTarget {
   const base = { org: show.title, cover: show.cover }
-  const session = sessionParam ? show.sessions.find((s) => s.id === sessionParam) : launchParam ? undefined : show.sessions.find((s) => s.status === 'LIVE' && s.live)
-  const launch = launchParam ? show.launches.find((l) => l.id === launchParam) : session ? undefined : show.launches.find((l) => l.live && l.streamEventId)
+  // came from an event link (/live/l-7?session=9): find the Show's session or launch slot that streams it
+  const hit = (eventId?: string, sessionId?: string) => !!stream && eventId === stream.eventId && (!stream.sessionId || sessionId === stream.sessionId)
+  const session = stream ? show.sessions.find((s) => hit(s.live?.eventId, s.live?.sessionId))
+    : sessionParam ? show.sessions.find((s) => s.id === sessionParam) : launchParam ? undefined : show.sessions.find((s) => s.status === 'LIVE' && s.live)
+  const launch = stream ? (session ? undefined : show.launches.find((l) => hit(l.streamEventId, l.streamSessionId)))
+    : launchParam ? show.launches.find((l) => l.id === launchParam) : session ? undefined : show.launches.find((l) => l.live && l.streamEventId)
   if (session) {
     const kind = session.live && toLiveKind(session.live.eventType)
     return {
@@ -109,12 +113,21 @@ function RealLiveRoom() {
   const show = showR.data ?? null
   const ev = evR.data ?? null
   const target = useMemo<LiveTarget | null>(() => {
-    if (isShow) return show ? showTarget(show, params.get('session'), params.get('launch')) : null
+    const from = params.get('ev')
+    if (isShow) return show ? showTarget(show, params.get('session'), params.get('launch'), from ? { eventId: from, sessionId: params.get('ls') } : undefined) : null
     return ev ? eventTarget(ev, params.get('session')) : null
   }, [isShow, show, ev, params])
 
   if (remote.loading) return <div className="bg-[#05061c] text-white"><LoadingBlock /></div>
   if (remote.error) return <ErrorBlock error={remote.error} onRetry={remote.reload} />
+  // a session of a Show is watched only with the Show's visitor badge (registered once with VCCI), even when opened by its event link
+  const owner = !isShow && ev?.showId ? parseLiveEventId(ev.id) : null
+  if (owner && ev?.showId) {
+    const q = new URLSearchParams({ ev: owner.eventId })
+    const ls = params.get('session')
+    if (ls) q.set('ls', ls)
+    return <Navigate to={`/live/${ev.showId}?${q}`} replace />
+  }
   if (!target) return <NotFound />
 
   const poster = target.cover ? img(target.cover, 1400, 790) : undefined
