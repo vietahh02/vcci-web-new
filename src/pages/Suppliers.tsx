@@ -2,12 +2,12 @@
 import { AnimatePresence, motion } from 'motion/react'
 import { LayoutGrid, List, Search } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { useSearchParams } from 'react-router-dom'
 import { searchBusinesses } from '@/api'
 import { categories, type Business, type BusinessType } from '@/data/mock'
 import { categoryIcons } from '@/components/brand'
 import { SupplierCard, SupplierRow } from '@/components/cards'
-import { UnderlineTabs } from '@/components/ui/overlay'
+import { PageHero } from '@/components/PageHero'
 import { Skeleton } from '@/components/ui/primitives'
 import { useI18n } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
@@ -34,36 +34,44 @@ export default function Suppliers() {
   }, [q, cat, type, lang])
 
   return (
-    <div className="container-page pt-8">
-      <nav aria-label={t.ui.breadcrumb} className="text-[13px] text-muted-foreground">
-        <Link to="/" className="hover:text-foreground">{t.common.home}</Link> / <span className="text-foreground">{t.nav.suppliers}</span>
-      </nav>
-      <div className="mt-4 grid gap-6 md:grid-cols-[minmax(0,1fr)_420px] md:items-end">
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
-          <h1 className="text-3xl font-extrabold tracking-tight md:text-[40px]">{t.supplier.directoryTitle}</h1>
-          <p className="mt-2 max-w-xl text-muted-foreground">{t.supplier.directorySub}</p>
-        </motion.div>
-        <label className="relative block">
-          <Search className="absolute left-4 top-1/2 size-5 -translate-y-1/2 text-muted-foreground" />
+    <>
+      <PageHero
+        tone="violet"
+        crumbs={[{ label: t.common.home, to: '/' }, { label: t.nav.suppliers }]}
+        title={t.supplier.directoryTitle}
+        subtitle={t.supplier.directorySub}
+      >
+        <form role="search" onSubmit={(e) => e.preventDefault()} className="flex h-14 items-center rounded-full bg-background pl-6 pr-2 shadow-[0_10px_30px_-14px_rgba(60,40,160,0.45)] ring-1 ring-[#5a31e0]/10 focus-within:ring-2 focus-within:ring-[#5a31e0]/50">
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder={t.search.scopes.suppliers + '…'}
             aria-label={t.search.scopes.suppliers}
-            className="h-12 w-full rounded-full border-2 border-input bg-background pl-12 pr-4 outline-none transition focus:border-primary"
+            className="h-full min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-muted-foreground"
           />
-        </label>
-      </div>
+          <button type="submit" className="inline-flex h-10 items-center gap-2 rounded-full bg-gradient-to-r from-[#e8383d] to-[#f26d4f] px-6 text-[15px] font-bold text-white shadow-sm transition-transform hover:-translate-y-0.5">
+            <Search className="size-4" aria-hidden /> {t.search.submit}
+          </button>
+        </form>
+        <div role="group" aria-label={t.supplier.businessType} className="mt-5 flex flex-wrap gap-x-3 gap-y-2.5">
+          {TYPES.map((k) => {
+            const on = type === k
+            return (
+              <button
+                key={k}
+                type="button"
+                aria-pressed={on}
+                onClick={() => setType(k)}
+                className={cn('h-11 rounded-full border px-5 text-[15px] font-semibold transition-colors', on ? 'border-[#5a31e0] bg-[#5a31e0] text-white shadow-[0_8px_18px_-10px_rgba(90,49,224,0.9)]' : 'border-[#5a31e0]/80 bg-white/40 text-[#5a31e0] hover:bg-white dark:border-[#a99bff]/70 dark:bg-white/5 dark:text-[#cfc6ff] dark:hover:bg-white/10')}
+              >
+                {k === 'ALL' ? t.searchPage.all : t.supplier.types[k]}
+              </button>
+            )
+          })}
+        </div>
+      </PageHero>
 
-      <UnderlineTabs
-        className="mt-8"
-        layoutId="sup-type"
-        value={type}
-        onValueChange={setType}
-        items={TYPES.map((k) => ({ value: k, label: k === 'ALL' ? t.searchPage.all : t.supplier.types[k] }))}
-      />
-
-      <div className="mt-6 grid gap-10 lg:grid-cols-[220px_minmax(0,1fr)]">
+      <div className="container-page mt-2 grid gap-10 lg:grid-cols-[220px_minmax(0,1fr)]">
         <aside className="hidden lg:block">
           <p className="mb-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">{t.searchPage.category}</p>
           <ul className="space-y-0.5">
@@ -116,6 +124,6 @@ export default function Suppliers() {
           )}
         </div>
       </div>
-    </div>
+    </>
   )
 }

@@ -4,7 +4,7 @@
  */
 import * as DialogPrimitive from '@radix-ui/react-dialog'
 import { AnimatePresence, motion, useScroll, useTransform } from 'motion/react'
-import { Award, BadgeCheck, Building2, ChevronLeft, ChevronRight, Download, Eye, FileText, Globe, Mail, MapPin, MessageSquare, Phone, Plus, Send, ShieldCheck, Users, X } from 'lucide-react'
+import { Award, BadgeCheck, Building2, Camera, ChevronLeft, ChevronRight, Download, Eye, Factory, FileText, Globe, Mail, MapPin, MessageSquare, Package, Phone, Plus, Send, ShieldCheck, Users, Video, X, type LucideIcon } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { liveApi, USE_MOCK, useBusiness, useOrgProducts } from '@/api'
@@ -26,7 +26,7 @@ import { tx } from '@/lib/tx'
 import { formatSize } from '@/lib/upload'
 import { cn, formatDate, img } from '@/lib/utils'
 
-type Tab = 'overview' | 'products' | 'capability' | 'contact'
+type Tab = 'overview' | 'products' | 'capability'
 type Slide = { url: string; caption: string }
 
 const LEGAL_FORMS: Record<string, Bilingual> = {
@@ -78,33 +78,45 @@ function Storefront({ b, remote }: { b: Business; remote: PublicProfile | null }
 
   return (
     <div>
-      <div ref={coverRef} className="relative isolate overflow-hidden bg-navy text-white">
-        <motion.img style={{ y: coverY }} src={pp.cover ?? img(b.coverImage, 1800, 700)} alt="" className="absolute inset-0 -z-20 size-full scale-110 object-cover" />
-        <div className="absolute inset-0 -z-10 bg-navy/70" />
-        <div className="container-page flex min-h-72 flex-col justify-end gap-6 py-10 md:flex-row md:items-end md:justify-between">
-          <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="flex items-end gap-5">
+      {/* ảnh bìa tan dần về nền trang (không có đường cắt ngang); thẻ hồ sơ nổi lên trên phần ảnh đang mờ */}
+      <div className="relative isolate">
+        <div ref={coverRef} aria-hidden className="absolute inset-x-0 top-0 -z-10 h-[21rem] overflow-hidden" style={{ maskImage: 'linear-gradient(to bottom, #000 0%, #000 30%, transparent 80%)', WebkitMaskImage: 'linear-gradient(to bottom, #000 0%, #000 30%, transparent 80%)' }}>
+          <motion.img style={{ y: coverY }} src={pp.cover ?? img(b.coverImage, 1800, 700)} alt="" className="absolute inset-0 size-full scale-110 object-cover" />
+          <div className="absolute inset-0 bg-gradient-to-br from-[#2b1a8f]/60 via-navy/35 to-navy/15" />
+        </div>
+        <div className="container-page pt-6 md:pt-8">
+          <nav aria-label={t.ui.breadcrumb} className="flex flex-wrap items-center gap-1 text-[13px] text-white/75">
+            <Link to="/" className="hover:text-white">{t.common.home}</Link>
+            <ChevronRight className="size-3.5" aria-hidden />
+            <Link to="/suppliers" className="hover:text-white">{t.nav.suppliers}</Link>
+            <ChevronRight className="size-3.5" aria-hidden />
+            <span className="line-clamp-1 font-semibold text-white">{b.name}</span>
+          </nav>
+          <div className="pt-16 md:pt-24">
+        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col gap-5 rounded-3xl border bg-card/95 p-5 backdrop-blur-md shadow-[0_20px_50px_-24px_rgba(8,8,46,0.45)] md:flex-row md:items-center md:justify-between md:gap-8 md:p-6">
+          <div className="flex min-w-0 items-center gap-5">
             {pp.logo ? (
-              <img src={pp.logo} alt={b.name} className="size-20 rounded-3xl bg-white object-contain p-2 shadow-2xl shadow-black/30 ring-4 ring-gold-bright/30 md:size-24" />
+              <img src={pp.logo} alt={b.name} className="size-20 shrink-0 rounded-2xl border bg-white object-contain p-1.5 shadow-sm md:size-28" />
             ) : (
-              <CompanyMark name={b.nameEn} accent={b.accent} className="size-20 rounded-3xl text-2xl shadow-2xl shadow-black/30 ring-4 ring-gold-bright/30 md:size-24" />
+              <CompanyMark name={b.nameEn} accent={b.accent} className="size-20 rounded-2xl text-2xl md:size-28 md:text-3xl" />
             )}
-            <div>
+            <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
-                {b.verified && <VerifiedBadge className="bg-white/90" />}
-                <span className="text-xs text-white/70">{t.supplier.types[b.businessType]}</span>
+                {b.verified && <VerifiedBadge />}
+                <span className="rounded-full bg-primary-soft px-2.5 py-0.5 text-xs font-semibold text-primary">{t.supplier.types[b.businessType]}</span>
               </div>
-              <h1 className="mt-2 text-2xl font-extrabold tracking-tight md:text-4xl">{b.name}</h1>
-              <p className="text-sm text-white/65">{pp.nameEn}</p>
-              <p className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-white/75">
-                <ReputationStars orgId={b.id} legacyScore={b.reputationScore} className="text-white" dark />
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1"><MapPin className="size-4 text-gold-bright" /> {b.province}</span>
-                {pp.facts.employees && <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1"><Users className="size-4 text-gold-bright" /> {pp.facts.employees}</span>}
+              <h1 className="mt-2 text-2xl font-extrabold leading-tight tracking-tight md:text-3xl">{b.name}</h1>
+              {pp.nameEn && pp.nameEn !== b.name && <p className="text-sm text-muted-foreground">{pp.nameEn}</p>}
+              <p className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-sm text-muted-foreground">
+                <ReputationStars orgId={b.id} legacyScore={b.reputationScore} />
+                {b.province && <span className="inline-flex items-center gap-1.5"><MapPin className="size-4 text-primary" /> {b.province}</span>}
+                {pp.facts.employees && <span className="inline-flex items-center gap-1.5"><Users className="size-4 text-primary" /> {pp.facts.employees}</span>}
               </p>
             </div>
-          </motion.div>
-          <div className="flex flex-wrap gap-2">
-            {pp.own && <Link to="/account/profile" className="inline-flex h-10 items-center gap-2 rounded-full bg-white/15 px-5 text-sm font-semibold transition-all duration-200 hover:bg-white/25">{tx('Sửa hồ sơ', 'Edit profile', '프로필 수정')}</Link>}
-            <Button variant="ghost" className={cn('border backdrop-blur transition-all duration-300 hover:-translate-y-0.5', following ? 'border-gold-bright/60 bg-gold-bright text-[#2b1d00] shadow-lg shadow-gold-bright/30 hover:bg-gold-bright hover:text-[#2b1d00]' : 'border-white/30 bg-white/10 text-white hover:bg-white/20')} onClick={() => {
+          </div>
+          <div className="flex shrink-0 flex-wrap gap-2.5">
+            {pp.own && <Link to="/account/profile" className="inline-flex h-10 items-center gap-2 rounded-full border px-5 text-sm font-semibold transition-colors hover:bg-muted">{tx('Sửa hồ sơ', 'Edit profile', '프로필 수정')}</Link>}
+            <Button variant="outline" className={cn('rounded-full transition-all duration-300 hover:-translate-y-0.5', following && 'border-primary/40 bg-primary-soft text-primary')} aria-pressed={following} onClick={() => {
               const next = !following
               const done = () => { setFollowing(next); if (next) toast({ kind: 'success', title: t.supplier.follow, description: b.name }) }
               if (USE_MOCK) return done()
@@ -113,23 +125,25 @@ function Storefront({ b, remote }: { b: Business; remote: PublicProfile | null }
               {following ? <BadgeCheck /> : <Plus />} {t.supplier.follow}
             </Button>
             {!pp.own && (
-              <Button variant="default" className="transition-all duration-300 hover:-translate-y-0.5" onClick={() => openB2bChat(b.id)}>
+              <Button variant="outline" className="rounded-full transition-all duration-300 hover:-translate-y-0.5" onClick={() => openB2bChat(b.id)}>
                 <MessageSquare /> {tx('Nhắn tin', 'Message', '메시지')}
               </Button>
             )}
             <ContactDialog id={b.id} name={b.name} email={pp.facts.contact.email} />
           </div>
+        </motion.div>
+          </div>
         </div>
       </div>
 
-      <div className="sticky top-[112px] z-30 bg-background py-3 max-lg:top-[68px]">
+      <div className="sticky top-[112px] z-30 mt-3 bg-background py-3 max-lg:top-[68px]">
         <div className="container-page flex items-center gap-4">
           <span className="hidden shrink-0 items-center gap-2 lg:flex">
             <CompanyMark name={b.nameEn} accent={b.accent} className="size-8 rounded-full text-[10px]" />
             <span className="max-w-56 truncate text-sm font-bold">{b.name}</span>
           </span>
           <div className="no-scrollbar flex gap-1 overflow-x-auto rounded-full bg-muted p-1">
-            {(['overview', 'capability', 'products', 'contact'] as Tab[]).filter((k) => k !== 'products' || hasProducts).map((k) => (
+            {(['overview', 'capability', 'products'] as Tab[]).filter((k) => k !== 'products' || hasProducts).map((k) => (
               <button key={k} onClick={() => setTab(k)} className={cn('relative min-h-10 shrink-0 rounded-full px-4 text-sm font-semibold transition-colors duration-200', tab === k ? 'text-foreground' : 'text-muted-foreground hover:text-foreground')}>
                 {tab === k && <motion.span layoutId="store-tab" className="absolute inset-0 rounded-full bg-background shadow-md shadow-primary/10 ring-1 ring-border" transition={{ type: 'spring', bounce: 0.2, duration: 0.5 }} />}
                 <span className="relative">{t.supplier.tabs[k]}</span>
@@ -187,7 +201,6 @@ function Storefront({ b, remote }: { b: Business; remote: PublicProfile | null }
                 {items.map((p) => <ProductCard key={p.id} product={p} />)}
               </div>
             )}
-            {tab === 'contact' && <div className="max-w-xl"><InfoCard b={b} pp={pp} /></div>}
           </motion.div>
         </AnimatePresence>
       </div>
@@ -276,17 +289,6 @@ function Capability({ pp, hasProducts, open }: { pp: PublicProfile; hasProducts:
   const docSlides: Slide[] = pp.documents.filter((d) => d.preview).map((d) => ({ url: d.preview!, caption: d.name }))
   const yt = pp.video.match(/(?:v=|youtu\.be\/|embed\/)([\w-]{11})/)?.[1]
 
-  const toc = [
-    ['cap-production', tx('Năng lực sản xuất', 'Production capacity', '생산 역량')],
-    ['cap-photos', tx('Hình ảnh nhà máy', 'Factory photos', '공장 사진')],
-    ['cap-certs', tx('Chứng nhận', 'Certificates', '인증')],
-    ['cap-markets', tx('Thị trường & xuất khẩu', 'Markets & export', '시장 & 수출')],
-    ['cap-qc', tx('Kiểm soát chất lượng', 'Quality control', '품질 관리')],
-    ...(hasProducts ? [['cap-customers', tx('Sản phẩm', 'Products', '제품')]] : []),
-    ...(yt ? [['cap-video', tx('Video giới thiệu', 'Intro video', '소개 영상')]] : []),
-    ['cap-docs', tx('Tài liệu', 'Documents', '자료')],
-  ] as [string, string][]
-
   const facts = [
     [tx('Diện tích nhà xưởng', 'Factory area', '공장 면적'), c.factoryArea && `${c.factoryArea} m²`],
     [tx('Dây chuyền sản xuất', 'Production lines', '생산 라인'), c.productionLines],
@@ -297,52 +299,107 @@ function Capability({ pp, hasProducts, open }: { pp: PublicProfile; hasProducts:
     [tx('Năng lực cung ứng', 'Supply capacity', '공급 능력'), label(OPTIONS.supplyCapacity, c.supply, L)],
   ].filter(([, v]) => v) as [string, string][]
 
+  const marketRows = [
+    [tx('Tỷ trọng doanh thu xuất khẩu', 'Export share of revenue', '수출 매출 비중'), label(OPTIONS.exportShare, pp.exports.share, L)],
+    [tx('Hình thức xuất khẩu', 'Export modes', '수출 방식'), pp.exports.modes.map((m) => label(OPTIONS.exportModes, m, L)).filter(Boolean).join(', ')],
+    [tx('Truy xuất nguồn gốc', 'Traceability', '이력 추적'), label(OPTIONS.traceability, pp.exports.traceability, L)],
+  ].filter(([, v]) => v) as [string, string][]
+
+  // chỉ hiện mục nào có dữ liệu; mục trống không để lại tiêu đề lơ lửng
+  const sections: { id: string; title: string; show: boolean }[] = [
+    { id: 'cap-production', title: tx('Năng lực sản xuất', 'Production capacity', '생산 역량'), show: facts.length > 0 || c.highlights.length > 0 },
+    { id: 'cap-photos', title: tx('Hình ảnh nhà máy', 'Factory photos', '공장 사진'), show: pp.gallery.length > 0 },
+    { id: 'cap-certs', title: tx('Chứng nhận', 'Certificates', '인증'), show: certs.length > 0 },
+    { id: 'cap-markets', title: tx('Thị trường & xuất khẩu', 'Markets & export', '시장 & 수출'), show: marketRows.length > 0 || pp.exports.markets.length > 0 },
+    { id: 'cap-qc', title: tx('Kiểm soát chất lượng', 'Quality control', '품질 관리'), show: Boolean(c.qcProcess) },
+    { id: 'cap-customers', title: tx('Sản phẩm chủ lực', 'Key products', '주력 제품'), show: hasProducts && c.mainProducts.length > 0 },
+    { id: 'cap-video', title: tx('Video giới thiệu', 'Intro video', '소개 영상'), show: Boolean(yt) },
+    { id: 'cap-docs', title: tx('Tài liệu', 'Documents', '자료'), show: pp.documents.length > 0 },
+  ]
+  const toc = sections.filter((s) => s.show)
+  const title = (id: string) => sections.find((s) => s.id === id)!.title
+  const tocKey = toc.map((s) => s.id).join()
+
+  // mục đang đọc được tô sáng trong thanh mục lục bên trái
+  const [active, setActive] = useState('')
+  useEffect(() => {
+    const els = tocKey.split(',').map((id) => document.getElementById(id)).filter(Boolean) as HTMLElement[]
+    if (!els.length) return
+    const io = new IntersectionObserver((entries) => {
+      const top = entries.filter((e) => e.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0]
+      if (top) setActive(top.target.id)
+    }, { rootMargin: '-190px 0px -55% 0px' })
+    els.forEach((el) => io.observe(el))
+    return () => io.disconnect()
+  }, [tocKey])
+
+  if (toc.length === 0) {
+    return (
+      <div className="mx-auto max-w-lg rounded-3xl border border-dashed bg-muted/30 px-6 py-14 text-center">
+        <span className="mx-auto grid size-12 place-items-center rounded-2xl bg-primary-soft text-primary"><Factory className="size-6" /></span>
+        <p className="mt-4 text-lg font-bold">{tx('Chưa có hồ sơ năng lực', 'No capability profile yet', '역량 프로필이 없습니다')}</p>
+        <p className="mt-1 text-sm text-muted-foreground">{tx('Doanh nghiệp chưa cập nhật năng lực sản xuất, chứng nhận hay tài liệu giới thiệu.', 'This business has not added production capacity, certificates or documents yet.', '이 기업은 아직 생산 역량, 인증 또는 자료를 등록하지 않았습니다.')}</p>
+      </div>
+    )
+  }
+
   return (
-    <div className="grid grid-cols-[minmax(0,1fr)] gap-10 lg:grid-cols-[200px_minmax(0,1fr)]">
-      <nav className="hidden lg:block">
-        <ul className="sticky top-48 space-y-1 border-l text-sm">
-          {toc.map(([id, t]) => (
-            <li key={id}><a href={`#${id}`} className="-ml-px block border-l-2 border-transparent py-1.5 pl-4 text-muted-foreground transition hover:border-primary hover:text-foreground">{t}</a></li>
-          ))}
+    <div className={cn('grid grid-cols-[minmax(0,1fr)] gap-8', toc.length > 1 && 'lg:grid-cols-[200px_minmax(0,1fr)]')}>
+      <nav aria-label={tx('Mục lục hồ sơ năng lực', 'Capability contents', '역량 프로필 목차')} className={cn('hidden', toc.length > 1 && 'lg:block')}>
+        <ul className="sticky top-48 space-y-0.5 border-l text-sm">
+          {toc.map(({ id, title: t }) => {
+            const on = (active || toc[0]!.id) === id
+            return (
+              <li key={id}>
+                <a href={`#${id}`} aria-current={on ? 'true' : undefined} className={cn('-ml-px block border-l-2 py-2 pl-4 transition', on ? 'border-primary font-semibold text-primary' : 'border-transparent text-muted-foreground hover:border-primary/40 hover:text-foreground')}>{t}</a>
+              </li>
+            )
+          })}
         </ul>
       </nav>
-      <div className="min-w-0 space-y-14">
-        <Block id="cap-production" title={toc[0]![1]}>
-          <dl className="grid overflow-hidden rounded-2xl border sm:grid-cols-2 lg:grid-cols-4">
-            {facts.map(([k, v]) => (
-              <div key={k} className="-mb-px -mr-px border-b border-r bg-card p-4">
-                <dt className="text-xs text-muted-foreground">{k}</dt>
-                <dd className="mt-1 text-lg font-bold">{v}</dd>
-              </div>
-            ))}
-          </dl>
-          {c.highlights.length > 0 && (
-            <ul className="mt-4 flex flex-wrap gap-2">
-              {c.highlights.map((h) => <li key={h.en} className="inline-flex items-center gap-1.5 rounded-full bg-primary-soft px-3 py-1.5 text-[13px] font-medium text-primary"><BadgeCheck className="size-3.5" /> {L(h)}</li>)}
-            </ul>
-          )}
-        </Block>
+      <div className="min-w-0 space-y-6">
+        {sections[0]!.show && (
+          <Block id="cap-production" icon={Factory} title={title('cap-production')}>
+            {facts.length > 0 && (
+              <dl className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+                {facts.map(([k, v]) => (
+                  <div key={k} className="rounded-2xl bg-primary-soft/60 p-4">
+                    <dt className="text-[13px] text-muted-foreground">{k}</dt>
+                    <dd className="mt-1 text-xl font-extrabold tracking-tight text-primary">{v}</dd>
+                  </div>
+                ))}
+              </dl>
+            )}
+            {c.highlights.length > 0 && (
+              <ul className={cn('flex flex-wrap gap-2', facts.length > 0 && 'mt-4')}>
+                {c.highlights.map((h) => <li key={h.en} className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-card px-3 py-1.5 text-[13px] font-medium text-primary"><BadgeCheck className="size-3.5" /> {L(h)}</li>)}
+              </ul>
+            )}
+          </Block>
+        )}
 
-        <Block id="cap-photos" title={toc[1]![1]} sub={tx('Bấm vào ảnh để xem cỡ lớn', 'Click a photo to enlarge', '사진을 클릭하면 크게 볼 수 있습니다')}>
-          {kinds.length > 1 && (
-            <div className="mb-4 flex flex-wrap gap-2">
-              {[{ value: 'ALL', vi: 'Tất cả', en: 'All', ko: '전체' }, ...kinds].map((k) => (
-                <button key={k.value} onClick={() => setKind(k.value)} className={cn('rounded-full border px-3 py-1.5 text-[13px] font-medium transition', kind === k.value ? 'border-primary bg-primary text-primary-foreground' : 'hover:border-primary/50')}>{L(k)}</button>
+        {sections[1]!.show && (
+          <Block id="cap-photos" icon={Camera} title={title('cap-photos')} sub={tx('Bấm vào ảnh để xem cỡ lớn', 'Click a photo to enlarge', '사진을 클릭하면 크게 볼 수 있습니다')}>
+            {kinds.length > 1 && (
+              <div className="mb-4 flex flex-wrap gap-2">
+                {[{ value: 'ALL', vi: 'Tất cả', en: 'All', ko: '전체' }, ...kinds].map((k) => (
+                  <button key={k.value} onClick={() => setKind(k.value)} className={cn('rounded-full border px-3.5 py-1.5 text-[13px] font-medium transition', kind === k.value ? 'border-primary bg-primary text-primary-foreground' : 'hover:border-primary/50')}>{L(k)}</button>
+                ))}
+              </div>
+            )}
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
+              {photos.map((m, i) => (
+                <motion.button key={m.id} layout onClick={() => open(photos.map((x) => ({ url: x.url, caption: caption(x, L) })), i)} className={cn('group relative overflow-hidden rounded-2xl bg-muted text-left', i === 0 && kind === 'ALL' && 'col-span-2 row-span-2')}>
+                  <img src={m.url} alt={caption(m, L)} loading="lazy" className="aspect-[4/3] size-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                  <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent px-3 pb-2.5 pt-8 text-[13px] font-medium text-white">{caption(m, L)}</span>
+                </motion.button>
               ))}
             </div>
-          )}
-          <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
-            {photos.map((m, i) => (
-              <motion.button key={m.id} layout onClick={() => open(photos.map((x) => ({ url: x.url, caption: caption(x, L) })), i)} className={cn('group relative overflow-hidden rounded-xl bg-muted text-left', i === 0 && kind === 'ALL' && 'col-span-2 row-span-2')}>
-                <img src={m.url} alt={caption(m, L)} loading="lazy" className="aspect-[4/3] size-full object-cover transition-transform duration-500 group-hover:scale-105" />
-                <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent px-3 pb-2.5 pt-8 text-[13px] font-medium text-white">{caption(m, L)}</span>
-              </motion.button>
-            ))}
-          </div>
-        </Block>
+          </Block>
+        )}
 
-        <Block id="cap-certs" title={toc[2]![1]}>
-          {certs.length ? (
+        {sections[2]!.show && (
+          <Block id="cap-certs" icon={ShieldCheck} title={title('cap-certs')}>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {certs.map((x) => (
                 <button
@@ -362,66 +419,80 @@ function Capability({ pp, hasProducts, open }: { pp: PublicProfile; hasProducts:
                 </button>
               ))}
             </div>
-          ) : <Empty />}
-        </Block>
+          </Block>
+        )}
 
-        <Block id="cap-markets" title={toc[3]![1]}>
-          <dl className="grid gap-x-8 sm:grid-cols-2">
-            {[
-              [tx('Tỷ trọng doanh thu xuất khẩu', 'Export share of revenue', '수출 매출 비중'), label(OPTIONS.exportShare, pp.exports.share, L) || '—'],
-              [tx('Hình thức xuất khẩu', 'Export modes', '수출 방식'), pp.exports.modes.map((m) => label(OPTIONS.exportModes, m, L)).filter(Boolean).join(', ') || '—'],
-              [tx('Truy xuất nguồn gốc', 'Traceability', '이력 추적'), label(OPTIONS.traceability, pp.exports.traceability, L) || '—'],
-            ].map(([k, v]) => (
-              <div key={k} className="flex justify-between gap-4 border-b py-3 text-sm"><dt className="text-muted-foreground">{k}</dt><dd className="text-right font-medium">{v}</dd></div>
-            ))}
-          </dl>
-          <div className="mt-4 flex flex-wrap gap-2">
-            {pp.exports.markets.map((m) => <span key={m} className="inline-flex items-center gap-1.5 rounded-full bg-muted px-3 py-1.5 text-[13px] font-medium"><Globe className="size-3.5 text-primary" /> {label(OPTIONS.markets, m, L) || safeRegion(region, m)}</span>)}
-          </div>
-        </Block>
+        {sections[3]!.show && (
+          <Block id="cap-markets" icon={Globe} title={title('cap-markets')}>
+            {marketRows.length > 0 && (
+              <dl className="grid gap-3 sm:grid-cols-3">
+                {marketRows.map(([k, v]) => (
+                  <div key={k} className="rounded-2xl bg-muted/50 p-4">
+                    <dt className="text-[13px] text-muted-foreground">{k}</dt>
+                    <dd className="mt-1 font-bold">{v}</dd>
+                  </div>
+                ))}
+              </dl>
+            )}
+            {pp.exports.markets.length > 0 && (
+              <div className={cn(marketRows.length > 0 && 'mt-5')}>
+                <p className="mb-2 text-[13px] font-medium text-muted-foreground">{tx('Thị trường xuất khẩu', 'Export markets', '수출 시장')}</p>
+                <div className="flex flex-wrap gap-2">
+                  {pp.exports.markets.map((m) => <span key={m} className="inline-flex items-center gap-1.5 rounded-full border bg-card px-3.5 py-1.5 text-[13px] font-medium"><Globe className="size-3.5 text-primary" /> {label(OPTIONS.markets, m, L) || safeRegion(region, m)}</span>)}
+                </div>
+              </div>
+            )}
+          </Block>
+        )}
 
-        <Block id="cap-qc" title={toc[4]![1]}>
-          {c.qcProcess ? <p className="max-w-3xl leading-relaxed text-foreground/85">{c.qcProcess}</p> : <Empty />}
-        </Block>
+        {sections[4]!.show && (
+          <Block id="cap-qc" icon={BadgeCheck} title={title('cap-qc')}>
+            <p className="max-w-3xl leading-relaxed text-foreground/85">{c.qcProcess}</p>
+          </Block>
+        )}
 
-        {hasProducts && <Block id="cap-customers" title={tx('Sản phẩm', 'Products', '제품')}>
-          <div className="grid gap-6 sm:grid-cols-2">
-            <div>
-              <p className="mb-2 text-sm font-semibold">{tx('Sản phẩm chủ lực', 'Key products', '주력 제품')}</p>
-              <ul className="space-y-1.5 text-sm">{c.mainProducts.map((m) => <li key={m} className="flex gap-2"><Award className="mt-0.5 size-4 shrink-0 text-gold" /> {m}</li>)}</ul>
-            </div>
-          </div>
-        </Block>}
+        {sections[5]!.show && (
+          <Block id="cap-customers" icon={Package} title={title('cap-customers')}>
+            <ul className="grid gap-2.5 sm:grid-cols-2">
+              {c.mainProducts.map((m) => <li key={m} className="flex items-center gap-2.5 rounded-xl bg-muted/50 px-4 py-3 text-sm font-medium"><Award className="size-4 shrink-0 text-gold" /> {m}</li>)}
+            </ul>
+          </Block>
+        )}
 
-        {yt && (
-          <Block id="cap-video" title={tx('Video giới thiệu', 'Intro video', '소개 영상')}>
+        {sections[6]!.show && (
+          <Block id="cap-video" icon={Video} title={title('cap-video')}>
             <div className="aspect-video overflow-hidden rounded-2xl bg-black">
               <iframe className="size-full" src={`https://www.youtube-nocookie.com/embed/${yt}`} title="video" allow="accelerometer; encrypted-media; picture-in-picture" allowFullScreen />
             </div>
           </Block>
         )}
 
-        <Block id="cap-docs" title={toc[toc.length - 1]![1]} sub={tx('Xem trước trực tiếp hoặc tải về', 'Preview online or download', '온라인 미리보기 또는 다운로드')}>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {pp.documents.map((d) => <DocCard key={d.id} name={d.name} size={d.size} preview={d.preview} file={d.url ?? d.preview} onView={() => d.preview && open(docSlides, docSlides.findIndex((s) => s.url === d.preview))} />)}
-          </div>
-        </Block>
+        {sections[7]!.show && (
+          <Block id="cap-docs" icon={FileText} title={title('cap-docs')} sub={tx('Xem trước trực tiếp hoặc tải về', 'Preview online or download', '온라인 미리보기 또는 다운로드')}>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {pp.documents.map((d) => <DocCard key={d.id} name={d.name} size={d.size} preview={d.preview} file={d.url ?? d.preview} onView={() => d.preview && open(docSlides, docSlides.findIndex((s) => s.url === d.preview))} />)}
+            </div>
+          </Block>
+        )}
       </div>
     </div>
   )
 }
 
-function Block({ id, title, sub, children }: { id: string; title: string; sub?: string; children: ReactNode }) {
+function Block({ id, icon: Icon, title, sub, children }: { id: string; icon: LucideIcon; title: string; sub?: string; children: ReactNode }) {
   return (
-    <section id={id} className="scroll-mt-48">
-      <h2 className="text-xl font-bold">{title}</h2>
-      {sub && <p className="mt-1 text-sm text-muted-foreground">{sub}</p>}
-      <div className="mt-4">{children}</div>
+    <section id={id} className="scroll-mt-48 rounded-3xl border bg-card p-5 md:p-7">
+      <div className="flex items-center gap-3">
+        <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary-soft text-primary"><Icon className="size-5" /></span>
+        <div className="min-w-0">
+          <h2 className="text-lg font-bold leading-tight">{title}</h2>
+          {sub && <p className="text-[13px] text-muted-foreground">{sub}</p>}
+        </div>
+      </div>
+      <div className="mt-5">{children}</div>
     </section>
   )
 }
-
-const Empty = () => <p className="text-sm text-muted-foreground">{tx('Doanh nghiệp chưa cập nhật', 'Not provided yet', '아직 제공되지 않음')}</p>
 
 /** Rendered certificate visual for certificates uploaded as PDF (no image preview). */
 function CertificateArt({ name, issuer }: { name: string; issuer: string }) {
@@ -440,6 +511,19 @@ function CertificateArt({ name, issuer }: { name: string; issuer: string }) {
 }
 
 function DocCard({ name, size, preview, file, onView }: { name: string; size: number; preview?: string; file?: string; onView: () => void }) {
+  // chưa có ảnh xem trước: thẻ gọn một hàng thay vì ô vuông xám trống
+  if (!preview) {
+    return (
+      <div className="flex items-center gap-3 rounded-2xl border bg-card p-3.5">
+        <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-red-50 text-red-600 dark:bg-red-500/15"><FileText className="size-5" /></span>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-semibold">{name}</p>
+          <p className="text-xs text-muted-foreground">PDF{size > 0 && ` · ${formatSize(size)}`}</p>
+        </div>
+        {file && <a href={file} download={name} target="_blank" rel="noopener noreferrer" className="rounded-full p-2 text-muted-foreground hover:bg-primary-soft hover:text-primary" aria-label={tx('Tải về', 'Download', '다운로드')}><Download className="size-4" /></a>}
+      </div>
+    )
+  }
   return (
     <div className="overflow-hidden rounded-2xl border bg-card">
       <button onClick={onView} disabled={!preview} className="group relative block aspect-[4/3] w-full overflow-hidden bg-muted">

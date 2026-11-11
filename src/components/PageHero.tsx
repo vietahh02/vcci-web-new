@@ -15,22 +15,48 @@ export type Crumb = { label: string; to?: string }
 export function PageHero({ crumbs, title, titleKey, subtitle, children, tabs, tone = 'sky' }: { crumbs: Crumb[]; title: ReactNode; titleKey?: string; subtitle?: ReactNode; children?: ReactNode; tabs?: ReactNode; tone?: HeroTone }) {
   const { t } = useI18n()
   const navy = tone === 'navy'
+  const violet = tone === 'violet'
+  const nav = (
+    <nav aria-label={t.ui.breadcrumb} className={cn('flex flex-wrap items-center gap-1 text-[13px]', navy ? 'text-white/65' : violet ? 'text-[#3d2f8f]/70 dark:text-white/70' : 'text-navy/65 dark:text-white/70')}>
+      {crumbs.map((c, i) => (
+        <span key={c.label + i} className="inline-flex items-center gap-1">
+          {i > 0 && <ChevronRight className="size-3.5" aria-hidden />}
+          {c.to && i < crumbs.length - 1
+            ? <Link to={c.to} className={navy ? 'hover:text-white' : violet ? 'hover:text-[#5a31e0] dark:hover:text-white' : 'hover:text-primary dark:hover:text-white'}>{c.label}</Link>
+            : <span className={i === crumbs.length - 1 ? cn('font-semibold', navy ? 'text-white' : violet ? 'text-[#2a1b7a] dark:text-white' : 'text-navy dark:text-white') : undefined}>{c.label}</span>}
+        </span>
+      ))}
+    </nav>
+  )
+
+  // violet: tiêu đề căn giữa, nền tím lavender có dải bóng; ô tìm kiếm và bộ lọc nằm ngay trong hero (không có thanh tab chồng mép)
+  if (violet) {
+    return (
+      <div className="relative isolate pb-10">
+        <VioletArt />
+        <section className="pb-8 pt-7 md:pt-8">
+          <div className="container-page">
+            {nav}
+            <div className="mt-1 max-w-3xl">
+              <motion.h1 key={titleKey} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="line-clamp-2 py-1.5 text-4xl font-extrabold leading-[1.25] tracking-tight text-[#5a31e0] md:text-5xl md:leading-[1.25] dark:text-[#c3b8ff]">
+                {title}
+              </motion.h1>
+              {subtitle && <p className="mt-2 text-base font-medium text-[#1f1a45]/85 md:text-lg dark:text-white/80" aria-live="polite">{subtitle}</p>}
+            </div>
+            {children && <div className="mt-7">{children}</div>}
+          </div>
+        </section>
+      </div>
+    )
+  }
+
   return (
     <div className="relative isolate pb-12">
       <HeroArt tone={tone} />
       <section className={cn('pt-7 md:min-h-[300px] md:pt-10', tabs ? 'pb-16 md:pb-20' : 'pb-12 md:pb-14')}>
         <div className="container-page">
           <div className="min-w-0 max-w-2xl">
-            <nav aria-label={t.ui.breadcrumb} className={cn('flex flex-wrap items-center gap-1 text-[13px]', navy ? 'text-white/65' : 'text-navy/65 dark:text-white/70')}>
-              {crumbs.map((c, i) => (
-                <span key={c.label + i} className="inline-flex items-center gap-1">
-                  {i > 0 && <ChevronRight className="size-3.5" aria-hidden />}
-                  {c.to && i < crumbs.length - 1
-                    ? <Link to={c.to} className={navy ? 'hover:text-white' : 'hover:text-primary dark:hover:text-white'}>{c.label}</Link>
-                    : <span className={i === crumbs.length - 1 ? cn('font-semibold', navy ? 'text-white' : 'text-navy dark:text-white') : undefined}>{c.label}</span>}
-                </span>
-              ))}
-            </nav>
+            {nav}
             <motion.h1 key={titleKey} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className={cn('mt-1 line-clamp-2 py-1.5 text-4xl font-extrabold leading-[1.25] tracking-tight md:text-5xl md:leading-[1.25]', navy ? 'text-white' : 'text-primary dark:text-white')}>
               {title}
             </motion.h1>
@@ -42,6 +68,48 @@ export function PageHero({ crumbs, title, titleKey, subtitle, children, tabs, to
       </section>
       {tabs && <div className="container-page relative z-10 -mt-8 md:-mt-9">{tabs}</div>}
     </div>
+  )
+}
+
+/** Nền tím lavender → xanh ngọc nhạt, thêm vài tấm "lụa" bán trong suốt cong nhẹ. Thuần CSS + SVG, tan dần ở đáy. */
+const VIOLET_MESH_LIGHT = [
+  'radial-gradient(38% 80% at 0% 0%, rgba(205,196,255,.95) 0%, rgba(205,196,255,0) 70%)',
+  'radial-gradient(34% 90% at 100% 12%, rgba(170,236,255,.95) 0%, rgba(170,236,255,0) 70%)',
+  'radial-gradient(45% 60% at 52% 100%, rgba(226,216,255,.8) 0%, rgba(226,216,255,0) 70%)',
+  'linear-gradient(100deg, #e9e6ff 0%, #f1f0ff 50%, #e0f4ff 100%)',
+].join(',')
+const VIOLET_MESH_DARK = [
+  'radial-gradient(38% 80% at 0% 0%, rgba(110,86,255,.42) 0%, rgba(110,86,255,0) 70%)',
+  'radial-gradient(34% 90% at 100% 12%, rgba(42,180,230,.3) 0%, rgba(42,180,230,0) 70%)',
+  'linear-gradient(100deg, #0f0d2c 0%, #15143c 55%, #0d1f3a 100%)',
+].join(',')
+const VIOLET_FADE = 'linear-gradient(to bottom, #000 0%, #000 60%, transparent 100%)'
+
+function VioletArt() {
+  return (
+    <>
+      <div aria-hidden className="absolute inset-0 -z-20 dark:hidden" style={{ background: VIOLET_MESH_LIGHT, maskImage: VIOLET_FADE, WebkitMaskImage: VIOLET_FADE }} />
+      <div aria-hidden className="absolute inset-0 -z-20 hidden dark:block" style={{ background: VIOLET_MESH_DARK, maskImage: VIOLET_FADE, WebkitMaskImage: VIOLET_FADE }} />
+      <svg aria-hidden viewBox="0 0 1440 420" preserveAspectRatio="xMidYMin slice" className="pointer-events-none absolute inset-x-0 top-0 -z-10 hidden h-[420px] w-full md:block dark:opacity-40" style={{ maskImage: VIOLET_FADE, WebkitMaskImage: VIOLET_FADE }}>
+        <defs>
+          <linearGradient id="vi-sheet" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stopColor="#7aa8ff" stopOpacity=".55" />
+            <stop offset=".6" stopColor="#b9b0ff" stopOpacity=".28" />
+            <stop offset="1" stopColor="#ffffff" stopOpacity=".12" />
+          </linearGradient>
+          <linearGradient id="vi-ribbon" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stopColor="#ffffff" stopOpacity=".05" />
+            <stop offset=".5" stopColor="#ffffff" stopOpacity=".85" />
+            <stop offset="1" stopColor="#c7bdff" stopOpacity=".25" />
+          </linearGradient>
+        </defs>
+        <path d="M-40 150 C 180 140 330 60 560 -30 L 610 -30 C 380 90 220 190 -40 215 Z" fill="url(#vi-ribbon)" />
+        <path d="M-40 215 C 220 190 380 90 610 -30" fill="none" stroke="#fff" strokeOpacity=".7" strokeWidth="1.5" />
+        <path d="M960 330 C 1030 190 1110 70 1165 40 C 1250 80 1370 160 1480 250 L 1480 330 Z" fill="url(#vi-sheet)" />
+        <path d="M1165 40 C 1250 80 1370 160 1480 250" fill="none" stroke="#fff" strokeOpacity=".85" strokeWidth="2" />
+        <path d="M1165 40 C 1100 90 1030 190 975 300" fill="none" stroke="#fff" strokeOpacity=".5" strokeWidth="1.5" />
+      </svg>
+    </>
   )
 }
 
@@ -153,7 +221,7 @@ const HERO_FADE = { maskImage: 'linear-gradient(to bottom, #000 0%, #000 55%, tr
 const HERO_IMG_FADE = 'linear-gradient(to right, transparent 0%, #000 38%), linear-gradient(to bottom, transparent 0%, #000 14%, #000 66%, transparent 100%)'
 const HERO_IMG_MASK = { maskImage: HERO_IMG_FADE, maskComposite: 'intersect', WebkitMaskImage: HERO_IMG_FADE, WebkitMaskComposite: 'source-in' } as const
 
-export type HeroTone = 'sky' | 'navy'
+export type HeroTone = 'sky' | 'navy' | 'violet'
 
 // bản "navy": nền xanh đậm có vệt vàng và lưới chấm mờ, ảnh toà nhà; khác hẳn bản "sky" sáng của trang sản phẩm
 const HERO_MESH_NAVY = [
