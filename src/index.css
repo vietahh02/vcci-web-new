@@ -108,6 +108,7 @@
   --radius-2xl: calc(var(--radius) + 10px);
 
   --animate-marquee: marquee var(--marquee-duration, 40s) linear infinite;
+  --animate-hero-drift: hero-drift 28s ease-in-out infinite alternate;
   --animate-shine: shine 3.2s ease-in-out infinite;
   --animate-float: float 6s ease-in-out infinite;
   --animate-aurora: aurora 18s ease-in-out infinite alternate;
@@ -115,6 +116,10 @@
   --animate-shimmer: shimmer 1.6s linear infinite;
 }
 
+@keyframes hero-drift {
+  from { transform: scale(1.05) translate3d(0, 0, 0); }
+  to { transform: scale(1.14) translate3d(-1.5%, -1%, 0); }
+}
 @keyframes marquee {
   from { transform: translateX(0); }
   to { transform: translateX(-50%); }
@@ -244,4 +249,6 @@
   /* opt-out for motion the visitor triggers and that carries a layout change (home featured panels):
      restore each element's own Tailwind duration, 150ms default */
   .motion-keep, .motion-keep * { transition-duration: var(--tw-duration, 150ms) !important; }
+  /* product decision: logo rows keep running (Windows often reports reduce with animations merely off), slower, and still pause on hover */
+  .animate-marquee { animation-duration: calc(var(--marquee-duration, 40s) * 1.5) !important; animation-iteration-count: infinite !important; }
 }

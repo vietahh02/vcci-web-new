@@ -67,10 +67,7 @@ export function Footer() {
               <ArrowRight className="size-4" />
             </button>
           </form>}
-          <div className="mt-6 flex items-center gap-3">
-            <img src="/imgs/Logo_vcci.png" alt="VCCI" className="h-10 w-auto rounded bg-white p-1" />
-            <p className="text-xs leading-relaxed text-muted-foreground">{t.top.official}</p>
-          </div>
+          <p className="mt-6 text-xs leading-relaxed text-muted-foreground">{t.top.official}</p>
         </div>
       </div>
       <div className="border-t">

@@ -31,7 +31,6 @@ export function Header() {
   const [mobileOpen, setMobileOpen] = useState(false)
   const [searchFocus, setSearchFocus] = useState(false)
   const location = useLocation()
-  const isHome = location.pathname === '/'
   const [chatUnread, setChatUnread] = useState(0)
 
   // số tin chưa đọc (B2B + hỗ trợ) cho nút Tin nhắn; làm mới khi đổi trang
@@ -83,8 +82,8 @@ export function Header() {
             <Menu className="size-5" />
           </button>
           <Logo className="shrink-0" />
-          <div className={cn('hidden flex-1 transition-all duration-500 md:block', isHome && !scrolled && 'pointer-events-none opacity-0 md:-translate-y-1')}>
-            <SearchBar autoFocusKey={!isHome || scrolled} />
+          <div className={cn('hidden flex-1 transition-all duration-500 md:block')}>
+            <SearchBar autoFocusKey />
           </div>
           <div className="ml-auto flex items-center gap-0.5 sm:gap-1">
             {/* phones: the search lives in the menu sheet; this opens it with the field focused */}

@@ -977,7 +977,7 @@ export const events: EventItem[] = rawEvents.map((e) => withComputedStatus({ ...
 export type SponsorTier = 'MAIN' | 'GOLD' | 'PARTNER'
 
 /** GET /api/public/sponsors — tier & tagline come from the CMS advertisement module (UC-EAM). */
-export const sponsors: { id: string; name: string; mark: string; tier: SponsorTier; color: string; tagline?: Bilingual; url?: string }[] = [
+export const sponsors: { id: string; name: string; mark: string; tier: SponsorTier; color: string; tagline?: Bilingual; url?: string; logo?: string }[] = [
   { id: 's1', name: 'SaoViet Bank', mark: 'SV', tier: 'MAIN', color: '#0b4f8a', url: '#',
     tagline: { vi: 'Đồng hành tài chính thương mại cho doanh nghiệp xuất khẩu Việt Nam — L/C, bảo lãnh và thanh toán quốc tế trong 24h.', en: 'Trade finance partner for Vietnamese exporters — L/Cs, guarantees and cross-border payments within 24h.', ko: '베트남 수출기업을 위한 무역금융 파트너 — 24시간 내 L/C, 보증, 해외 송금 처리.' } },
   { id: 's2', name: 'MekongLog', mark: 'ML', tier: 'GOLD', color: '#0f766e', tagline: { vi: 'Logistics đa phương thức', en: 'Multimodal logistics', ko: '복합 운송 물류' } },

@@ -10,7 +10,7 @@ import { currentLang } from '@/lib/i18n'
 import { showToEvent } from '@/lib/showEvent'
 import type { CompanyProfile, SectionKey } from '@/lib/profile'
 import { initials } from '@/lib/utils'
-import { arr, bi, id, num, str, type Raw } from './adapters/common'
+import { arr, bi, id, num, str, url, type Raw } from './adapters/common'
 import { toBusiness, toPublicProfile } from './adapters/business'
 import { toCategory } from './adapters/category'
 import { showCardToEvent, toEvent, toRegistration } from './adapters/event'
@@ -364,6 +364,7 @@ export const homeSponsors = () => orMock('GET /api/public/sponsors', async () =>
     // CMS chỉ cho MAIN/GOLD/PARTNER; hạng lạ (vd. dữ liệu cũ 'SILVER') xếp vào PARTNER thay vì biến mất khỏi trang chủ
     tier: (s.tier ? (['MAIN', 'GOLD', 'PARTNER'].includes(str(s.tier).toUpperCase()) ? str(s.tier).toUpperCase() : 'PARTNER') : i === 0 ? 'MAIN' : i <= 3 ? 'GOLD' : 'PARTNER') as SponsorTier,
     color: str(s.color, PALETTE[i % PALETTE.length]!), tagline: s.tagline ? bi(s.tagline) : undefined, url: str(s.url || s.linkUrl) || undefined,
+    logo: s.logoUrl ? url(s.logoUrl) : undefined,
   }))
 }, mock.homeSponsors)
 

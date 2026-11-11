@@ -394,6 +394,7 @@ export function SponsorTiers() {
       <Reveal>
         <dl className="divide-y border-y border-t-2 border-t-foreground">
           {s && <SponsorTier label={t.home.sponsorMain}>
+            {s.logo && <img src={s.logo} alt="" referrerPolicy="no-referrer" onError={(e) => { e.currentTarget.hidden = true }} className="mb-4 h-14 w-auto max-w-60 object-contain" />}
             <a href={s.url} className={cn('text-4xl font-extrabold tracking-tight md:text-5xl', nameLink)}>{s.name}</a>
             {s.tagline && <p className="mt-3 max-w-2xl text-muted-foreground">{L(s.tagline)}</p>}
             {s.url && <a href={s.url} className="mt-4 inline-flex items-center gap-1 rounded-sm text-sm font-semibold text-primary outline-none hover:underline focus-visible:ring-2 focus-visible:ring-primary">
@@ -402,22 +403,19 @@ export function SponsorTiers() {
           </SponsorTier>}
 
           {goldSponsors.length > 0 && <SponsorTier label={t.home.sponsorGold}>
-            <ul className="grid gap-x-10 gap-y-6 sm:grid-cols-2 xl:grid-cols-3">
-              {goldSponsors.map((g) => (
-                <li key={g.id}>
-                  <a href={g.url} className={cn('text-2xl font-bold tracking-tight', nameLink)}>{g.name}</a>
-                  {g.tagline && <p className="mt-1 text-sm text-muted-foreground">{L(g.tagline)}</p>}
-                </li>
+            <Marquee duration={36} className="py-1 [&>div]:gap-14 [&>div]:pr-14">
+              {loop(goldSponsors).map((g, i) => (
+                <SponsorChip key={i} sponsor={g} size="lg" />
               ))}
-            </ul>
+            </Marquee>
           </SponsorTier>}
 
           {partnerSponsors.length > 0 && <SponsorTier label={t.home.sponsorPartners}>
-            <ul className="flex flex-wrap gap-x-9 gap-y-2">
-              {partnerSponsors.map((p) => (
-                <li key={p.id}><a href={p.url} className={cn('text-[17px] font-semibold', nameLink)}>{p.name}</a></li>
+            <Marquee duration={44} reverse className="py-1 [&>div]:gap-10 [&>div]:pr-10">
+              {loop(partnerSponsors).map((p, i) => (
+                <SponsorChip key={i} sponsor={p} size="md" />
               ))}
-            </ul>
+            </Marquee>
           </SponsorTier>}
         </dl>
       </Reveal>
@@ -425,9 +423,26 @@ export function SponsorTiers() {
   )
 }
 
+function SponsorChip({ sponsor: sp, size }: { sponsor: (typeof goldSponsors)[number]; size: 'lg' | 'md' }) {
+  // a logo hosted elsewhere can fail (hotlink block, moved file): fall back to the monogram
+  const [broken, setBroken] = useState(false)
+  const logo = broken ? undefined : sp.logo
+  return (
+    <a href={sp.url} className="group/chip flex shrink-0 items-center gap-3 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-primary">
+      <span aria-hidden className={cn('grid shrink-0 place-items-center overflow-hidden rounded-full font-extrabold text-white transition-transform duration-300 group-hover/chip:scale-110', size === 'lg' ? 'size-16 text-lg' : 'size-11 text-sm', logo && 'bg-white p-1.5 ring-1 ring-border')} style={logo ? undefined : { background: sp.color }}>
+        {logo ? <img src={logo} alt="" referrerPolicy="no-referrer" onError={() => setBroken(true)} className="size-full object-contain" /> : sp.mark}
+      </span>
+      <span className={cn('whitespace-nowrap tracking-tight transition-colors group-hover/chip:text-primary', size === 'lg' ? 'text-xl font-bold md:text-2xl' : 'text-base font-semibold text-foreground/80')}>{sp.name}</span>
+    </a>
+  )
+}
+
+// repeat a short list so one copy is wider than the row; Marquee doubles it for the seamless loop
+const loop = <T,>(xs: T[]) => Array.from({ length: Math.ceil(8 / xs.length) }, () => xs).flat()
+
 function SponsorTier({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="grid gap-3 py-7 md:grid-cols-[12rem_minmax(0,1fr)] md:gap-8 md:py-9">
+    <div className="grid grid-cols-[minmax(0,1fr)] gap-3 py-7 md:grid-cols-[12rem_minmax(0,1fr)] md:gap-8 md:py-9">
       <dt className="text-sm font-semibold text-muted-foreground md:pt-1.5">{label}</dt>
       <dd>{children}</dd>
     </div>

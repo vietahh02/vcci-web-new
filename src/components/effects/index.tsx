@@ -106,7 +106,8 @@ export function Marquee({ children, duration = 40, className, reverse }: { child
         style={{ '--marquee-duration': `${duration}s`, animationDirection: reverse ? 'reverse' : 'normal' } as CSSProperties}
       >
         {children}
-        {children}
+        {/* the copy only completes the loop: hidden from screen readers and Tab, but still clickable (not inert — half the time it is the part on screen) */}
+        <div aria-hidden className="contents" ref={(el) => el?.querySelectorAll('a,button').forEach((n) => n.setAttribute('tabindex', '-1'))}>{children}</div>
       </div>
     </div>
   )
