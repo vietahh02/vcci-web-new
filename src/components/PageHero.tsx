@@ -86,7 +86,7 @@ export function PageHero({ crumbs, title, titleKey, subtitle, kicker, children, 
         <div className="container-page">
           <div className="min-w-0 max-w-2xl">
             {nav}
-            <motion.h1 key={titleKey} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className={cn('mt-6 line-clamp-2 py-1.5 text-4xl font-extrabold leading-[1.25] tracking-tight md:mt-10 md:text-5xl md:leading-[1.25]', navy ? 'text-white' : 'text-primary dark:text-white')}>
+            <motion.h1 key={titleKey} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className={cn('mt-6 line-clamp-2 py-1.5 text-4xl font-extrabold leading-[1.25] tracking-tight md:mt-10 md:text-5xl md:leading-[1.25]', navy ? 'text-white' : tone === 'pearl' ? 'text-navy dark:text-white' : 'text-primary dark:text-white')}>
               {title}
             </motion.h1>
             {navy && <span aria-hidden className="mt-1 block h-1 w-14 rounded-full bg-gold-bright" />}
@@ -236,11 +236,12 @@ const HERO_MESH_LIGHT = [
   'linear-gradient(115deg, rgba(255,255,255,0) 52%, rgba(255,255,255,.4) 60%, rgba(255,255,255,0) 68%)',
   'linear-gradient(100deg, #d4ebf9 0%, #eaf5fb 42%, #fdf1d6 100%)',
 ].join(',')
+// chế độ tối: xanh navy sáng hơn (cùng tông nền #031e48 của ảnh minh hoạ tối), vệt xanh dương bên trái, vệt vàng rất nhẹ ở góc phải
 const HERO_MESH_DARK = [
-  'radial-gradient(60% 90% at 92% 8%, rgba(224,184,74,.5) 0%, rgba(224,184,74,0) 70%)',
-  'radial-gradient(45% 80% at 72% 105%, rgba(42,159,216,.35) 0%, rgba(42,159,216,0) 70%)',
-  'radial-gradient(55% 100% at 4% 100%, rgba(42,159,216,.3) 0%, rgba(42,159,216,0) 70%)',
-  'linear-gradient(100deg, #06152e 0%, #0a2a4a 60%, #1b2a3f 100%)',
+  'radial-gradient(45% 90% at 96% 0%, rgba(224,184,74,.16) 0%, rgba(224,184,74,0) 70%)',
+  'radial-gradient(50% 100% at 0% 0%, rgba(42,120,220,.35) 0%, rgba(42,120,220,0) 70%)',
+  'radial-gradient(45% 90% at 40% 110%, rgba(42,159,216,.22) 0%, rgba(42,159,216,0) 70%)',
+  'linear-gradient(100deg, #061f4a 0%, #052250 55%, #031e48 100%)',
 ].join(',')
 
 // đáy nền tan dần về trong suốt để hoà vào màu nền trang
@@ -250,7 +251,15 @@ const HERO_FADE = { maskImage: 'linear-gradient(to bottom, #000 0%, #000 55%, tr
 const HERO_IMG_FADE = 'linear-gradient(to right, transparent 0%, #000 38%), linear-gradient(to bottom, transparent 0%, #000 14%, #000 66%, transparent 100%)'
 const HERO_IMG_MASK = { maskImage: HERO_IMG_FADE, maskComposite: 'intersect', WebkitMaskImage: HERO_IMG_FADE, WebkitMaskComposite: 'source-in' } as const
 
-export type HeroTone = 'sky' | 'navy' | 'violet' | 'warm' | 'azure'
+export type HeroTone = 'sky' | 'navy' | 'violet' | 'warm' | 'azure' | 'pearl'
+
+/** Bản "pearl" (trang Về VCCI): nền trắng ngọc xanh xám có lưới chấm mờ và vệt tím nhạt, ảnh bản đồ Việt Nam kết nối bằng kính xanh đậm, chữ navy. */
+const PEARL_MESH_LIGHT = [
+  'radial-gradient(42% 90% at 0% 0%, rgba(176,196,236,.65) 0%, rgba(176,196,236,0) 70%)',
+  'radial-gradient(40% 90% at 70% 110%, rgba(255,214,214,.45) 0%, rgba(255,214,214,0) 70%)',
+  'radial-gradient(rgba(10,50,110,.08) 1px, transparent 1.6px) 0 0 / 24px 24px',
+  'linear-gradient(100deg, #e8eef8 0%, #f1f5fb 55%, #ecf2f8 100%)',
+].join(',')
 
 /** Bản "azure" (trang hội chợ & sự kiện): nền xanh primary nhạt, không ảnh nền (ảnh sự kiện nằm trong khối aside), tan dần ở đáy. */
 const AZURE_MESH_LIGHT = [
@@ -319,9 +328,20 @@ function HeroArt({ tone }: { tone: HeroTone }) {
       </>
     )
   }
+  if (tone === 'pearl') {
+    return (
+      <>
+        <img src="/imgs/hero-about.webp" alt="" aria-hidden width={1536} height={864} className="pointer-events-none absolute right-0 top-0 -z-10 hidden h-[285px] w-auto max-w-[64%] object-cover object-right md:block dark:md:hidden" style={HERO_IMG_MASK} />
+        <img src="/imgs/hero-about-dark.webp" alt="" aria-hidden width={1536} height={864} className="pointer-events-none absolute right-0 top-0 -z-10 hidden h-[285px] w-auto max-w-[64%] object-cover object-right dark:md:block" style={HERO_IMG_MASK} />
+        <div aria-hidden className="absolute inset-0 -z-20 dark:hidden" style={{ background: PEARL_MESH_LIGHT, ...HERO_FADE }} />
+        <div aria-hidden className="absolute inset-0 -z-20 hidden dark:block" style={{ background: HERO_MESH_DARK, ...HERO_FADE }} />
+      </>
+    )
+  }
   return (
     <>
       <img src="/imgs/hero-trade.webp" alt="" aria-hidden width={1536} height={864} className="pointer-events-none absolute right-0 top-0 -z-10 hidden h-[300px] w-auto max-w-[62%] object-cover object-right opacity-95 md:block dark:md:hidden" style={HERO_IMG_MASK} />
+      <img src="/imgs/hero-trade-dark.webp" alt="" aria-hidden width={1536} height={864} className="pointer-events-none absolute right-0 top-0 -z-10 hidden h-[300px] w-auto max-w-[62%] object-cover object-right dark:md:block" style={HERO_IMG_MASK} />
       <div aria-hidden className="absolute inset-0 -z-20 dark:hidden" style={{ background: HERO_MESH_LIGHT, ...HERO_FADE }} />
       <div aria-hidden className="absolute inset-0 -z-20 hidden dark:block" style={{ background: HERO_MESH_DARK, ...HERO_FADE }} />
     </>
