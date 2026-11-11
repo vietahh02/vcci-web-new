@@ -7,6 +7,7 @@ import { Link } from 'react-router-dom'
 import { getCategory, liveApi, USE_MOCK, useOrgProducts } from '@/api'
 import type { Business, EventItem, ImportRequest, Product } from '@/data/mock'
 import { CompanyMark, CountryChip, VerifiedBadge } from '@/components/brand'
+import { FavoriteButton } from '@/components/catalog/FavoriteButton'
 import { ReputationStars } from '@/components/reputation/Reputation'
 import { LiveDot, SmartImage, Tilt } from '@/components/effects'
 import { Badge } from '@/components/ui/primitives'
@@ -15,9 +16,10 @@ import { useI18n } from '@/lib/i18n'
 import { cn, daysLeft, formatDate, formatMoney, formatNumber, img } from '@/lib/utils'
 
 /* ---------------------------------------------------------------- Product (ProductResult) */
-export function ProductCard({ product, className }: { product: Product; className?: string }) {
+export function ProductCard({ product, className, favorite }: { product: Product; className?: string; favorite?: boolean }) {
   const { t, L, locale } = useI18n()
-  return (
+  // `favorite` (true/false = trạng thái đã lưu) bật nút tim; để undefined thì card không có nút. Nút nằm NGOÀI <Link> để không lồng nút trong link.
+  const card = (
     <Link
       to={`/products/${product.id}`}
       className={cn('group block h-full rounded-2xl outline-none focus-visible:ring-2 focus-visible:ring-primary', className)}
@@ -45,6 +47,17 @@ export function ProductCard({ product, className }: { product: Product; classNam
       </div>
       </div>
     </Link>
+  )
+  if (favorite === undefined) return card
+  return (
+    <div className="group/card relative h-full">
+      {card}
+      <FavoriteButton
+        productId={product.id}
+        initial={favorite}
+        className="absolute right-2.5 top-2.5 size-9 rounded-full bg-white/90 text-navy shadow-sm backdrop-blur transition-transform duration-300 hover:bg-white group-hover/card:-translate-y-1"
+      />
+    </div>
   )
 }
 

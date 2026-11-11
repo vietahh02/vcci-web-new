@@ -1,13 +1,13 @@
-/** Marketplace listing: short video strip + category icon rail + filter sidebar + product grid. */
+/** Marketplace listing: video hero + category tab bar overlapping its edge + filter sidebar + product grid. */
 import { AnimatePresence, motion } from 'motion/react'
-import { Infinity as InfinityIcon, SearchX, SlidersHorizontal, X } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Infinity as InfinityIcon, SearchX, SlidersHorizontal, X } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { catalogApi, searchProductsPage, USE_MOCK, type ProductQuery } from '@/api'
+import { catalogApi, searchProductsPage, tokens, USE_MOCK, type ProductQuery } from '@/api'
 import { ErrorBlock } from '@/components/ui/StateViews'
 import { categories, products, type Product } from '@/data/mock'
-import { categoryIcons } from '@/components/brand'
 import { ProductCard } from '@/components/cards'
+import { CategoryTabs, PageHero } from '@/components/PageHero'
 import { Badge, Button, buttonClass, Skeleton } from '@/components/ui/primitives'
 import { Select } from '@/components/ui/select'
 import { useI18n } from '@/lib/i18n'
@@ -27,58 +27,69 @@ export default function SearchPage() {
   const patch = (fn: (n: URLSearchParams) => void) => { const n = new URLSearchParams(params); fn(n); setParams(n, { replace: true }) }
   const moqParam = Number(params.get('moq'))
   const maxMoq = MOQ_STEPS.includes(moqParam) ? moqParam : 0
-  const setMaxMoq = (v: number) => patch((n) => (v ? n.set('moq', String(v)) : n.delete('moq')))
+  // đổi bộ lọc thì quay về trang 1
+  const patchFilter = (fn: (n: URLSearchParams) => void) => patch((n) => { fn(n); n.delete('page') })
+  const setMaxMoq = (v: number) => patchFilter((n) => (v ? n.set('moq', String(v)) : n.delete('moq')))
   const certsKey = params.getAll('cert').join('|')
   const certs = useMemo(() => (certsKey ? certsKey.split('|') : []), [certsKey])
-  const setCerts = (next: string[]) => patch((n) => { n.delete('cert'); next.forEach((c) => n.append('cert', c)) })
+  const setCerts = (next: string[]) => patchFilter((n) => { n.delete('cert'); next.forEach((c) => n.append('cert', c)) })
   const sorts = Object.keys(t.searchPage.sorts) as NonNullable<ProductQuery['sort']>[]
   const sortParam = params.get('sort') as NonNullable<ProductQuery['sort']> | null
   const sort = sortParam && sorts.includes(sortParam) ? sortParam : 'popular'
-  const setSort = (v: NonNullable<ProductQuery['sort']>) => patch((n) => (v === 'popular' ? n.delete('sort') : n.set('sort', v)))
+  const setSort = (v: NonNullable<ProductQuery['sort']>) => patchFilter((n) => (v === 'popular' ? n.delete('sort') : n.set('sort', v)))
   const [results, setResults] = useState<Product[] | null>(null)
   const [loadError, setLoadError] = useState<Error>()
   const [attempt, setAttempt] = useState(0)
   const [total, setTotal] = useState(0)
-  const [page, setPage] = useState(0)
-  const [loadingMore, setLoadingMore] = useState(false)
   const [facetCerts, setFacetCerts] = useState<string[]>([])
   const [filtersOpen, setFiltersOpen] = useState(false)
-  const rail = useRef<HTMLDivElement>(null)
-  const query = (pg: number): ProductQuery => ({ keyword, categoryId: categoryId || undefined, maxMoq: maxMoq || undefined, certificates: certs, sort, page: pg, size: 24 })
+  const listTop = useRef<HTMLDivElement>(null)
+  // mỗi trang đúng 2 hàng: số sản phẩm = số cột của lưới x 2
+  const cols = useGridCols()
+  const pageSize = cols * 2
+  const pageNo = Math.max(1, Math.floor(Number(params.get('page'))) || 1)
+  const totalPages = Math.max(1, Math.ceil(total / pageSize))
+  const query = (): ProductQuery => ({ keyword, categoryId: categoryId || undefined, maxMoq: maxMoq || undefined, certificates: certs, sort, page: pageNo - 1, size: pageSize })
+  const goPage = (n: number) => {
+    const next = new URLSearchParams(params)
+    if (n <= 1) next.delete('page')
+    else next.set('page', String(n))
+    setParams(next)
+    const el = listTop.current
+    if (el) window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 110, behavior: 'smooth' })
+  }
 
-  // filters, sorting and paging are all applied by the BE; a new filter restarts from page 0
+  // filters, sorting and paging are all applied by the BE; a new filter restarts from page 1
   useEffect(() => {
     let alive = true
     setResults(null)
-    setPage(0)
     setLoadError(undefined)
-    searchProductsPage(query(0)).then((r) => { if (alive) { setResults(r.items); setTotal(r.total) } }, (e: Error) => { if (alive) { setLoadError(e); setResults([]) } })
+    searchProductsPage(query()).then((r) => { if (alive) { setResults(r.items); setTotal(r.total) } }, (e: Error) => { if (alive) { setLoadError(e); setResults([]) } })
     return () => {
       alive = false
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [keyword, categoryId, maxMoq, certsKey, sort, lang, attempt])
+  }, [keyword, categoryId, maxMoq, certsKey, sort, lang, attempt, pageNo, pageSize])
+
+  // link cũ trỏ tới trang không còn tồn tại (số sản phẩm giảm): về trang cuối
+  useEffect(() => {
+    if (results && total > 0 && pageNo > totalPages) goPage(totalPages)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [results, total, pageNo, totalPages])
 
   useEffect(() => {
     if (!USE_MOCK) catalogApi.popularCertificates(12).then(setFacetCerts, () => undefined)
   }, [lang])
 
-  // mobile: danh mục đang chọn luôn nằm trong vùng nhìn thấy; chờ font vì font tải muộn làm chip rộng ra
+  // trạng thái tim của cả trang lấy bằng một request; khách chưa đăng nhập thì không gọi (nút vẫn bấm được, sẽ chuyển tới đăng nhập)
+  const [favorites, setFavorites] = useState<Set<string>>(new Set())
+  const idsKey = results?.map((p) => p.id).join(',') ?? ''
   useEffect(() => {
-    document.fonts.ready.then(() => {
-      const el = rail.current
-      const chip = el?.querySelector<HTMLElement>('[aria-pressed="true"]')
-      if (el && chip) el.scrollTo({ left: chip.offsetLeft - (el.clientWidth - chip.offsetWidth) / 2, behavior: 'smooth' })
-    })
-  }, [categoryId])
-
-  const loadMore = () => {
-    setLoadingMore(true)
-    searchProductsPage(query(page + 1)).then(
-      (r) => { setResults((prev) => [...(prev ?? []), ...r.items]); setPage(page + 1); setTotal(r.total) },
-      () => undefined,
-    ).finally(() => setLoadingMore(false))
-  }
+    if (USE_MOCK || !idsKey || !tokens.access()) { setFavorites(new Set()); return }
+    let alive = true
+    catalogApi.favoriteIds(idsKey.split(',')).then((s) => { if (alive) setFavorites(s) }, () => undefined)
+    return () => { alive = false }
+  }, [idsKey])
 
   const cat = categories.find((c) => c.id === categoryId)
   // live mode: certificate facets are the most used labels in the public catalogue (GET /api/products/certificates)
@@ -89,14 +100,15 @@ export default function SearchPage() {
     const next = new URLSearchParams(params)
     if (id) next.set('category', id)
     else next.delete('category')
+    next.delete('page')
     setParams(next)
   }
-  const clearAll = () => patch((n) => { n.delete('moq'); n.delete('cert') })
+  const clearAll = () => patchFilter((n) => { n.delete('moq'); n.delete('cert') })
 
-  // the BE total, not the page size: "215 results · showing 24"
-  const countLabel = total > (results?.length ?? 0)
-    ? `${formatNumber(total, locale)} ${t.searchPage.results} · ${tx('đang hiển thị', 'showing', '표시 중')} ${formatNumber(results?.length ?? 0, locale)}`
-    : `${formatNumber(results?.length ?? 0, locale)} ${t.searchPage.results}`
+  // the BE total, not the page size: "215 results · page 2/27"
+  const countLabel = totalPages > 1
+    ? `${formatNumber(total, locale)} ${t.searchPage.results} · ${tx('trang', 'page', '페이지')} ${formatNumber(pageNo, locale)}/${formatNumber(totalPages, locale)}`
+    : `${formatNumber(total, locale)} ${t.searchPage.results}`
 
   const moqIndex = MOQ_STEPS.indexOf(maxMoq)
   const moqLabel = maxMoq ? `≤ ${formatNumber(maxMoq, locale)}` : t.searchPage.any
@@ -142,37 +154,26 @@ export default function SearchPage() {
 
   return (
     <>
-      <section className="relative isolate overflow-hidden bg-navy py-6 text-white md:py-8">
-        <video className="absolute inset-0 -z-20 size-full object-cover" src="/video/product_search.mp4" poster="/video/product_search-poster.jpg" autoPlay muted loop playsInline aria-hidden />
-        <div className="absolute inset-0 -z-10 bg-navy/80" />
-        <div className="container-page">
-          <div className="min-w-0">
-            <nav aria-label={t.ui.breadcrumb} className="text-[13px] text-white/70">
-              <Link to="/" className="hover:text-white">{t.common.home}</Link> / {t.nav.products}{cat && ` / ${L(cat.categoryName)}`}
-            </nav>
-            <motion.h1 key={keyword + categoryId} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-2 line-clamp-2 text-3xl font-extrabold tracking-tight md:text-4xl">
-              {keyword ? `“${keyword}”` : cat ? L(cat.categoryName) : t.nav.products}
-            </motion.h1>
-            <p className="mt-1 text-[15px] text-white/85" aria-live="polite">{loadError ? '' : !results ? t.common.loading : countLabel}</p>
-          </div>
-        </div>
-      </section>
+      <PageHero
+        titleKey={keyword + categoryId}
+        crumbs={[
+          { label: t.common.home, to: '/' },
+          { label: t.nav.products, to: '/search' },
+          ...(cat ? [{ label: L(cat.categoryName) }] : []),
+        ]}
+        title={keyword ? `“${keyword}”` : cat ? L(cat.categoryName) : t.nav.products}
+        subtitle={loadError ? '' : !results ? t.common.loading : countLabel}
+        tabs={
+          <CategoryTabs
+            label={t.searchPage.all}
+            value={categoryId}
+            onChange={setCategory}
+            items={[{ id: '', name: t.searchPage.all }, ...categories.map((c) => ({ id: c.id, name: L(c.categoryName) }))]}
+          />
+        }
+      />
 
-      {/* category rail */}
-      <div className="sticky top-[68px] z-30 bg-background lg:static lg:bg-transparent">
-        {/* Desktop xuống hàng để thấy đủ danh mục trong khung nội dung; mobile cuộn ngang để không đẩy sản phẩm xuống */}
-        <div ref={rail} className="container-page no-scrollbar relative flex gap-2 overflow-x-auto py-2.5 lg:flex-wrap lg:overflow-visible lg:pb-0 lg:pt-6">
-          {[{ id: '', name: t.searchPage.all, Icon: null }, ...categories.map((c) => ({ id: c.id, name: L(c.categoryName), Icon: categoryIcons[c.icon] }))].map(({ id, name, Icon }) => (
-            <button key={id} aria-pressed={categoryId === id} onClick={() => setCategory(id)} className={cn('relative flex h-11 shrink-0 items-center gap-2 rounded-full border px-4 lg:h-9 lg:px-3.5 text-[13px] font-semibold transition-colors', categoryId === id ? 'border-transparent text-primary-foreground' : 'bg-card text-foreground/75 hover:border-primary/40 hover:text-foreground')}>
-              {categoryId === id && <motion.span layoutId="search-cat" className="absolute -inset-px rounded-full bg-primary" transition={{ type: 'spring', bounce: 0.2, duration: 0.4 }} />}
-              {Icon && <Icon className="relative size-4" />}
-              <span className="relative">{name}</span>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="container-page mt-6 grid gap-8 lg:grid-cols-[240px_minmax(0,1fr)]">
+      <div className="container-page mt-2 grid gap-8 lg:grid-cols-[240px_minmax(0,1fr)]">
         <aside className="hidden lg:block">
           <div className="sticky top-32 rounded-2xl bg-muted/60 p-5">
             <p className="mb-5 flex items-center gap-2 font-bold"><SlidersHorizontal className="size-4" /> {t.searchPage.filters}</p>
@@ -181,7 +182,7 @@ export default function SearchPage() {
         </aside>
 
         <div>
-          <div className="mb-6 flex flex-wrap items-center gap-3">
+          <div ref={listTop} className="mb-6 flex flex-wrap items-center gap-3">
             <Button variant="outline" className="h-11 lg:hidden" onClick={() => setFiltersOpen(true)}><SlidersHorizontal /> {t.searchPage.filters}{activeFilters.length > 0 && ` (${activeFilters.length})`}</Button>
             <div className="flex flex-1 flex-wrap items-center gap-2">
               {activeFilters.map((f) => <Badge key={f} variant="secondary" className="py-1">{f}</Badge>)}
@@ -192,7 +193,7 @@ export default function SearchPage() {
 
           {!results ? (
             <div className="grid grid-cols-2 gap-4 md:grid-cols-3 md:gap-5 xl:grid-cols-4">
-              {Array.from({ length: 8 }).map((_, i) => <div key={i} className="overflow-hidden rounded-2xl border bg-card"><Skeleton className="aspect-square rounded-none" /><div className="p-3.5"><Skeleton className="h-4" /><Skeleton className="mt-2 h-5 w-1/2" /></div></div>)}
+              {Array.from({ length: pageSize }).map((_, i) => <div key={i} className="overflow-hidden rounded-2xl border bg-card"><Skeleton className="aspect-square rounded-none" /><div className="p-3.5"><Skeleton className="h-4" /><Skeleton className="mt-2 h-5 w-1/2" /></div></div>)}
             </div>
           ) : loadError ? (
             <ErrorBlock error={loadError} onRetry={() => setAttempt((n) => n + 1)} />
@@ -202,7 +203,7 @@ export default function SearchPage() {
               <p className="mt-4 text-lg font-bold">{t.common.noResults}</p>
               <p className="mt-1 max-w-md text-[15px] text-foreground/80">{tx('Sửa từ khoá ở ô tìm kiếm phía trên, hoặc:', 'Edit the keyword in the search field above, or:', '위 검색창에서 검색어를 고치거나:')}</p>
               <div className="mt-5 flex flex-wrap justify-center gap-2">
-                {(activeFilters.length > 0 || categoryId) && <Button variant="outline" onClick={() => patch((n) => { n.delete('moq'); n.delete('cert'); n.delete('category') })}>{tx('Xoá bộ lọc và danh mục', 'Clear filters and category', '필터·카테고리 지우기')}</Button>}
+                {(activeFilters.length > 0 || categoryId) && <Button variant="outline" onClick={() => patchFilter((n) => { n.delete('moq'); n.delete('cert'); n.delete('category') })}>{tx('Xoá bộ lọc và danh mục', 'Clear filters and category', '필터·카테고리 지우기')}</Button>}
                 {keyword && <Link to={categoryId ? `/search?category=${categoryId}` : '/search'} className={buttonClass('outline')}>{tx('Bỏ từ khoá', 'Drop the keyword', '검색어 지우기')}</Link>}
                 <Link to="/requests?post=1" className={buttonClass('default')}>{tx('Đăng yêu cầu nhập khẩu', 'Post an import request', '수입 요청 등록')}</Link>
               </div>
@@ -211,16 +212,12 @@ export default function SearchPage() {
             <div className="grid grid-cols-2 gap-4 md:grid-cols-3 md:gap-5 xl:grid-cols-4">
               {results.map((p, i) => (
                 <motion.div key={p.id} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0, transition: { delay: i * 0.035 } }}>
-                  <ProductCard product={p} />
+                  <ProductCard product={p} favorite={favorites.has(p.id)} />
                 </motion.div>
               ))}
             </div>
           )}
-          {results && results.length > 0 && results.length < total && (
-            <div className="mt-10 flex justify-center">
-              <Button variant="outline" disabled={loadingMore} onClick={loadMore}>{tx('Xem thêm', 'Load more', '더 보기')} · {formatNumber(results.length, locale)}/{formatNumber(total, locale)}</Button>
-            </div>
-          )}
+          {results && results.length > 0 && totalPages > 1 && <Pagination page={pageNo} pages={totalPages} onChange={goPage} label={tx('Phân trang', 'Pagination', '페이지 이동')} />}
         </div>
       </div>
 
@@ -239,5 +236,50 @@ export default function SearchPage() {
         )}
       </AnimatePresence>
     </>
+  )
+}
+
+/** Số cột của lưới sản phẩm (khớp grid-cols-2 / md:3 / xl:4) để mỗi trang luôn đúng 2 hàng. */
+function useGridCols() {
+  const read = () => (window.matchMedia('(min-width: 1280px)').matches ? 4 : window.matchMedia('(min-width: 768px)').matches ? 3 : 2)
+  const [cols, setCols] = useState(read)
+  useEffect(() => {
+    const queries = [window.matchMedia('(min-width: 1280px)'), window.matchMedia('(min-width: 768px)')]
+    const on = () => setCols(read())
+    queries.forEach((q) => q.addEventListener('change', on))
+    return () => queries.forEach((q) => q.removeEventListener('change', on))
+  }, [])
+  return cols
+}
+
+/** Các số trang cần hiện: đầu, cuối, trang hiện tại và hai bên; chỗ hở thay bằng dấu ba chấm. */
+function pageItems(page: number, pages: number): (number | 'gap-l' | 'gap-r')[] {
+  const keep = new Set([1, pages, page - 1, page, page + 1])
+  if (page <= 3) { keep.add(2); keep.add(3) }
+  if (page >= pages - 2) { keep.add(pages - 1); keep.add(pages - 2) }
+  const nums = [...keep].filter((n) => n >= 1 && n <= pages).sort((a, b) => a - b)
+  const out: (number | 'gap-l' | 'gap-r')[] = []
+  nums.forEach((n, i) => {
+    const prev = nums[i - 1]
+    if (prev !== undefined && n - prev > 1) out.push(i < nums.length / 2 ? 'gap-l' : 'gap-r')
+    out.push(n)
+  })
+  return out
+}
+
+function Pagination({ page, pages, onChange, label }: { page: number; pages: number; onChange: (n: number) => void; label: string }) {
+  const cell = 'grid h-10 min-w-10 place-items-center rounded-lg border px-2 text-sm font-semibold transition-colors'
+  return (
+    <nav aria-label={label} className="mt-10 flex flex-wrap items-center justify-center gap-1.5">
+      <button type="button" aria-label="‹" disabled={page <= 1} onClick={() => onChange(page - 1)} className={cn(cell, 'bg-card hover:border-primary/40 hover:text-primary disabled:pointer-events-none disabled:opacity-40')}><ChevronLeft className="size-4" /></button>
+      {pageItems(page, pages).map((it) =>
+        typeof it === 'number' ? (
+          <button key={it} type="button" aria-current={it === page ? 'page' : undefined} onClick={() => onChange(it)} className={cn(cell, it === page ? 'border-transparent bg-primary text-primary-foreground' : 'bg-card text-foreground/80 hover:border-primary/40 hover:text-primary')}>{it}</button>
+        ) : (
+          <span key={it} aria-hidden className="grid h-10 min-w-8 place-items-center text-muted-foreground">…</span>
+        ),
+      )}
+      <button type="button" aria-label="›" disabled={page >= pages} onClick={() => onChange(page + 1)} className={cn(cell, 'bg-card hover:border-primary/40 hover:text-primary disabled:pointer-events-none disabled:opacity-40')}><ChevronRight className="size-4" /></button>
+    </nav>
   )
 }
