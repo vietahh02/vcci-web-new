@@ -117,6 +117,8 @@ export interface Show {
   visitorTicketFee: number
   ticketCurrency: 'VND' | 'USD'
   requireVisitorApproval: boolean
+  /** VCCI | ORGANIZATION | HOSTED ("Sân chơi": businesses either visit, or co-organise and stream by day). */
+  showType?: 'VCCI' | 'ORGANIZATION' | 'HOSTED'
   boothFee: number
   registrationDeadline: string
   issuedBadges: number

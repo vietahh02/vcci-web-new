@@ -1,6 +1,6 @@
 /** /account/catalog - a business's own products and what it takes to trade shows (live mode, signed-in only). The second tab holds products in ONLINE shows, and booths when an OFFLINE/HYBRID show exists. */
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { USE_MOCK, tokens } from '@/api'
 import { MyBooths } from '@/components/catalog/MyBooths'
 import { MyProducts } from '@/components/catalog/MyProducts'
@@ -11,7 +11,9 @@ import { cn } from '@/lib/utils'
 
 export default function MyCatalog() {
   useI18n()
-  const [tab, setTab] = useState<'products' | 'booths'>('products')
+  const [params] = useSearchParams()
+  // ?tab=booths: the show page's "Đăng ký đồng tổ chức" link lands on the participation list
+  const [tab, setTab] = useState<'products' | 'booths'>(params.get('tab') === 'booths' ? 'booths' : 'products')
   const tabs = [
     { k: 'products' as const, label: tx('Sản phẩm của tôi', 'My products', '내 제품') },
     { k: 'booths' as const, label: tx('Hội chợ của tôi', 'My trade shows', '내 박람회') },

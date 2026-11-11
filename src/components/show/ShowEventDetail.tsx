@@ -168,6 +168,20 @@ export function ShowEventDetail({ show }: { show: Show }) {
                 <LiveDot /> {x.joinLive}
               </Button>
             )}
+            {show.showType === 'HOSTED' && !ended && show.status !== 'CANCELED' && (
+              <div className="mt-5 space-y-3 rounded-2xl bg-white/5 p-4 text-xs leading-relaxed text-white/75 ring-1 ring-white/10" data-testid="hosted-ways">
+                <p className="text-sm font-bold text-white">{tx('Hai cách tham gia Show Sân chơi', 'Two ways to join this open-platform show', '오픈 플랫폼 쇼 참여 방법 두 가지')}</p>
+                <div>
+                  <p className="font-semibold text-white">{tx('Chỉ xem', 'Watch only', '시청만')}</p>
+                  <p>{tx(`Đăng ký một lần với VCCI bằng nút "${x.registerVisit}" ở trên. Khi được xác nhận, bạn xem được mọi phiên live trong Show, kể cả phiên do doanh nghiệp đồng tổ chức phát, không cần đăng ký từng phiên.`, `Register once with VCCI using "${x.registerVisit}" above. Once confirmed you can watch every live session in the show, including those streamed by co-organisers, with no per-session sign-up.`, `위의 "${x.registerVisit}" 버튼으로 VCCI에 한 번만 등록하세요. 확인되면 공동 주최 기업의 방송을 포함한 모든 라이브 세션을 세션별 신청 없이 시청할 수 있습니다.`)}</p>
+                </div>
+                <div>
+                  <p className="font-semibold text-white">{tx('Đồng tổ chức - phát live', 'Co-organise - stream live', '공동 주최 - 라이브 방송')}</p>
+                  <p>{tx('Doanh nghiệp đăng ký theo ngày, có phí đồng tổ chức do VCCI quy định. VCCI duyệt đơn và xác nhận phí thì doanh nghiệp tự phát live trong các ngày đã đăng ký.', 'Businesses apply by day and pay the co-organiser fee set by VCCI. Once VCCI approves and confirms the fee, you stream live on your chosen days.', '기업은 일자별로 신청하며 VCCI가 정한 공동 주최 비용을 냅니다. VCCI가 승인하고 비용을 확인하면 선택한 날에 직접 라이브 방송합니다.')}</p>
+                  <Link to="/account/catalog?tab=booths" className="mt-1.5 inline-block font-semibold text-gold-bright hover:underline">{tx('Đăng ký đồng tổ chức', 'Apply to co-organise', '공동 주최 신청')} →</Link>
+                </div>
+              </div>
+            )}
             {!ended && show.status !== 'CANCELED' && <AddToCalendar ev={showToEvent(show)} className="mt-4" />}
           </Reveal>
         </div>
