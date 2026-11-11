@@ -7,7 +7,7 @@ import { fieldBase } from '@/components/ui/styles'
 import { cn } from '@/lib/utils'
 
 /* ---------------------------------------------------------------- Button */
-type ButtonVariant = 'default' | 'secondary' | 'outline' | 'ghost' | 'gold' | 'link' | 'white'
+type ButtonVariant = 'default' | 'secondary' | 'outline' | 'ghost' | 'gold' | 'warm' | 'link' | 'white'
 type ButtonSize = 'sm' | 'md' | 'lg' | 'icon'
 
 const buttonVariants: Record<ButtonVariant, string> = {
@@ -16,6 +16,8 @@ const buttonVariants: Record<ButtonVariant, string> = {
   outline: 'border border-input bg-background/80 shadow-sm hover:border-primary/40 hover:bg-primary-soft hover:text-primary hover:shadow-md hover:-translate-y-px',
   ghost: 'hover:bg-primary-soft hover:text-primary',
   gold: 'bg-gradient-to-b from-[#f2d36b] to-[#d9a62a] text-[#2b1d00] shadow-md shadow-amber-500/30 hover:brightness-105 hover:shadow-lg hover:-translate-y-px',
+  /** Call to action on warm (cream / peach) surfaces, e.g. the import-request board: red → orange, white type */
+  warm: 'bg-gradient-to-r from-[#e23a3a] to-[#f0641f] text-white shadow-md shadow-[#e23a3a]/30 hover:brightness-105 hover:shadow-lg hover:shadow-[#e23a3a]/40 hover:-translate-y-px',
   link: 'text-primary underline-offset-4 hover:underline px-0 h-auto',
   white: 'bg-white text-navy shadow-md shadow-black/10 hover:bg-white hover:shadow-lg hover:-translate-y-px',
 }

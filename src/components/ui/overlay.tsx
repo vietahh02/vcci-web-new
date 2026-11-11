@@ -18,11 +18,16 @@ export function DialogContent({
   className,
   title,
   description,
+  icon,
+  headerClassName,
 }: {
   children: ReactNode
   className?: string
   title: string
   description?: string
+  /** optional tile shown left of the title (for dialogs that want a branded header) */
+  icon?: ReactNode
+  headerClassName?: string
 }) {
   const { t } = useI18n()
   return (
@@ -34,14 +39,17 @@ export function DialogContent({
           className,
         )}
       >
-        <div className="flex items-start justify-between gap-4 border-b px-6 py-4">
-          <div>
-            <DialogPrimitive.Title className="text-lg font-bold tracking-tight">{title}</DialogPrimitive.Title>
-            {description ? (
-              <DialogPrimitive.Description className="mt-0.5 text-sm text-muted-foreground">{description}</DialogPrimitive.Description>
-            ) : (
-              <DialogPrimitive.Description className="sr-only">{title}</DialogPrimitive.Description>
-            )}
+        <div className={cn('flex items-start justify-between gap-4 border-b px-6 py-4', headerClassName)}>
+          <div className={cn(icon && 'flex min-w-0 items-center gap-3.5')}>
+            {icon}
+            <div className="min-w-0">
+              <DialogPrimitive.Title className="text-lg font-bold tracking-tight">{title}</DialogPrimitive.Title>
+              {description ? (
+                <DialogPrimitive.Description className="mt-0.5 text-sm text-muted-foreground">{description}</DialogPrimitive.Description>
+              ) : (
+                <DialogPrimitive.Description className="sr-only">{title}</DialogPrimitive.Description>
+              )}
+            </div>
           </div>
           <DialogPrimitive.Close className="-mr-2 rounded-full p-2 text-muted-foreground transition-all duration-200 hover:bg-primary-soft hover:text-primary" aria-label={t.ui.close}>
             <X className="size-4" />

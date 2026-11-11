@@ -12,22 +12,49 @@ export type Crumb = { label: string; to?: string }
  * Hero + breadcrumb + title + optional tab bar. The mesh covers hero and tab bar, then fades into the page, so there is no horizontal seam.
  * `children` (search box, filters…) sit in the left column under the subtitle; `tabs` straddles the hero's bottom edge.
  */
-export function PageHero({ crumbs, title, titleKey, subtitle, children, tabs, tone = 'sky' }: { crumbs: Crumb[]; title: ReactNode; titleKey?: string; subtitle?: ReactNode; children?: ReactNode; tabs?: ReactNode; tone?: HeroTone }) {
+export function PageHero({ crumbs, title, titleKey, subtitle, children, tabs, aside, below, tone = 'sky' }: { crumbs: Crumb[]; title: ReactNode; titleKey?: string; subtitle?: ReactNode; children?: ReactNode; tabs?: ReactNode; aside?: ReactNode; below?: ReactNode; tone?: HeroTone }) {
   const { t } = useI18n()
   const navy = tone === 'navy'
   const violet = tone === 'violet'
+  const warm = tone === 'warm'
   const nav = (
-    <nav aria-label={t.ui.breadcrumb} className={cn('flex flex-wrap items-center gap-1 text-[13px]', navy ? 'text-white/65' : violet ? 'text-[#3d2f8f]/70 dark:text-white/70' : 'text-navy/65 dark:text-white/70')}>
+    <nav aria-label={t.ui.breadcrumb} className={cn('flex flex-wrap items-center gap-1 text-[13px]', navy ? 'text-white/65' : violet ? 'text-[#3d2f8f]/70 dark:text-white/70' : warm ? 'text-[#7a3b1c]/70 dark:text-white/70' : 'text-navy/65 dark:text-white/70')}>
       {crumbs.map((c, i) => (
         <span key={c.label + i} className="inline-flex items-center gap-1">
           {i > 0 && <ChevronRight className="size-3.5" aria-hidden />}
           {c.to && i < crumbs.length - 1
-            ? <Link to={c.to} className={navy ? 'hover:text-white' : violet ? 'hover:text-[#5a31e0] dark:hover:text-white' : 'hover:text-primary dark:hover:text-white'}>{c.label}</Link>
-            : <span className={i === crumbs.length - 1 ? cn('font-semibold', navy ? 'text-white' : violet ? 'text-[#2a1b7a] dark:text-white' : 'text-navy dark:text-white') : undefined}>{c.label}</span>}
+            ? <Link to={c.to} className={navy ? 'hover:text-white' : violet ? 'hover:text-[#5a31e0] dark:hover:text-white' : warm ? 'hover:text-[#c2410c] dark:hover:text-white' : 'hover:text-primary dark:hover:text-white'}>{c.label}</Link>
+            : <span className={i === crumbs.length - 1 ? cn('font-semibold', navy ? 'text-white' : violet ? 'text-[#2a1b7a] dark:text-white' : warm ? 'text-[#4a1d0a] dark:text-white' : 'text-navy dark:text-white') : undefined}>{c.label}</span>}
         </span>
       ))}
     </nav>
   )
+
+  // warm: nền kem → cam đào, ảnh cảng mờ dần bên phải; cột trái là tiêu đề + nút, cột phải là số liệu (aside); `below` là phần mở rộng (các bước)
+  if (warm) {
+    return (
+      <div className="relative isolate pb-10">
+        <WarmArt />
+        <section className="pb-8 pt-7 md:pt-8">
+          <div className="container-page">
+            {nav}
+            <div className="mt-6 grid items-end gap-8 md:mt-10 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] lg:gap-14">
+              <div className="min-w-0">
+                <motion.h1 key={titleKey} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="py-1.5 text-4xl font-extrabold leading-[1.2] tracking-tight text-balance text-[#3b1507] md:text-[52px] md:leading-[1.15] dark:text-white">
+                  {title}
+                </motion.h1>
+                <span aria-hidden className="mt-1 block h-1 w-14 rounded-full bg-gradient-to-r from-[#e8383d] to-[#f59e0b]" />
+                {subtitle && <p className="mt-4 max-w-xl text-base font-medium leading-relaxed text-[#4a2a1a]/85 md:text-lg dark:text-white/85">{subtitle}</p>}
+                {children && <div className="mt-7 flex flex-wrap gap-3">{children}</div>}
+              </div>
+              {aside && <div className="lg:justify-self-end">{aside}</div>}
+            </div>
+            {below}
+          </div>
+        </section>
+      </div>
+    )
+  }
 
   // violet: tiêu đề căn giữa, nền tím lavender có dải bóng; ô tìm kiếm và bộ lọc nằm ngay trong hero (không có thanh tab chồng mép)
   if (violet) {
@@ -37,11 +64,11 @@ export function PageHero({ crumbs, title, titleKey, subtitle, children, tabs, to
         <section className="pb-8 pt-7 md:pt-8">
           <div className="container-page">
             {nav}
-            <div className="mt-1 max-w-3xl">
+            <div className="mt-6 max-w-3xl md:mt-10">
               <motion.h1 key={titleKey} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="line-clamp-2 py-1.5 text-4xl font-extrabold leading-[1.25] tracking-tight text-[#5a31e0] md:text-5xl md:leading-[1.25] dark:text-[#c3b8ff]">
                 {title}
               </motion.h1>
-              {subtitle && <p className="mt-2 text-base font-medium text-[#1f1a45]/85 md:text-lg dark:text-white/80" aria-live="polite">{subtitle}</p>}
+              {subtitle && <p className="mt-6 text-base font-medium text-[#1f1a45]/85 md:text-lg dark:text-white/80" aria-live="polite">{subtitle}</p>}
             </div>
             {children && <div className="mt-7">{children}</div>}
           </div>
@@ -53,15 +80,15 @@ export function PageHero({ crumbs, title, titleKey, subtitle, children, tabs, to
   return (
     <div className="relative isolate pb-12">
       <HeroArt tone={tone} />
-      <section className={cn('pt-7 md:min-h-[300px] md:pt-10', tabs ? 'pb-16 md:pb-20' : 'pb-12 md:pb-14')}>
+      <section className={cn('pt-7 md:min-h-[300px] md:pt-8', tabs ? 'pb-16 md:pb-20' : 'pb-12 md:pb-14')}>
         <div className="container-page">
           <div className="min-w-0 max-w-2xl">
             {nav}
-            <motion.h1 key={titleKey} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className={cn('mt-1 line-clamp-2 py-1.5 text-4xl font-extrabold leading-[1.25] tracking-tight md:text-5xl md:leading-[1.25]', navy ? 'text-white' : 'text-primary dark:text-white')}>
+            <motion.h1 key={titleKey} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className={cn('mt-6 line-clamp-2 py-1.5 text-4xl font-extrabold leading-[1.25] tracking-tight md:mt-10 md:text-5xl md:leading-[1.25]', navy ? 'text-white' : 'text-primary dark:text-white')}>
               {title}
             </motion.h1>
-            {navy && <span aria-hidden className="block h-1 w-14 rounded-full bg-gold-bright" />}
-            {subtitle && <p className={cn('mt-3 text-base font-medium md:text-lg', navy ? 'text-white/80' : 'text-navy/75 dark:text-white/80')} aria-live="polite">{subtitle}</p>}
+            {navy && <span aria-hidden className="mt-1 block h-1 w-14 rounded-full bg-gold-bright" />}
+            {subtitle && <p className={cn(navy ? 'mt-4' : 'mt-6', 'text-base font-medium md:text-lg', navy ? 'text-white/80' : 'text-navy/75 dark:text-white/80')} aria-live="polite">{subtitle}</p>}
             {children && <div className="mt-6">{children}</div>}
           </div>
         </div>
@@ -221,7 +248,33 @@ const HERO_FADE = { maskImage: 'linear-gradient(to bottom, #000 0%, #000 55%, tr
 const HERO_IMG_FADE = 'linear-gradient(to right, transparent 0%, #000 38%), linear-gradient(to bottom, transparent 0%, #000 14%, #000 66%, transparent 100%)'
 const HERO_IMG_MASK = { maskImage: HERO_IMG_FADE, maskComposite: 'intersect', WebkitMaskImage: HERO_IMG_FADE, WebkitMaskComposite: 'source-in' } as const
 
-export type HeroTone = 'sky' | 'navy' | 'violet'
+export type HeroTone = 'sky' | 'navy' | 'violet' | 'warm'
+
+/** Bản "warm" (trang yêu cầu nhập khẩu): nền kem → cam đào, ảnh cảng biển có sẵn mờ dần về nền, tan dần ở đáy. */
+const WARM_MESH_LIGHT = [
+  'radial-gradient(40% 90% at 0% 0%, rgba(255,232,196,.95) 0%, rgba(255,232,196,0) 70%)',
+  'radial-gradient(46% 100% at 96% 0%, rgba(255,190,110,.8) 0%, rgba(255,190,110,0) 70%)',
+  'radial-gradient(40% 80% at 66% 110%, rgba(255,128,110,.4) 0%, rgba(255,128,110,0) 70%)',
+  'linear-gradient(100deg, #fff3df 0%, #fff0e4 50%, #ffe4d2 100%)',
+].join(',')
+const WARM_MESH_DARK = [
+  'radial-gradient(46% 100% at 96% 0%, rgba(245,158,11,.32) 0%, rgba(245,158,11,0) 70%)',
+  'radial-gradient(40% 80% at 66% 110%, rgba(232,56,61,.22) 0%, rgba(232,56,61,0) 70%)',
+  'linear-gradient(100deg, #0b1430 0%, #1a1a36 55%, #2a1c2c 100%)',
+].join(',')
+const WARM_FADE = 'linear-gradient(to bottom, #000 0%, #000 62%, transparent 100%)'
+const WARM_IMG_FADE = 'linear-gradient(to right, transparent 0%, #000 45%), linear-gradient(to bottom, transparent 0%, #000 18%, #000 60%, transparent 100%)'
+const WARM_IMG_MASK = { maskImage: WARM_IMG_FADE, maskComposite: 'intersect', WebkitMaskImage: WARM_IMG_FADE, WebkitMaskComposite: 'source-in' } as const
+
+function WarmArt() {
+  return (
+    <>
+      <img src="/imgs/cang-bien.jpg" alt="" aria-hidden className="pointer-events-none absolute right-0 top-0 -z-10 hidden h-[380px] w-[58%] object-cover opacity-60 md:block dark:opacity-35" style={WARM_IMG_MASK} />
+      <div aria-hidden className="absolute inset-0 -z-20 dark:hidden" style={{ background: WARM_MESH_LIGHT, maskImage: WARM_FADE, WebkitMaskImage: WARM_FADE }} />
+      <div aria-hidden className="absolute inset-0 -z-20 hidden dark:block" style={{ background: WARM_MESH_DARK, maskImage: WARM_FADE, WebkitMaskImage: WARM_FADE }} />
+    </>
+  )
+}
 
 // bản "navy": nền xanh đậm có vệt vàng và lưới chấm mờ, ảnh toà nhà; khác hẳn bản "sky" sáng của trang sản phẩm
 const HERO_MESH_NAVY = [
