@@ -136,12 +136,16 @@ function FeaturedBusinessRow({ business: b }: { business: Business }) {
     </article>
   )
 }
+const AUTO_MS = 7000
 /* ================================================================ EVENTS — one event on show, its date set large; the strip below picks the next */
 export function EventsAgenda() {
   const { t, L, locale } = useI18n()
   const { data: events = [], loading } = useEvents()
   const list = [...events.filter((e) => e.eventStatus === 'ONGOING'), ...events.filter((e) => e.eventStatus === 'UPCOMING')].slice(0, 5)
   const [activeId, setActiveId] = useState<string>()
+  const [hover, setHover] = useState(false)
+  const reduced = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  const paused = hover || reduced
   const idx = Math.max(0, list.findIndex((e) => e.id === activeId))
   const ev = list[idx]
   if (!ev) return loading ? null : (
@@ -190,7 +194,7 @@ export function EventsAgenda() {
         </Link>
 
         {/* the details, with the date as the largest thing */}
-        <div className="flex min-w-0 flex-col p-6 md:p-10" aria-live="polite">
+        <div className="flex min-w-0 flex-col p-6 md:p-10" aria-live="polite" onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}>
           <AnimatePresence mode="wait" initial={false}>
             <motion.div
               key={ev.id}
@@ -221,36 +225,50 @@ export function EventsAgenda() {
             </motion.div>
           </AnimatePresence>
 
-          {/* the other events: pick one to bring it to the front */}
+          {/* the other events: a clear list of dated entries; the open one fills a timer bar and the list moves on by itself */}
           {list.length > 1 && (
-            <div className="mt-8 flex items-center gap-2 lg:mt-auto lg:pt-8">
-              <button type="button" onClick={() => go(-1)} aria-label={t.ui.previous} className="grid size-9 shrink-0 place-items-center rounded-full text-foreground/70 transition-colors hover:bg-background hover:text-foreground">
-                <ChevronLeft className="size-5" />
-              </button>
-              <ol className="flex min-w-0 flex-1 gap-2 overflow-x-auto">
+            <div className="mt-8 lg:mt-auto lg:pt-8">
+              <p className="mb-2 px-1 text-xs font-bold uppercase tracking-wider text-muted-foreground">{t.home.upcoming}</p>
+              <ol className="space-y-1.5">
                 {list.map((e) => {
                   const on = e.id === ev.id
+                  const ed = new Date(e.startDate)
                   return (
-                    <li key={e.id} className="min-w-16 flex-1">
+                    <li key={e.id}>
                       <button
                         type="button"
                         onClick={() => setActiveId(e.id)}
                         aria-pressed={on}
                         aria-label={`${L(e.title)}, ${formatDate(e.startDate, locale)}`}
-                        className="group block w-full text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                        className={cn('group relative flex w-full items-center gap-3 overflow-hidden rounded-xl px-3 py-2 text-left transition-all duration-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary', on ? 'bg-background shadow-[0_10px_24px_-14px_rgba(0,70,110,0.5)] ring-1 ring-primary/25' : 'hover:bg-background/70')}
                       >
-                        <span className="block aspect-[4/3] overflow-hidden rounded-xl">
-                          <img src={img(e.coverImage, 200, 150)} alt="" loading="lazy" className={cn('size-full object-cover transition-[opacity,scale] duration-500', on ? 'opacity-100' : 'opacity-50 group-hover:scale-105 group-hover:opacity-85')} />
+                        <span className={cn('grid h-11 w-12 shrink-0 place-items-center rounded-lg text-center leading-none transition-colors duration-300', on ? 'bg-primary text-primary-foreground' : 'bg-background text-foreground/80 group-hover:text-primary')}>
+                          <span>
+                            <span className="block text-base font-extrabold tabular-nums">{String(ed.getDate()).padStart(2, '0')}</span>
+                            <span className="mt-0.5 block whitespace-nowrap text-[9px] font-bold uppercase opacity-80">{formatDate(e.startDate, locale, { month: 'short' })}</span>
+                          </span>
                         </span>
-                        <span className={cn('mt-1.5 block h-0.5 rounded-full transition-colors duration-500', on ? 'bg-primary' : 'bg-transparent')} />
+                        <span className="min-w-0 flex-1">
+                          <span className={cn('block truncate text-sm font-semibold transition-colors', on ? 'text-foreground' : 'text-foreground/80 group-hover:text-primary')}>{L(e.title)}</span>
+                          <span className="block truncate text-xs text-muted-foreground">{t.events.type[e.eventType]}</span>
+                        </span>
+                        <ArrowRight className={cn('size-4 shrink-0 transition-all duration-300', on ? 'translate-x-0 text-primary opacity-100' : '-translate-x-1 opacity-0 group-hover:translate-x-0 group-hover:opacity-60')} />
+                        {on && !paused && (
+                          <motion.span
+                            key={e.id}
+                            aria-hidden
+                            className="absolute inset-x-0 bottom-0 h-0.5 origin-left bg-primary"
+                            initial={{ scaleX: 0 }}
+                            animate={{ scaleX: 1 }}
+                            transition={{ duration: AUTO_MS / 1000, ease: 'linear' }}
+                            onAnimationComplete={() => go(1)}
+                          />
+                        )}
                       </button>
                     </li>
                   )
                 })}
               </ol>
-              <button type="button" onClick={() => go(1)} aria-label={t.ui.next} className="grid size-9 shrink-0 place-items-center rounded-full text-foreground/70 transition-colors hover:bg-background hover:text-foreground">
-                <ChevronRight className="size-5" />
-              </button>
             </div>
           )}
         </div>

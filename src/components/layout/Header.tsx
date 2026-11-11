@@ -1,17 +1,15 @@
 import * as DialogPrimitive from '@radix-ui/react-dialog'
 import { AnimatePresence, motion, useMotionValueEvent, useScroll } from 'motion/react'
-import { ChevronDown, ChevronRight, LayoutGrid, LogOut, Menu, MessageSquare, Moon, Phone, Search, Sun } from 'lucide-react'
-import { useEffect, useState } from 'react'
-import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
-import { chatApi, chatConfigured } from '@/api/chat'
-import { tokens } from '@/api/http'
+import { ChevronDown, ChevronRight, LayoutGrid, LogOut, Menu, Moon, Phone, Search, Sun } from 'lucide-react'
+import { useState } from 'react'
+import { Link, NavLink, useNavigate } from 'react-router-dom'
 import { categories } from '@/data/mock'
 import { categoryIcons, Logo } from '@/components/brand'
 import { LiveDot } from '@/components/effects'
+import { HeaderMenu } from '@/components/layout/HeaderMenu'
 import { LangSwitcher } from '@/components/layout/LangSwitcher'
-import { NotificationBell } from '@/components/layout/NotificationBell'
 import { SearchBar } from '@/components/layout/SearchBar'
-import { SheetContent, Tooltip } from '@/components/ui/overlay'
+import { SheetContent } from '@/components/ui/overlay'
 import { buttonClass } from '@/components/ui/primitives'
 import { useI18n } from '@/lib/i18n'
 import { useTheme } from '@/lib/theme'
@@ -22,27 +20,12 @@ import { cn, formatNumber, img } from '@/lib/utils'
 
 export function Header() {
   const { t } = useI18n()
-  const { theme, toggle } = useTheme()
-  const { session, profile, signOut } = useProfile()
-  const navigate = useNavigate()
+  const { session, profile } = useProfile()
   const { scrollY } = useScroll()
   const [scrolled, setScrolled] = useState(false)
   const [megaOpen, setMegaOpen] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
   const [searchFocus, setSearchFocus] = useState(false)
-  const location = useLocation()
-  const [chatUnread, setChatUnread] = useState(0)
-
-  // số tin chưa đọc (B2B + hỗ trợ) cho nút Tin nhắn; làm mới khi đổi trang
-  useEffect(() => {
-    if (!session || !chatConfigured() || !tokens.access()) return
-    let alive = true
-    chatApi.unreadCount().then((u) => alive && setChatUnread(u.total), () => undefined)
-    return () => {
-      alive = false
-    }
-  }, [session, location.pathname])
-  const unreadShown = session ? chatUnread : 0
 
   useMotionValueEvent(scrollY, 'change', (v) => setScrolled(v > 40))
 
@@ -53,7 +36,7 @@ export function Header() {
     { to: '/events', label: t.nav.events, live: true },
     { to: '/legal-ai', label: t.nav.legal },
     { to: '/about', label: t.nav.about },
-    ...(session ? [{ to: '/account/catalog', label: tx('Sản phẩm & hội chợ', 'Products & trade shows', '제품 및 박람회') }] : []),
+    ...(session ? [{ to: '/account/catalog', label: tx('Sản phẩm & sự kiện', 'Products & events', '제품 및 행사') }] : []),
   ]
 
   return (
@@ -90,21 +73,7 @@ export function Header() {
             <button onClick={() => { setSearchFocus(true); setMobileOpen(true) }} className="grid size-11 place-items-center rounded-full text-muted-foreground transition-colors duration-200 hover:bg-primary-soft hover:text-primary md:hidden" aria-label={t.search.submit}>
               <Search className="size-5" />
             </button>
-            <Tooltip content={t.nav.messages}>
-              <Link to="/messages" className="relative hidden size-11 place-items-center rounded-full text-muted-foreground transition-colors duration-200 hover:bg-primary-soft hover:text-primary sm:grid" aria-label={t.nav.messages}>
-                <MessageSquare className="size-[18px]" />
-                {unreadShown > 0 && <span className="absolute right-2 top-2 grid size-4 place-items-center rounded-full bg-live text-[9px] font-bold text-white">{unreadShown > 9 ? '9+' : unreadShown}</span>}
-              </Link>
-            </Tooltip>
-            <NotificationBell />
             <LangSwitcher />
-            <button onClick={toggle} className="grid size-11 place-items-center rounded-full text-muted-foreground transition-colors duration-200 hover:bg-primary-soft hover:text-primary max-sm:hidden" aria-label={t.ui.theme}>
-              <AnimatePresence mode="wait" initial={false}>
-                <motion.span key={theme} initial={{ rotate: -90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: 90, opacity: 0 }} transition={{ duration: 0.2 }} className="block">
-                  {theme === 'dark' ? <Sun className="size-[18px]" /> : <Moon className="size-[18px]" />}
-                </motion.span>
-              </AnimatePresence>
-            </button>
             {session ? (
               <>
               <Link to="/account/profile" className="ml-2 flex items-center gap-2.5 rounded-xl py-1 pl-1 pr-3 transition hover:bg-muted" title={tx('Hồ sơ doanh nghiệp của tôi', 'My company profile')}>
@@ -117,15 +86,6 @@ export function Header() {
                 </span>
                 <span className="hidden max-w-40 truncate text-[13px] font-semibold 2xl:block">{profile.general.nameEn || session.companyName}</span>
               </Link>
-              <Tooltip content={tx('Đăng xuất', 'Sign out', '로그아웃')}>
-                <button
-                  onClick={() => { signOut(); navigate('/') }}
-                  className="grid size-11 place-items-center rounded-full text-muted-foreground transition-colors duration-200 hover:bg-primary-soft hover:text-primary"
-                  aria-label={tx('Đăng xuất', 'Sign out', '로그아웃')}
-                >
-                  <LogOut className="size-[18px]" />
-                </button>
-              </Tooltip>
               </>
             ) : (
               <div className="ml-2 hidden items-center gap-2 lg:flex">
@@ -133,6 +93,7 @@ export function Header() {
                 <Link to="/register" className={buttonClass('default', 'sm', 'h-9')}>{t.nav.register}</Link>
               </div>
             )}
+            <HeaderMenu />
           </div>
         </div>
 

@@ -106,7 +106,7 @@ export const vi = {
     suppliersTitle: 'Doanh nghiệp xác thực VCCI',
     suppliersSub: 'Nhà sản xuất, xuất khẩu uy tín với hồ sơ pháp lý đã được thẩm định',
     requestsTitle: 'Yêu cầu nhập khẩu mới nhất',
-    requestsSub: 'Người mua quốc tế đang tìm nguồn hàng Việt Nam — gửi báo giá ngay',
+    requestsSub: 'Người mua quốc tế đang tìm hàng Việt Nam',
     howItWorks: 'Cách nhận đơn hàng',
     steps: [
       { t: 'Hoàn thiện hồ sơ', d: 'Cập nhật năng lực, sản phẩm và chứng nhận để được xác thực.' },
@@ -114,8 +114,8 @@ export const vi = {
       { t: 'Gửi báo giá', d: 'Báo giá trực tiếp qua email kèm tài liệu kỹ thuật.' },
       { t: 'Kết nối & chốt đơn', d: 'Trao đổi qua chat B2B, hẹn gặp tại hội chợ hoặc livestream.' },
     ],
-    eventsTitle: 'Hội chợ, hội thảo & livestream',
-    eventsSub: 'Gặp gỡ người mua trực tuyến — đăng ký tham gia chỉ trong 2 phút',
+    eventsTitle: 'Sự kiện',
+    eventsSub: 'Hội chợ, hội thảo, livestream: gặp người mua trực tuyến',
     whyTitle: 'Vì sao doanh nghiệp chọn VCCI Trade Hub',
     why: [
       { t: 'Niềm tin được bảo chứng', d: 'Mọi nhà cung cấp mang huy hiệu xác thực đều đã qua thẩm định giấy phép, mã số thuế và năng lực sản xuất.' },
@@ -376,7 +376,7 @@ export const vi = {
       vcci: 'VCCI',
     },
     links: {
-      buyers: ['Tìm sản phẩm', 'Tìm nhà cung cấp', 'Đăng yêu cầu nhập khẩu', 'Hội chợ & sự kiện'],
+      buyers: ['Tìm sản phẩm', 'Tìm nhà cung cấp', 'Đăng yêu cầu nhập khẩu', 'Sự kiện'],
       suppliers: ['Đăng ký doanh nghiệp', 'Gửi báo giá', 'Quản lý sản phẩm', 'Livestream bán hàng'],
       vcci: ['Giới thiệu', 'Trợ giúp', 'Chính sách bảo mật', 'Điều khoản sử dụng'],
     },
@@ -496,7 +496,7 @@ export const en: Dict = {
     suppliersTitle: 'VCCI Verified suppliers',
     suppliersSub: 'Trusted manufacturers and exporters with vetted legal records',
     requestsTitle: 'Latest import requests',
-    requestsSub: 'Global buyers sourcing from Vietnam right now — send your quote',
+    requestsSub: 'Global buyers sourcing from Vietnam',
     howItWorks: 'How to win orders',
     steps: [
       { t: 'Complete your profile', d: 'Add capabilities, products and certificates to get verified.' },
@@ -504,8 +504,8 @@ export const en: Dict = {
       { t: 'Send quotes', d: 'Quote directly by email with technical documents attached.' },
       { t: 'Connect & close', d: 'Negotiate in B2B chat, meet at fairs or livestreams.' },
     ],
-    eventsTitle: 'Trade fairs, webinars & livestreams',
-    eventsSub: 'Meet buyers online — register in under 2 minutes',
+    eventsTitle: 'Events',
+    eventsSub: 'Trade fairs, webinars, livestreams: meet buyers online',
     whyTitle: 'Why businesses choose VCCI Trade Hub',
     why: [
       { t: 'Trust you can verify', d: 'Every badge-holding supplier has passed licence, tax-code and production-capacity checks.' },
@@ -762,7 +762,7 @@ export const en: Dict = {
     address: '9 Dao Duy Anh, Dong Da, Hanoi',
     cols: { buyers: 'Buyers', suppliers: 'Suppliers', vcci: 'VCCI' },
     links: {
-      buyers: ['Find products', 'Find suppliers', 'Post import request', 'Trade fairs & events'],
+      buyers: ['Find products', 'Find suppliers', 'Post import request', 'Events'],
       suppliers: ['Register business', 'Send quotes', 'Manage products', 'Live selling'],
       vcci: ['About', 'Help', 'Privacy policy', 'Terms of use'],
     },
@@ -880,7 +880,7 @@ export const ko: Dict = {
     suppliersTitle: 'VCCI 인증 기업',
     suppliersSub: '법적 서류 심사를 통과한 신뢰할 수 있는 제조·수출 기업',
     requestsTitle: '최신 수입 요청',
-    requestsSub: '지금 베트남에서 소싱 중인 해외 바이어 — 바로 견적을 보내세요',
+    requestsSub: '베트남 제품을 찾는 해외 바이어',
     howItWorks: '주문 받는 방법',
     steps: [
       { t: '프로필 완성', d: '역량, 제품, 인증서를 등록하여 인증을 받으세요.' },
@@ -888,8 +888,8 @@ export const ko: Dict = {
       { t: '견적 발송', d: '기술 자료를 첨부해 이메일로 직접 견적을 보냅니다.' },
       { t: '연결 & 계약', d: 'B2B 채팅으로 협상하고 박람회나 라이브에서 만나세요.' },
     ],
-    eventsTitle: '박람회, 세미나 & 라이브 방송',
-    eventsSub: '온라인으로 바이어를 만나세요 — 2분이면 등록 완료',
+    eventsTitle: '행사',
+    eventsSub: '박람회, 웨비나, 라이브 방송: 온라인으로 바이어를 만나세요',
     whyTitle: '기업들이 VCCI Trade Hub를 선택하는 이유',
     why: [
       { t: '검증된 신뢰', d: '인증 배지를 가진 모든 공급업체는 사업자 등록, 세금 번호, 생산 능력 심사를 통과했습니다.' },
@@ -1146,7 +1146,7 @@ export const ko: Dict = {
     address: '하노이 동다군 다오주이아인 9번지',
     cols: { buyers: '바이어', suppliers: '공급업체', vcci: 'VCCI' },
     links: {
-      buyers: ['제품 찾기', '공급업체 찾기', '수입 요청 등록', '박람회 & 행사'],
+      buyers: ['제품 찾기', '공급업체 찾기', '수입 요청 등록', '행사'],
       suppliers: ['기업 등록', '견적 보내기', '제품 관리', '라이브 판매'],
       vcci: ['소개', '도움말', '개인정보 처리방침', '이용약관'],
     },

@@ -4,9 +4,9 @@ import {
 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { useHomeProducts, useHomeRequests, useHomeStats, useHomeTrending } from '@/api'
+import { getCategory, useHomeProducts, useHomeRequests, useHomeStats, useHomeTrending } from '@/api'
 import { CountryChip, SectionHeader } from '@/components/brand'
-import { ProductCard, RequestCard } from '@/components/cards'
+import { ProductCard } from '@/components/cards'
 import { CountUp, LiveDot, Reveal, Stagger, StaggerItem, WordsReveal } from '@/components/effects'
 import { Tabs } from '@/components/ui/overlay'
 import { Pager, usePaged } from '@/components/ui/pager'
@@ -15,7 +15,8 @@ import { useI18n } from '@/lib/i18n'
 import { useProfile } from '@/lib/profile'
 import { tx } from '@/lib/tx'
 import { EventsAgenda, FeaturedBusiness, HomeEmpty, SponsorTiers, Testimonials, WhyList } from '@/pages/home/sections'
-import { formatNumber } from '@/lib/utils'
+import { type ImportRequest } from '@/data/mock'
+import { cn, daysLeft, formatMoney, formatNumber } from '@/lib/utils'
 
 export default function Home() {
   return (
@@ -203,67 +204,58 @@ function ProductsSection() {
 
 /* ================================================================ IMPORT REQUESTS */
 function RequestsSection() {
-  const { t, L } = useI18n()
+  const { t } = useI18n()
   const { data: importRequests = [], loading } = useHomeRequests()
   const { items: list, ...pager } = usePaged(importRequests)
 
   return (
     <section className="container-page mt-24">
       <SectionHeader title={t.home.requestsTitle} sub={t.home.requestsSub} action={{ to: '/requests', label: t.common.viewAll }} />
-      <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
-        <div className="relative space-y-3">
-          {!loading && !importRequests.length && <HomeEmpty what="requests" />}
-          <AnimatePresence mode="popLayout" initial={false}>
-            {list.map((r) => (
-              <motion.div
-                key={r.id}
-                layout
-                initial={{ opacity: 0, y: -30, scale: 0.97 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: 30, scale: 0.97 }}
-                transition={{ type: 'spring', bounce: 0.18, duration: 0.7 }}
-                className="relative"
-              >
-                <RequestCard request={r} />
-              </motion.div>
-            ))}
-          </AnimatePresence>
-          <Pager {...pager} className="pt-2" />
-        </div>
-        <Reveal className="relative overflow-hidden rounded-2xl bg-navy p-6 text-white md:p-7">
-          <div className="relative">
-            <h3 className="text-2xl font-extrabold tracking-tight">{t.home.howItWorks}</h3>
-            <ol className="relative mt-6 space-y-6">
-              {t.home.steps.map((s, i) => (
-                <motion.li
-                  key={s.t}
-                  initial={{ opacity: 0, x: -14 }}
-                  whileInView={{ opacity: 1, x: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: 0.15 + i * 0.12, duration: 0.5 }}
-                  className="relative flex gap-4"
-                >
-                  <span className="relative grid size-9 shrink-0 place-items-center rounded-full bg-navy text-sm font-extrabold ring-2 ring-gold-bright/70">{i + 1}</span>
-                  <div>
-                    <p className="font-bold">{s.t}</p>
-                    <p className="mt-0.5 text-sm leading-relaxed text-white/80">{s.d}</p>
-                  </div>
-                </motion.li>
-              ))}
-            </ol>
-            <div className="mt-7 flex flex-wrap gap-2">
-              <Link to="/requests" className={buttonClass('gold', 'md')}>{t.requests.sendQuote} <ArrowRight /></Link>
-              <Link to="/requests?post=1" className={buttonClass('ghost', 'md', 'text-white hover:bg-white/10 hover:text-white')}>{t.nav.postRequest}</Link>
-            </div>
-            <div className="mt-7 flex flex-wrap gap-x-4 gap-y-2">
-              {importRequests.slice(0, 5).map((r) => (
-                <CountryChip key={r.id} code={r.country} label={L(r.countryName)} className="text-white/70 [&>span:first-child]:bg-white/10 [&>span:first-child]:text-white [&>span:first-child]:ring-white/15" />
-              ))}
-            </div>
-          </div>
-        </Reveal>
+      <div className="relative space-y-3">
+        {!loading && !importRequests.length && <HomeEmpty what="requests" />}
+        <AnimatePresence mode="popLayout" initial={false}>
+          {list.map((r) => (
+            <motion.div
+              key={r.id}
+              layout
+              initial={{ opacity: 0, y: -24, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 24, scale: 0.98 }}
+              transition={{ type: 'spring', bounce: 0.18, duration: 0.7 }}
+            >
+              <RequestRow request={r} />
+            </motion.div>
+          ))}
+        </AnimatePresence>
+        <Pager {...pager} className="pt-2" />
       </div>
     </section>
+  )
+}
+
+/** One full-width row: category + title, quantity, buyer, price with time left, and an arrow that nudges on hover. */
+function RequestRow({ request: r }: { request: ImportRequest }) {
+  const { t, L, locale } = useI18n()
+  const cat = getCategory(r.categoryId)
+  const left = daysLeft(r.endTime)
+  return (
+    <Link
+      to={`/requests/${r.id}`}
+      className="group relative grid items-center gap-x-6 gap-y-2 overflow-hidden rounded-2xl border bg-card px-5 py-4 transition duration-300 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-[0_18px_40px_-24px_rgba(0,102,153,0.45)] md:grid-cols-[minmax(0,1fr)_150px_minmax(0,220px)_150px_32px] md:px-6"
+    >
+      <span aria-hidden className="absolute inset-y-0 left-0 w-1 origin-top scale-y-0 bg-gradient-to-b from-[#1a8cc4] to-primary transition-transform duration-300 group-hover:scale-y-100" />
+      <div className="min-w-0">
+        <span className="inline-block rounded-full bg-primary-soft px-2.5 py-0.5 text-[11px] font-semibold text-primary">{cat ? L(cat.categoryName) : r.productType}</span>
+        <p className="mt-1.5 truncate text-base font-bold leading-snug transition-colors group-hover:text-primary">{L(r.requestName)}</p>
+      </div>
+      <p className="text-sm font-semibold md:text-[15px]">{formatNumber(r.quantity, locale)} <span className="font-normal text-muted-foreground">{r.unit}</span></p>
+      <CountryChip code={r.country} label={r.organizationName} className="min-w-0 truncate" />
+      <div className="md:text-right">
+        <p className="text-lg font-extrabold tracking-tight">{formatMoney(r.price)}<span className="text-xs font-normal text-muted-foreground">/{r.unit}</span></p>
+        <p className={cn('text-xs', left <= 7 ? 'font-semibold text-amber-600 dark:text-amber-400' : 'text-muted-foreground')}>{left} {t.common.daysLeft}</p>
+      </div>
+      <span className="hidden size-8 place-items-center rounded-full bg-muted text-muted-foreground transition group-hover:bg-primary group-hover:text-primary-foreground md:grid"><ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" /></span>
+    </Link>
   )
 }
 
