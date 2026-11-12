@@ -95,8 +95,8 @@ function Hero() {
         />
       </motion.div>
       {/* scrim: dark behind the type on the left, thinning toward the empty right so the footage shows; flat on phones where text runs full width */}
-      <div className="absolute inset-0 -z-20 bg-navy/65 md:bg-transparent md:bg-gradient-to-r md:from-navy/85 md:via-navy/45 md:to-navy/5" />
-      <div className="absolute inset-x-0 bottom-0 -z-20 h-2/5 bg-gradient-to-t from-navy/80 to-transparent" />
+      <div className="absolute inset-0 -z-20 bg-navy/65 md:bg-transparent md:bg-gradient-to-r md:from-navy/80 md:from-[22%] md:via-navy/30 md:via-[48%] md:to-transparent md:to-[75%]" />
+      <div className="absolute inset-x-0 bottom-0 -z-20 h-1/3 bg-gradient-to-t from-navy/60 to-transparent" />
 
       <motion.div style={{ y: contentY, opacity: contentOpacity }} className="container-page w-full pt-10 md:pt-14">
         <div className="min-w-0">
@@ -108,22 +108,27 @@ function Hero() {
             <WordsReveal key={t.home.heroTitleA} text={t.home.heroTitleA} className="block" />
             <WordsReveal key={t.home.heroTitleB} text={t.home.heroTitleB} delay={0.25} className="block" />
           </h1>
-          <motion.p initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.35 }} className="mt-6 max-w-xl text-base leading-relaxed text-white/80 md:text-lg">
+          <motion.p initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.35 }} className="mt-6 max-w-lg text-base leading-relaxed text-white/85 md:text-lg">
             {t.home.heroSub}
           </motion.p>
           {/* two doors, by intent: the platform serves both sides equally; the longer line is the tooltip */}
-          <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.5 }} className="mt-10 flex flex-wrap gap-3">
+          <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.5 }} className="mt-8 flex flex-wrap gap-3">
             {doors.map((d, i) => (
               <Link
                 key={d.to}
                 to={d.to}
-                title={d.sub}
-                className={i === 0
-                  ? 'group inline-flex min-h-12 items-center gap-2 rounded-full bg-white px-6 text-[15px] font-bold text-navy transition-[background-color,color,transform] duration-300 hover:bg-primary hover:text-white active:scale-[0.97] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white'
-                  : 'group inline-flex min-h-12 items-center gap-2 rounded-full bg-white/10 px-6 text-[15px] font-semibold text-white ring-1 ring-inset ring-white/25 transition-[background-color,transform] duration-300 hover:bg-white/20 active:scale-[0.97] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white'}
+                className={cn(
+                  'group flex min-h-[64px] min-w-[15rem] flex-1 items-center gap-4 rounded-2xl px-5 py-3 transition-[background-color,transform,box-shadow] duration-300 hover:-translate-y-0.5 active:scale-[0.98] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white sm:flex-none',
+                  i === 0
+                    ? 'bg-white text-navy shadow-[0_14px_30px_-16px_rgba(255,255,255,0.6)] hover:bg-white/95'
+                    : 'bg-gradient-to-b from-[#f2d36b] to-[#d9a62a] text-[#2b1d00] shadow-[0_14px_30px_-16px_rgba(217,166,42,0.8)] hover:brightness-105',
+                )}
               >
-                {d.title}
-                <ArrowRight className="size-4 shrink-0 transition-transform duration-300 group-hover:translate-x-1" />
+                <span className="min-w-0 flex-1">
+                  <span className="block text-base font-extrabold leading-tight">{d.title}</span>
+                  <span className="mt-0.5 block text-[13px] font-medium leading-snug opacity-75">{d.sub}</span>
+                </span>
+                <ArrowRight className="size-5 shrink-0 transition-transform duration-300 group-hover:translate-x-1" />
               </Link>
             ))}
           </motion.div>

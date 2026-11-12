@@ -248,14 +248,15 @@ function Facts({ b, pp }: { b: Business; pp: PublicProfile }) {
   return (
     <div className="mt-8">
       <h3 className="text-xl font-bold">{tx('Thông tin doanh nghiệp', 'Company information', '기업 정보')}</h3>
-      <dl className="mt-4 grid gap-x-8 sm:grid-cols-2">
+      {/* framed attribute table, the same look as "Thông tin sản phẩm": tinted label cell, value beside it */}
+      <dl className="mt-4 grid overflow-hidden rounded-xl border sm:grid-cols-2">
         {rows.map((r) => {
           // a blank field reads as a bug; say plainly that the company has not filled it in
           const empty = r.v == null || r.v === '' || r.v === '—'
           return (
-            <div key={r.k} className="flex justify-between gap-4 border-b py-3 text-sm">
-              <dt className="text-muted-foreground">{r.k}</dt>
-              <dd className={cn('text-right', empty ? 'text-muted-foreground' : 'font-medium')}>{empty ? tx('Chưa cung cấp', 'Not provided', '미제공') : r.v}</dd>
+            <div key={r.k} className="-mb-px -mr-px grid grid-cols-[132px_minmax(0,1fr)] border-b border-r text-sm sm:grid-cols-[184px_minmax(0,1fr)]">
+              <dt className="border-r bg-muted/60 px-3 py-2.5 text-muted-foreground">{r.k}</dt>
+              <dd className={cn('px-3 py-2.5', empty ? 'text-muted-foreground' : 'font-medium')}>{empty ? tx('Chưa cung cấp', 'Not provided', '미제공') : r.v}</dd>
             </div>
           )
         })}
