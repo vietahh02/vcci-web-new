@@ -2,6 +2,7 @@ import * as DialogPrimitive from '@radix-ui/react-dialog'
 import { AnimatePresence, motion, useMotionValueEvent, useScroll } from 'motion/react'
 import { ChevronDown, ChevronRight, LayoutGrid, LogOut, Menu, Moon, Phone, Search, Sun } from 'lucide-react'
 import { useState } from 'react'
+import { USE_MOCK } from '@/api'
 import { Link, NavLink, useNavigate } from 'react-router-dom'
 import { categories } from '@/data/mock'
 import { categoryIcons, Logo } from '@/components/brand'
@@ -133,7 +134,12 @@ export function Header() {
         </nav>
       </div>
 
-      <MobileNav open={mobileOpen} onOpenChange={(v) => { setMobileOpen(v); if (!v) setSearchFocus(false) }} items={[...navItems, { to: '/account/favorites', label: tx('Sản phẩm yêu thích', 'Favourite products', '즐겨찾는 제품') }]} focusSearch={searchFocus} />
+      <MobileNav open={mobileOpen} onOpenChange={(v) => { setMobileOpen(v); if (!v) setSearchFocus(false) }} items={[
+        ...navItems,
+        { to: '/account/favorites', label: tx('Sản phẩm yêu thích', 'Favourite products', '즐겨찾는 제품') },
+        { to: '/account/following', label: tx('Doanh nghiệp đang theo dõi', 'Businesses you follow', '팔로우 중인 기업') },
+        ...(session && !USE_MOCK ? [{ to: '/account/notifications', label: tx('Thông báo', 'Notifications', '알림') }] : []),
+      ]} focusSearch={searchFocus} />
     </header>
   )
 }

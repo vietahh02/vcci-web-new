@@ -149,6 +149,11 @@ export function sendBusinessRfq(bid: string, f: { subject: string; content: stri
 export const isFollowingBusiness = async (bid: string) => Boolean((await apiFetch<Raw>(`/api/me/follows/businesses/${encodeURIComponent(bid)}`)).following)
 /** POST/DELETE /api/me/follows/businesses/{id} */
 export const followBusiness = (bid: string, on: boolean) => apiFetch(`/api/me/follows/businesses/${encodeURIComponent(bid)}`, { method: on ? 'POST' : 'DELETE' })
+/** GET /api/me/follows/businesses?page&size — doanh nghiệp tôi đang theo dõi (mới theo dõi trước), cùng hình dạng thẻ doanh nghiệp của danh bạ */
+export async function listFollowedBusinesses(page: number, size = 12): Promise<Page<Business>> {
+  const p = toPage<Raw>(await apiFetch('/api/me/follows/businesses', { query: { page, size } }), size)
+  return { ...p, items: p.items.map(toBusiness) }
+}
 
 /* --------------------------------------------------------- import requests */
 /** GET /api/portal/import-requests/browse?categoryId&keyword&sort&page&size */

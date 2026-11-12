@@ -1,5 +1,5 @@
 /** Home sections added in the "less monotonous" pass: varied rhythm, fewer image frames. */
-import { AnimatePresence, motion } from 'motion/react'
+import { motion } from 'motion/react'
 import {
   ArrowRight, ArrowUpRight, Bot, CalendarDays, ChevronLeft, ChevronRight, Globe2, Handshake,
   Landmark, MessagesSquare, Quote, Radio, SearchX, ShieldCheck, Star,
@@ -14,7 +14,7 @@ import { goldSponsors, mainSponsor, partnerSponsors } from '@/components/sponsor
 import { buttonClass } from '@/components/ui/primitives'
 import { eventTimeRange, isOnAir } from '@/lib/eventStatus'
 import { useI18n } from '@/lib/i18n'
-import { cn, daysLeft, formatDate, formatMoney, formatNumber, img } from '@/lib/utils'
+import { cn, daysLeft, formatDate, formatMoney, img } from '@/lib/utils'
 
 /* ================================================================ TRUST BAND — no boxes */
 export function TrustBand() {
@@ -136,29 +136,23 @@ function FeaturedBusinessRow({ business: b }: { business: Business }) {
     </article>
   )
 }
-const AUTO_MS = 7000
-/* ================================================================ EVENTS — one event on show, its date set large; the strip below picks the next */
+/* ================================================================ EVENTS — one featured event with its date set large, then a separate row of the next ones */
+/** Trang chủ — Sự kiện: một sự kiện nổi bật (ảnh lớn + ngày + tiêu đề + nút) và, tách riêng bên dưới, hàng thẻ "Sắp diễn ra". */
 export function EventsAgenda() {
   const { t, L, locale } = useI18n()
   const { data: events = [], loading } = useEvents()
-  const list = [...events.filter((e) => e.eventStatus === 'ONGOING'), ...events.filter((e) => e.eventStatus === 'UPCOMING')].slice(0, 5)
-  const [activeId, setActiveId] = useState<string>()
-  const [hover, setHover] = useState(false)
-  const reduced = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
-  const paused = hover || reduced
-  const idx = Math.max(0, list.findIndex((e) => e.id === activeId))
-  const ev = list[idx]
+  const list = [...events.filter((e) => e.eventStatus === 'ONGOING'), ...events.filter((e) => e.eventStatus === 'UPCOMING')].slice(0, 4)
+  const ev = list[0]
   if (!ev) return loading ? null : (
     <section className="container-page mt-24">
       <h2 className="mb-8 text-3xl font-extrabold tracking-[-0.02em] md:text-[38px] md:leading-[1.1]">{t.home.eventsTitle}</h2>
       <HomeEmpty what="events" />
     </section>
   )
-  const go = (step: number) => setActiveId(list[(idx + step + list.length) % list.length]!.id)
+  const others = list.slice(1)
   const time = eventTimeRange(ev)
   const left = daysLeft(ev.startDate)
   const d = new Date(ev.startDate)
-  const ease = [0.22, 1, 0.36, 1] as const
 
   return (
     <section className="container-page mt-24">
@@ -173,106 +167,58 @@ export function EventsAgenda() {
         </Link>
       </Reveal>
 
+      {/* sự kiện nổi bật */}
       <Reveal className="grid overflow-hidden rounded-3xl bg-muted/60 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
-        {/* the picture */}
-        <Link to={`/events/${ev.id}`} tabIndex={-1} aria-hidden className="relative block aspect-[16/10] overflow-hidden bg-muted lg:aspect-auto lg:min-h-[480px]">
-          <AnimatePresence initial={false}>
-            <motion.img
-              key={ev.id}
-              src={img(ev.coverImage, 1100, 800)}
-              alt=""
-              initial={{ opacity: 0, scale: 1.05 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.8, ease }}
-              className="absolute inset-0 size-full object-cover"
-            />
-          </AnimatePresence>
+        <Link to={`/events/${ev.id}`} tabIndex={-1} aria-hidden className="group relative block aspect-[16/10] overflow-hidden bg-muted lg:aspect-auto lg:min-h-[380px]">
+          <img src={img(ev.coverImage, 1100, 800)} alt="" className="absolute inset-0 size-full object-cover transition-transform duration-700 group-hover:scale-105" />
           <span className="absolute bottom-4 left-4 inline-flex items-center gap-2 rounded-full bg-background px-3.5 py-1.5 text-sm font-semibold text-foreground">
             {isOnAir(ev) ? <><LiveDot /> {t.events.live}</> : ev.eventStatus === 'ONGOING' ? t.events.status.ONGOING : `${left} ${t.common.daysLeft}`}
           </span>
         </Link>
-
-        {/* the details, with the date as the largest thing */}
-        <div className="flex min-w-0 flex-col p-6 md:p-10" aria-live="polite" onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}>
-          <AnimatePresence mode="wait" initial={false}>
-            <motion.div
-              key={ev.id}
-              initial={{ opacity: 0, y: 14 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={{ duration: 0.35, ease }}
-            >
-              <div className="flex items-center gap-4">
-                <span className="text-[56px] font-extrabold leading-[0.9] tracking-[-0.05em] text-primary tabular-nums md:text-[72px]">{String(d.getDate()).padStart(2, '0')}</span>
-                <span className="text-sm leading-relaxed text-muted-foreground">
-                  <span className="block font-semibold text-foreground first-letter:uppercase">{formatDate(ev.startDate, locale, { month: 'long', year: 'numeric' })}</span>
-                  {[time, L(ev.location)].filter(Boolean).join(' · ')}
-                </span>
-              </div>
-              <h3 className="mt-6 line-clamp-2 text-2xl font-extrabold leading-tight tracking-[-0.02em] md:text-[28px]">
-                <Link to={`/events/${ev.id}`} className="transition-colors hover:text-primary">{L(ev.title)}</Link>
-              </h3>
-              <p className="mt-3 line-clamp-3 leading-relaxed text-foreground/80">{L(ev.introduction)}</p>
-              <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-3">
-                <Link to={`/events/${ev.id}`} className={buttonClass('default', 'lg', 'rounded-full')}>
-                  {ev.eventStatus === 'ONGOING' ? t.common.viewDetail : t.events.register}
-                </Link>
-                <span className="text-sm text-muted-foreground">
-                  {ev.participationFee ? formatMoney(ev.participationFee, ev.participationFeeCurrency, locale) : t.common.free} · {formatNumber(ev.registeredSlots, locale)}{ev.maxSlots > 0 && `/${formatNumber(ev.maxSlots, locale)}`} {t.events.registered}
-                </span>
-              </div>
-            </motion.div>
-          </AnimatePresence>
-
-          {/* the other events: a clear list of dated entries; the open one fills a timer bar and the list moves on by itself */}
-          {list.length > 1 && (
-            <div className="mt-8 lg:mt-auto lg:pt-8">
-              <p className="mb-2 px-1 text-xs font-bold uppercase tracking-wider text-muted-foreground">{t.home.upcoming}</p>
-              <ol className="space-y-1.5">
-                {list.map((e) => {
-                  const on = e.id === ev.id
-                  const ed = new Date(e.startDate)
-                  return (
-                    <li key={e.id}>
-                      <button
-                        type="button"
-                        onClick={() => setActiveId(e.id)}
-                        aria-pressed={on}
-                        aria-label={`${L(e.title)}, ${formatDate(e.startDate, locale)}`}
-                        className={cn('group relative flex w-full items-center gap-3 overflow-hidden rounded-xl px-3 py-2 text-left transition-all duration-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary', on ? 'bg-background shadow-[0_10px_24px_-14px_rgba(0,70,110,0.5)] ring-1 ring-primary/25' : 'hover:bg-background/70')}
-                      >
-                        <span className={cn('grid h-11 w-12 shrink-0 place-items-center rounded-lg text-center leading-none transition-colors duration-300', on ? 'bg-primary text-primary-foreground' : 'bg-background text-foreground/80 group-hover:text-primary')}>
-                          <span>
-                            <span className="block text-base font-extrabold tabular-nums">{String(ed.getDate()).padStart(2, '0')}</span>
-                            <span className="mt-0.5 block whitespace-nowrap text-[9px] font-bold uppercase opacity-80">{formatDate(e.startDate, locale, { month: 'short' })}</span>
-                          </span>
-                        </span>
-                        <span className="min-w-0 flex-1">
-                          <span className={cn('block truncate text-sm font-semibold transition-colors', on ? 'text-foreground' : 'text-foreground/80 group-hover:text-primary')}>{L(e.title)}</span>
-                          <span className="block truncate text-xs text-muted-foreground">{t.events.type[e.eventType]}</span>
-                        </span>
-                        <ArrowRight className={cn('size-4 shrink-0 transition-all duration-300', on ? 'translate-x-0 text-primary opacity-100' : '-translate-x-1 opacity-0 group-hover:translate-x-0 group-hover:opacity-60')} />
-                        {on && !paused && (
-                          <motion.span
-                            key={e.id}
-                            aria-hidden
-                            className="absolute inset-x-0 bottom-0 h-0.5 origin-left bg-primary"
-                            initial={{ scaleX: 0 }}
-                            animate={{ scaleX: 1 }}
-                            transition={{ duration: AUTO_MS / 1000, ease: 'linear' }}
-                            onAnimationComplete={() => go(1)}
-                          />
-                        )}
-                      </button>
-                    </li>
-                  )
-                })}
-              </ol>
-            </div>
-          )}
+        <div className="flex min-w-0 flex-col justify-center p-6 md:p-10">
+          <div className="flex items-center gap-4">
+            <span className="text-[56px] font-extrabold leading-[0.9] tracking-[-0.05em] text-primary tabular-nums md:text-[72px]">{String(d.getDate()).padStart(2, '0')}</span>
+            <span className="text-sm leading-relaxed text-muted-foreground">
+              <span className="block font-semibold text-foreground first-letter:uppercase">{formatDate(ev.startDate, locale, { month: 'long', year: 'numeric' })}</span>
+              {time}
+            </span>
+          </div>
+          <h3 className="mt-6 line-clamp-3 text-2xl font-extrabold leading-tight tracking-[-0.02em] md:text-[28px]">
+            <Link to={`/events/${ev.id}`} className="transition-colors hover:text-primary">{L(ev.title)}</Link>
+          </h3>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <span className="rounded-full bg-background px-3 py-1 text-[13px] font-semibold text-foreground/80">{t.events.type[ev.eventType]}</span>
+            <span className="rounded-full bg-background px-3 py-1 text-[13px] font-semibold text-foreground/80">{ev.participationFee ? formatMoney(ev.participationFee, ev.participationFeeCurrency, locale) : t.common.free}</span>
+          </div>
+          <Link to={`/events/${ev.id}`} className={buttonClass('default', 'lg', 'mt-7 self-start rounded-full')}>
+            {ev.eventStatus === 'ONGOING' ? t.common.viewDetail : t.events.register}
+          </Link>
         </div>
       </Reveal>
+
+      {/* các sự kiện khác: hàng thẻ riêng, cùng một kiểu (ảnh + ngày + tiêu đề), tách khỏi khối nổi bật bằng nhãn và khoảng cách */}
+      {others.length > 0 && (
+        <div className="mt-10">
+          <p className="mb-4 text-sm font-bold uppercase tracking-wider text-muted-foreground">{t.home.upcoming}</p>
+          <Stagger className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {others.map((e) => (
+              <StaggerItem key={e.id}>
+                <Link to={`/events/${e.id}`} className="group block rounded-2xl outline-none focus-visible:ring-2 focus-visible:ring-primary">
+                  <span className="relative block aspect-[16/10] overflow-hidden rounded-2xl bg-muted">
+                    <img src={img(e.coverImage, 640, 400)} alt="" loading="lazy" className="absolute inset-0 size-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                    <span className="absolute left-3 top-3 rounded-xl bg-background px-3 py-1.5 text-center leading-none shadow-sm">
+                      <span className="block text-lg font-extrabold tabular-nums text-primary">{String(new Date(e.startDate).getDate()).padStart(2, '0')}</span>
+                      <span className="mt-0.5 block text-[10px] font-bold uppercase text-muted-foreground">{formatDate(e.startDate, locale, { month: 'short' })}</span>
+                    </span>
+                  </span>
+                  <span className="mt-3 block line-clamp-2 text-base font-bold leading-snug transition-colors group-hover:text-primary">{L(e.title)}</span>
+                  <span className="mt-1 block text-sm text-muted-foreground">{t.events.type[e.eventType]}</span>
+                </Link>
+              </StaggerItem>
+            ))}
+          </Stagger>
+        </div>
+      )}
     </section>
   )
 }

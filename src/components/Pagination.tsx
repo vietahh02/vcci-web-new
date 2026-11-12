@@ -18,7 +18,7 @@ function pageItems(page: number, pages: number): (number | 'gap-l' | 'gap-r')[] 
 }
 
 export function Pagination({ page, pages, onChange, label }: { page: number; pages: number; onChange: (n: number) => void; label: string }) {
-  const cell = 'grid h-10 min-w-10 place-items-center rounded-lg border px-2 text-sm font-semibold transition-colors'
+  const cell = 'grid h-10 min-w-10 place-items-center rounded-full border px-2 text-sm font-semibold transition-colors'
   return (
     <nav aria-label={label} className="mt-10 flex flex-wrap items-center justify-center gap-1.5">
       <button type="button" aria-label="‹" disabled={page <= 1} onClick={() => onChange(page - 1)} className={cn(cell, 'bg-card hover:border-primary/40 hover:text-primary disabled:pointer-events-none disabled:opacity-40')}><ChevronLeft className="size-4" /></button>

@@ -23,10 +23,10 @@ export default function Home() {
     <>
       <Hero />
       {/* TrustBand (legal verification / 63 provinces / B2B support / languages) hidden on home; component kept in home/sections.tsx */}
+      <EventsAgenda />
       <ProductsSection />
       <FeaturedBusiness />
       <RequestsSection />
-      <EventsAgenda />
       <Testimonials />
       <WhyList />
       <SponsorTiers />

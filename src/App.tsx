@@ -15,6 +15,7 @@ import { ForgotPassword, Login, Register, ResetPassword } from '@/pages/Auth'
 import { Help, Privacy, Terms } from '@/pages/Help'
 import EventDetail from '@/pages/EventDetail'
 import Favorites from '@/pages/Favorites'
+import Following from '@/pages/Following'
 import EventRegister from '@/pages/EventRegister'
 import Events from '@/pages/Events'
 import Home from '@/pages/Home'
@@ -23,6 +24,7 @@ import LiveRoom from '@/pages/LiveRoom'
 import { LegacyRoomRedirect } from '@/components/live/LegacyRoomRedirect'
 import Messages from '@/pages/Messages'
 import MyCatalog from '@/pages/MyCatalog'
+import Notifications from '@/pages/Notifications'
 import ProductEditPage from '@/pages/ProductEdit'
 import NotFound from '@/pages/NotFound'
 import ProductDetail from '@/pages/ProductDetail'
@@ -88,6 +90,8 @@ export default function App() {
                     <Route path="/terms" element={<Terms />} />
                     <Route path="/account/profile" element={<MyProfile />} />
                     <Route path="/account/favorites" element={<Favorites />} />
+                    <Route path="/account/following" element={<Following />} />
+                    <Route path="/account/notifications" element={<Notifications />} />
                     <Route path="/account/catalog" element={<MyCatalog />} />
                     <Route path="/account/catalog/products/new" element={<ProductEditPage />} />
                     <Route path="/account/catalog/products/:id" element={<ProductEditPage />} />

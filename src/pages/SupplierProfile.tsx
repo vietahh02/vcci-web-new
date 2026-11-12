@@ -4,7 +4,7 @@
  */
 import * as DialogPrimitive from '@radix-ui/react-dialog'
 import { AnimatePresence, motion, useScroll, useTransform } from 'motion/react'
-import { Award, BadgeCheck, Building2, Camera, ChevronLeft, ChevronRight, Download, Eye, Factory, FileText, Globe, Mail, MapPin, MessageSquare, Package, Phone, Send, ShieldCheck, Users, Video, X, type LucideIcon } from 'lucide-react'
+import { Award, BadgeCheck, Building2, Camera, ChevronLeft, ChevronRight, Download, Eye, Factory, FileText, Globe, Mail, MapPin, MessageSquare, Package, Phone, Send, ShieldCheck, Users, UsersRound, Video, X, type LucideIcon } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { liveApi, USE_MOCK, useBusiness, useOrgProducts } from '@/api'
@@ -23,9 +23,10 @@ import NotFound from '@/pages/NotFound'
 import { SuccessState } from '@/pages/ProductDetail'
 import { useI18n, type Bilingual } from '@/lib/i18n'
 import { OPTIONS, sellsProducts, useProfile, type MediaItem, type VerifyStatus } from '@/lib/profile'
+import { onFollowChange } from '@/lib/follows'
 import { tx } from '@/lib/tx'
 import { formatSize } from '@/lib/upload'
-import { cn, formatDate, img } from '@/lib/utils'
+import { cn, formatDate, formatNumber, img } from '@/lib/utils'
 
 type Tab = 'overview' | 'products' | 'capability'
 type Slide = { url: string; caption: string }
@@ -54,8 +55,12 @@ export default function SupplierProfile() {
 }
 
 function Storefront({ b, remote }: { b: Business; remote: PublicProfile | null }) {
-  const { t, L } = useI18n()
+  const { t, L, locale } = useI18n()
   const { session, profile } = useProfile()
+  // số người theo dõi (live, từ BE); nhích lên/xuống ngay khi chính người xem bấm Theo dõi / Bỏ theo dõi
+  const [followers, setFollowers] = useState(b.followerCount)
+  useEffect(() => setFollowers(b.followerCount), [b.id, b.followerCount])
+  useEffect(() => onFollowChange(({ orgId, on }) => { if (orgId === b.id) setFollowers((n) => (n === undefined ? n : Math.max(0, n + (on ? 1 : -1)))) }), [b.id])
   const isOwn = !!session && profile.general.taxCode.replace(/\s/g, '') === b.taxCode.replace(/\s/g, '')
   // live: the BE returns the (already privacy-filtered) public profile; mock: built locally
   const pp = useMemo(() => remote ?? buildPublicProfile(b, isOwn ? profile : null), [b, isOwn, profile, remote])
@@ -103,6 +108,13 @@ function Storefront({ b, remote }: { b: Business; remote: PublicProfile | null }
                 <ReputationStars orgId={b.id} legacyScore={b.reputationScore} />
                 {b.province && <span className="inline-flex items-center gap-1.5"><MapPin className="size-4 text-primary" /> {b.province}</span>}
                 {pp.facts.employees && <span className="inline-flex items-center gap-1.5"><Users className="size-4 text-primary" /> {pp.facts.employees}</span>}
+                {followers !== undefined && (
+                  <span className="inline-flex items-center gap-1.5">
+                    <UsersRound className="size-4 text-primary" />
+                    <motion.b key={followers} initial={{ y: -6, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="font-bold text-foreground">{formatNumber(followers, locale)}</motion.b>
+                    {tx('người theo dõi', 'followers', '팔로워')}
+                  </span>
+                )}
               </p>
             </div>
           </div>

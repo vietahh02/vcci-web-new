@@ -27,7 +27,7 @@ export function pageItems(page: number, pageCount: number): number[] {
 export function Pager({ page, pageCount, onChange, className }: { page: number; pageCount: number; onChange: (page: number) => void; className?: string }) {
   const { t } = useI18n()
   if (pageCount <= 1) return null
-  const cell = 'grid size-9 place-items-center rounded-lg border text-sm font-semibold transition-colors hover:bg-muted disabled:pointer-events-none disabled:opacity-40'
+  const cell = 'grid size-9 place-items-center rounded-full border text-sm font-semibold transition-colors hover:bg-muted disabled:pointer-events-none disabled:opacity-40'
 
   return (
     <nav aria-label="pagination" className={cn('flex flex-wrap items-center justify-center gap-1', className)}>

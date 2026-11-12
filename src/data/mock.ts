@@ -139,6 +139,8 @@ export interface Business {
   responseRate: number
   responseTime: Bilingual
   documents: DocumentItem[]
+  /** số người theo dõi (chỉ có ở chi tiết doanh nghiệp live; undefined khi BE tắt tính năng) */
+  followerCount?: number
 }
 
 const docs = (prefix: string): DocumentItem[] => [

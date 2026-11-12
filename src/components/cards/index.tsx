@@ -3,6 +3,7 @@
  * (ProductResult, Business, EventItem, PortalImportRequestListItem) — nothing invented.
  */
 import { ArrowRight, CalendarDays, MapPin, Radio, Store, Users, Video } from 'lucide-react'
+import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { getCategory, liveApi, USE_MOCK, useOrgProducts } from '@/api'
 import type { Business, EventItem, ImportRequest, Product } from '@/data/mock'
@@ -62,7 +63,8 @@ export function ProductCard({ product, className, favorite }: { product: Product
 }
 
 /* ---------------------------------------------------------------- Supplier (Business) — interactive card */
-export function SupplierCard({ business }: { business: Business }) {
+/** `corner`: nút đặt ở góc trái-trên của thẻ, nằm TRONG khung xoay (Tilt) nên di chuyển cùng thẻ khi hover; để ngoài thẻ (không lồng nút trong liên kết). */
+export function SupplierCard({ business, corner }: { business: Business; corner?: ReactNode }) {
   const { t, L } = useI18n()
   const items = (useOrgProducts(business.id, USE_MOCK || liveApi.hasEmbeddedProducts(business.id)).data ?? []).slice(0, 3)
   return (
@@ -106,6 +108,7 @@ export function SupplierCard({ business }: { business: Business }) {
           </div>
         </div>
       </Link>
+      {corner && <div className="absolute left-3 top-3 z-10">{corner}</div>}
     </Tilt>
   )
 }

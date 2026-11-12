@@ -31,6 +31,7 @@ export function toBusiness(r: Raw): Business {
     responseRate: num(r.responseRate),
     responseTime: bi(mins ? (mins >= 60 ? `${Math.round(mins / 60)}h` : `${mins}m`) : ''),
     documents: arr(r.documents).map((d): DocumentItem => ({ id: id(d.id), type: str(d.type), name: str(d.name || d.fileName), url: url(d.url, '#'), uploadedAt: str(d.uploadedAt || d.createdDate) })),
+    followerCount: r.followerCount == null ? undefined : num(r.followerCount),
   }
 }
 
