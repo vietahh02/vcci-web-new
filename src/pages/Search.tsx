@@ -12,6 +12,7 @@ import { PageHero, PillTabs } from '@/components/PageHero'
 import { Pagination } from '@/components/Pagination'
 import { Badge, Button, buttonClass, Skeleton } from '@/components/ui/primitives'
 import { Select } from '@/components/ui/select'
+import { mockFavoriteIds } from '@/lib/favorites'
 import { useI18n } from '@/lib/i18n'
 import { tx } from '@/lib/tx'
 import { formatNumber } from '@/lib/utils'
@@ -96,7 +97,8 @@ export default function SearchPage() {
   const [favorites, setFavorites] = useState<Set<string>>(new Set())
   const idsKey = results?.map((p) => p.id).join(',') ?? ''
   useEffect(() => {
-    if (USE_MOCK || !idsKey || !tokens.access()) { setFavorites(new Set()); return }
+    if (USE_MOCK) { setFavorites(new Set(mockFavoriteIds())); return }
+    if (!idsKey || !tokens.access()) { setFavorites(new Set()); return }
     let alive = true
     catalogApi.favoriteIds(idsKey.split(',')).then((s) => { if (alive) setFavorites(s) }, () => undefined)
     return () => { alive = false }

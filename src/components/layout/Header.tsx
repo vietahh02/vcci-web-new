@@ -133,7 +133,7 @@ export function Header() {
         </nav>
       </div>
 
-      <MobileNav open={mobileOpen} onOpenChange={(v) => { setMobileOpen(v); if (!v) setSearchFocus(false) }} items={navItems} focusSearch={searchFocus} />
+      <MobileNav open={mobileOpen} onOpenChange={(v) => { setMobileOpen(v); if (!v) setSearchFocus(false) }} items={[...navItems, { to: '/account/favorites', label: tx('Sản phẩm yêu thích', 'Favourite products', '즐겨찾는 제품') }]} focusSearch={searchFocus} />
     </header>
   )
 }

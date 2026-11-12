@@ -14,6 +14,7 @@ import About from '@/pages/About'
 import { ForgotPassword, Login, Register, ResetPassword } from '@/pages/Auth'
 import { Help, Privacy, Terms } from '@/pages/Help'
 import EventDetail from '@/pages/EventDetail'
+import Favorites from '@/pages/Favorites'
 import EventRegister from '@/pages/EventRegister'
 import Events from '@/pages/Events'
 import Home from '@/pages/Home'
@@ -86,6 +87,7 @@ export default function App() {
                     <Route path="/privacy" element={<Privacy />} />
                     <Route path="/terms" element={<Terms />} />
                     <Route path="/account/profile" element={<MyProfile />} />
+                    <Route path="/account/favorites" element={<Favorites />} />
                     <Route path="/account/catalog" element={<MyCatalog />} />
                     <Route path="/account/catalog/products/new" element={<ProductEditPage />} />
                     <Route path="/account/catalog/products/:id" element={<ProductEditPage />} />

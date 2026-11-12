@@ -191,7 +191,7 @@ export function Tooltip({ content, children }: { content: ReactNode; children: R
 }
 
 /* ---------------------------------------------------------------- Toaster */
-type Toast = { id: number; title: string; description?: string; kind: 'success' | 'info' }
+type Toast = { id: number; title: string; description?: string; kind: 'success' | 'info'; action?: { label: string; onClick: () => void } }
 const ToastContext = createContext<(t: Omit<Toast, 'id'>) => void>(() => {})
 
 export function ToastProvider({ children }: { children: ReactNode }) {
@@ -199,8 +199,9 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const push = useCallback((t: Omit<Toast, 'id'>) => {
     const id = Date.now() + Math.random()
     setToasts((prev) => [...prev.slice(-2), { ...t, id }])
-    setTimeout(() => setToasts((prev) => prev.filter((x) => x.id !== id)), 4200)
+    setTimeout(() => setToasts((prev) => prev.filter((x) => x.id !== id)), t.action ? 7000 : 4200)
   }, [])
+  const dismiss = (id: number) => setToasts((prev) => prev.filter((x) => x.id !== id))
 
   return (
     <ToastContext.Provider value={push}>
@@ -218,10 +219,15 @@ export function ToastProvider({ children }: { children: ReactNode }) {
               className="pointer-events-auto flex items-start gap-3 rounded-xl border bg-popover p-4 shadow-xl shadow-navy/10"
             >
               {t.kind === 'success' ? <CheckCircle2 className="mt-0.5 size-5 shrink-0 text-success" /> : <Info className="mt-0.5 size-5 shrink-0 text-primary" />}
-              <div className="min-w-0">
+              <div className="min-w-0 flex-1">
                 <p className="text-sm font-semibold">{t.title}</p>
                 {t.description && <p className="mt-0.5 text-[13px] text-muted-foreground">{t.description}</p>}
               </div>
+              {t.action && (
+                <button type="button" onClick={() => { t.action!.onClick(); dismiss(t.id) }} className="-my-1 -mr-1 shrink-0 rounded-lg px-3 py-1.5 text-sm font-bold text-primary transition-colors hover:bg-primary-soft">
+                  {t.action.label}
+                </button>
+              )}
             </motion.div>
           ))}
         </AnimatePresence>

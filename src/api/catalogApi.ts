@@ -5,6 +5,8 @@
 import { apiFetch, toPage, type Page } from './http'
 import { isOnlineFormat } from '@/lib/eventStatus'
 import type { Raw } from './adapters/common'
+import { toProduct } from './adapters/product'
+import type { Product } from '@/data/mock'
 
 export interface Specs { label: string; value: string }
 export interface TranslationInput { productName?: string; description?: string }
@@ -80,6 +82,11 @@ export async function favoriteIds(ids: string[]): Promise<Set<string>> {
   if (!ids.length) return new Set()
   const r = await apiFetch<number[]>('/api/my/favorites/products/ids', { query: { ids: ids.slice(0, 100) } })
   return new Set((r ?? []).map(String))
+}
+/** GET /api/my/favorites/products — đã lưu, mới nhất trước; sản phẩm đã ẩn/xoá bị BE bỏ khỏi trang. */
+export async function listFavorites(page: number, size = 12): Promise<Page<Product>> {
+  const p = toPage<Raw>(await apiFetch('/api/my/favorites/products', { query: { page, size } }), size)
+  return { ...p, items: p.items.map(toProduct) }
 }
 export const addFavorite = (pid: string) => apiFetch(`/api/my/favorites/products/${encodeURIComponent(pid)}`, { method: 'PUT' })
 export const removeFavorite = (pid: string) => apiFetch(`/api/my/favorites/products/${encodeURIComponent(pid)}`, { method: 'DELETE' })
