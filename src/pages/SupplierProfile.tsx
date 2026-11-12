@@ -4,7 +4,7 @@
  */
 import * as DialogPrimitive from '@radix-ui/react-dialog'
 import { AnimatePresence, motion, useScroll, useTransform } from 'motion/react'
-import { Award, BadgeCheck, Building2, Camera, ChevronLeft, ChevronRight, Download, Eye, Factory, FileText, Globe, Mail, MapPin, MessageSquare, Package, Phone, Plus, Send, ShieldCheck, Users, Video, X, type LucideIcon } from 'lucide-react'
+import { Award, BadgeCheck, Building2, Camera, ChevronLeft, ChevronRight, Download, Eye, Factory, FileText, Globe, Mail, MapPin, MessageSquare, Package, Phone, Send, ShieldCheck, Users, Video, X, type LucideIcon } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { liveApi, USE_MOCK, useBusiness, useOrgProducts } from '@/api'
@@ -15,6 +15,7 @@ import { categories, type Business } from '@/data/mock'
 import { CompanyMark, VerifiedBadge } from '@/components/brand'
 import { ReputationPanel, ReputationStars } from '@/components/reputation/Reputation'
 import { ProductCard } from '@/components/cards'
+import { FollowButton } from '@/components/catalog/FollowButton'
 import { GALLERY_KINDS } from '@/components/upload/Upload'
 import { Dialog, DialogContent, DialogTrigger, useToast } from '@/components/ui/overlay'
 import { Button, Field, Input, Textarea } from '@/components/ui/primitives'
@@ -54,20 +55,11 @@ export default function SupplierProfile() {
 
 function Storefront({ b, remote }: { b: Business; remote: PublicProfile | null }) {
   const { t, L } = useI18n()
-  const toast = useToast()
   const { session, profile } = useProfile()
   const isOwn = !!session && profile.general.taxCode.replace(/\s/g, '') === b.taxCode.replace(/\s/g, '')
   // live: the BE returns the (already privacy-filtered) public profile; mock: built locally
   const pp = useMemo(() => remote ?? buildPublicProfile(b, isOwn ? profile : null), [b, isOwn, profile, remote])
   const [tab, setTab] = useState<Tab>('overview')
-  const [following, setFollowing] = useState(false)
-  // live: the follow flag is per user, so it is read from the authenticated endpoint (and only when signed in)
-  useEffect(() => {
-    if (USE_MOCK || !session) return
-    let alive = true
-    liveApi.isFollowingBusiness(b.id).then((v) => { if (alive) setFollowing(v) }, () => undefined)
-    return () => { alive = false }
-  }, [b.id, session])
   const [lightbox, setLightbox] = useState<{ slides: Slide[]; index: number } | null>(null)
   const coverRef = useRef<HTMLDivElement>(null)
   const { scrollYProgress } = useScroll({ target: coverRef, offset: ['start start', 'end start'] })
@@ -116,14 +108,7 @@ function Storefront({ b, remote }: { b: Business; remote: PublicProfile | null }
           </div>
           <div className="flex shrink-0 flex-wrap gap-2.5">
             {pp.own && <Link to="/account/profile" className="inline-flex h-10 items-center gap-2 rounded-full border px-5 text-sm font-semibold transition-colors hover:bg-muted">{tx('Sửa hồ sơ', 'Edit profile', '프로필 수정')}</Link>}
-            <Button variant="outline" className={cn('rounded-full transition-all duration-300 hover:-translate-y-0.5', following && 'border-primary/40 bg-primary-soft text-primary')} aria-pressed={following} onClick={() => {
-              const next = !following
-              const done = () => { setFollowing(next); if (next) toast({ kind: 'success', title: t.supplier.follow, description: b.name }) }
-              if (USE_MOCK) return done()
-              liveApi.followBusiness(b.id, next).then(done, (err: Error) => toast({ kind: 'info', title: err.message }))
-            }}>
-              {following ? <BadgeCheck /> : <Plus />} {t.supplier.follow}
-            </Button>
+            {!pp.own && <FollowButton orgId={b.id} name={b.name} />}
             {!pp.own && (
               <Button variant="outline" className="rounded-full transition-all duration-300 hover:-translate-y-0.5" onClick={() => openB2bChat(b.id)}>
                 <MessageSquare /> {tx('Nhắn tin', 'Message', '메시지')}

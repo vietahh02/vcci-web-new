@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from 'motion/react'
-import { Award, BadgeCheck, Check, CheckCircle2, ChevronLeft, ChevronRight, MapPin, MessageSquare, Plus, Send, Share2 } from 'lucide-react'
+import { Award, Check, CheckCircle2, ChevronLeft, ChevronRight, FileText, MapPin, MessageSquare, Package, Plus, Send, Share2, Sparkles } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { getCategory, getProduct, liveApi, USE_MOCK, useBusiness, useRelatedProducts } from '@/api'
@@ -11,6 +11,7 @@ import { CompanyMark, SectionHeader, VerifiedBadge } from '@/components/brand'
 import { ReputationStars } from '@/components/reputation/Reputation'
 import { ProductCard } from '@/components/cards'
 import { FavoriteButton } from '@/components/catalog/FavoriteButton'
+import { FollowButton } from '@/components/catalog/FollowButton'
 import { Reveal, Stagger, StaggerItem } from '@/components/effects'
 import { Dialog, DialogContent, DialogTrigger, UnderlineTabs, useToast } from '@/components/ui/overlay'
 import { Badge, Button, Field, Input, Skeleton, Textarea } from '@/components/ui/primitives'
@@ -187,7 +188,7 @@ function ProductView({ product }: { product: Product }) {
               <dl className="mt-3 divide-y overflow-hidden rounded-lg border">
                 {specs.map((r) => (
                   <div key={r.label} className="grid grid-cols-[132px_minmax(0,1fr)] text-sm">
-                    <dt className="bg-muted/60 px-3 py-2.5 text-muted-foreground">{r.label}</dt>
+                    <dt className="border-r bg-muted/60 px-3 py-2.5 text-muted-foreground">{r.label}</dt>
                     <dd className="px-3 py-2.5 font-medium">{r.value}</dd>
                   </div>
                 ))}
@@ -219,7 +220,8 @@ function ProductView({ product }: { product: Product }) {
           <motion.div key={tab} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.2 }} className="py-5">
             {tab === 'overview' && <p className="leading-relaxed text-foreground/90">{L(product.description) || none}</p>}
             {tab === 'specs' && (
-              <dl className="divide-y rounded-xl border">
+              /* cùng kiểu khung với "Thông tin sản phẩm" và "Thông tin doanh nghiệp": ô nhãn tô nền, đường kẻ dọc, hai cột trên màn rộng */
+              <dl className="grid overflow-hidden rounded-xl border sm:grid-cols-2">
                 {[
                   { label: t.ui.productCode, value: product.productCode },
                   { label: t.searchPage.category, value: category ? L(category.categoryName) : product.industry },
@@ -228,9 +230,9 @@ function ProductView({ product }: { product: Product }) {
                   { label: t.common.moq, value: product.moq ? `${formatNumber(product.moq, locale)} ${product.unit}` : none },
                   { label: t.common.payment, value: product.paymentTerms || none },
                 ].map((r) => (
-                  <div key={r.label} className="grid grid-cols-[150px_1fr] gap-4 px-4 py-3 text-sm">
-                    <dt className="text-muted-foreground">{r.label}</dt>
-                    <dd className="font-medium">{r.value}</dd>
+                  <div key={r.label} className="-mb-px -mr-px grid grid-cols-[132px_minmax(0,1fr)] border-b border-r text-sm sm:grid-cols-[150px_minmax(0,1fr)]">
+                    <dt className="border-r bg-muted/60 px-3 py-2.5 text-muted-foreground">{r.label}</dt>
+                    <dd className={cn('px-3 py-2.5', r.value === none ? 'text-muted-foreground' : 'font-medium')}>{r.value}</dd>
                   </div>
                 ))}
               </dl>
@@ -263,21 +265,7 @@ function ProductView({ product }: { product: Product }) {
 function SupplierCard({ product }: { product: Product }) {
   const { t } = useI18n()
   const toast = useToast()
-  const { session } = useProfile()
   const supplier = useBusiness(product.organizationId).data?.business ?? businessStub(product.organizationId, product.organizationName)
-  const [following, setFollowing] = useState(false)
-  useEffect(() => {
-    if (USE_MOCK || !session) return
-    let alive = true
-    liveApi.isFollowingBusiness(supplier.id).then((v) => { if (alive) setFollowing(v) }, () => undefined)
-    return () => { alive = false }
-  }, [supplier.id, session])
-  const toggleFollow = () => {
-    const next = !following
-    const done = () => { setFollowing(next); if (next) toast({ kind: 'success', title: t.supplier.follow, description: supplier.name }) }
-    if (USE_MOCK) return done()
-    liveApi.followBusiness(supplier.id, next).then(done, (err: Error) => toast({ kind: 'info', title: err.message }))
-  }
   const type = t.supplier.types[supplier.businessType]
   const facts = [supplier.employees && `${t.common.employees}: ${supplier.employees}`].filter(Boolean) as string[]
 
@@ -307,17 +295,24 @@ function SupplierCard({ product }: { product: Product }) {
         <Button variant="outline" className="w-full rounded-full" onClick={() => { if (USE_MOCK) toast({ kind: 'info', title: t.product.chatNow, description: supplier.name }); else openBusinessChat(product.organizationId) }}>
           <MessageSquare /> {t.product.chatNow}
         </Button>
-        <Button variant="outline" className={cn('w-full rounded-full', following && 'border-primary/40 text-primary')} aria-pressed={following} onClick={toggleFollow}>
-          {following ? <BadgeCheck /> : <Plus />} {t.supplier.follow}
-        </Button>
+        <FollowButton orgId={supplier.id} name={supplier.name} className="w-full" />
       </div>
       <Link to={`/suppliers/${supplier.id}`} className="mt-4 block text-center text-sm font-semibold text-primary hover:underline">{t.product.visitProfile}</Link>
     </div>
   )
 }
 
+// những điều người mua hay cần ghi để nhà cung cấp báo giá được ngay
+const MESSAGE_HINTS = [
+  { vi: 'Quy cách', en: 'Specs', ko: '사양' },
+  { vi: 'Đóng gói', en: 'Packing', ko: '포장' },
+  { vi: 'Incoterms', en: 'Incoterms', ko: '인코텀즈' },
+  { vi: 'Ngày giao', en: 'Delivery', ko: '희망 납기' },
+  { vi: 'Mẫu thử', en: 'Samples', ko: '샘플' },
+]
+
 function RfqDialog({ product }: { product: Product }) {
-  const { t, L } = useI18n()
+  const { t, L, locale } = useI18n()
   // arrived from a show's product list: the quote counts as interest at that show. A plain visit sends nothing.
   const [params, setParams] = useSearchParams()
   const sourceEventPid = /^s-\d+$/.exec(params.get('fromEvent') ?? '')?.[0]
@@ -332,6 +327,14 @@ function RfqDialog({ product }: { product: Product }) {
   })
   const [open, setOpen] = useState(() => params.get('rfq') === '1')
   const [sent, setSent] = useState(false)
+  const [message, setMessage] = useState(draft.message ?? '')
+  const messageRef = useRef<HTMLTextAreaElement>(null)
+  const addHint = (label: string) => {
+    setMessage((m) => (m.includes(`${label}:`) ? m : `${m}${m && !m.endsWith('\n') ? '\n' : ''}${label}: `))
+    requestAnimationFrame(() => { const el = messageRef.current; if (el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length) } })
+  }
+  // các khối của form hiện lần lượt khi mở hộp thoại
+  const rise = (i: number) => ({ initial: { opacity: 0, y: 12 }, animate: { opacity: 1, y: 0 }, transition: { delay: 0.08 + i * 0.07, duration: 0.4, ease: [0.16, 1, 0.3, 1] as const } })
   const close = (v: boolean) => {
     setOpen(v)
     if (v) return
@@ -344,7 +347,12 @@ function RfqDialog({ product }: { product: Product }) {
       <DialogTrigger asChild>
         <Button size="lg" className="h-12 w-full rounded-full px-10 text-base sm:w-auto"><Send /> {t.common.sendInquiry}</Button>
       </DialogTrigger>
-      <DialogContent title={t.product.rfqTitle} description={session ? tx('Yêu cầu được gửi tới email của nhà cung cấp.', 'The request goes to the supplier by email.', '요청은 공급업체 이메일로 전달됩니다.') : tx('Yêu cầu được gửi tới email của nhà cung cấp. Bạn soạn ngay được; khi gửi, bạn đăng nhập và nội dung đã soạn được giữ nguyên.', 'The request goes to the supplier by email. Write it now; when you send, you sign in and what you wrote is kept.', '요청은 공급업체 이메일로 전달됩니다. 지금 작성하고, 보낼 때 로그인하면 내용이 그대로 유지됩니다.')}>
+      <DialogContent
+        title={t.product.rfqTitle}
+        className="max-w-xl"
+        icon={<span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-[#1a8cc4] to-primary text-white shadow-lg shadow-primary/30 ring-4 ring-white/60 dark:ring-white/10"><FileText className="size-5" /></span>}
+        headerClassName="border-b-primary/15 bg-gradient-to-br from-[#e4f2fb] via-[#f2f9fe] to-[#d6eaf8] py-5 dark:from-[#0b2a4a] dark:via-[#0a2548] dark:to-[#071d3c]"
+        description={session ? tx('Yêu cầu được gửi tới email của nhà cung cấp.', 'The request goes to the supplier by email.', '요청은 공급업체 이메일로 전달됩니다.') : tx('Yêu cầu được gửi tới email của nhà cung cấp. Bạn soạn ngay được; khi gửi, bạn đăng nhập và nội dung đã soạn được giữ nguyên.', 'The request goes to the supplier by email. Write it now; when you send, you sign in and what you wrote is kept.', '요청은 공급업체 이메일로 전달됩니다. 지금 작성하고, 보낼 때 로그인하면 내용이 그대로 유지됩니다.')}>
         <AnimatePresence mode="wait">
           {sent ? (
             <SuccessState key="ok" title={t.product.sent} desc={t.product.sentDesc} onClose={() => setOpen(false)} />
@@ -352,7 +360,7 @@ function RfqDialog({ product }: { product: Product }) {
             <motion.form
               key="form"
               exit={{ opacity: 0, x: -20 }}
-              className="space-y-4 p-6"
+              className="space-y-5 px-6 pt-6"
               onSubmit={(e) => {
                 e.preventDefault()
                 const fd = new FormData(e.currentTarget)
@@ -379,22 +387,58 @@ function RfqDialog({ product }: { product: Product }) {
                 )
               }}
             >
-              <div className="flex items-center gap-3 rounded-xl bg-muted p-3">
-                <img src={img(product.productImages[0]!, 120, 120)} alt="" className="size-12 rounded-lg object-cover" />
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-semibold">{L(product.productName)}</p>
-                  <p className="text-xs text-muted-foreground">{t.common.moq}: {product.moq} {product.unit} · FOB {formatMoney(product.priceFob)}</p>
+              {/* sản phẩm đang hỏi giá: ảnh, tên, doanh nghiệp, MOQ và giá FOB */}
+              <motion.div {...rise(0)} className="overflow-hidden rounded-2xl border border-primary/15 bg-gradient-to-br from-primary-soft/70 via-card to-card">
+                <div className="flex items-center gap-3.5 p-3.5">
+                  <img src={img(product.productImages[0]!, 160, 160)} alt="" className="size-16 shrink-0 rounded-xl object-cover shadow-sm ring-2 ring-white dark:ring-white/10" />
+                  <div className="min-w-0">
+                    <p className="line-clamp-2 text-[15px] font-bold leading-snug">{L(product.productName)}</p>
+                    {product.organizationName && <p className="mt-0.5 truncate text-[13px] text-muted-foreground">{product.organizationName}</p>}
+                  </div>
                 </div>
-              </div>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <Field label={t.product.quantity} htmlFor="rfq-q"><Input id="rfq-q" placeholder={tx('VD: 1000', 'e.g. 1000', '예: 1000')} name="quantity" type="number" min={product.moq || 1} defaultValue={draft.quantity ?? (product.moq || '')} required /></Field>
-                <Field label={t.product.destination} htmlFor="rfq-d"><Input id="rfq-d" name="destination" placeholder="Busan, KR" defaultValue={draft.destination} required /></Field>
-              </div>
-              <Field label={t.product.message} htmlFor="rfq-m"><Textarea id="rfq-m" name="message" placeholder={t.product.messagePh} defaultValue={draft.message} required /></Field>
-              <div className="flex flex-wrap items-center justify-end gap-2 pt-2">
+                <dl className="grid grid-cols-2 divide-x border-t border-primary/10 bg-card/60 text-[13px]">
+                  <div className="px-4 py-2.5"><dt className="text-xs text-muted-foreground">{t.common.moq}</dt><dd className="mt-0.5 font-bold">{formatNumber(product.moq, locale)} {product.unit}</dd></div>
+                  <div className="px-4 py-2.5"><dt className="text-xs text-muted-foreground">FOB</dt><dd className="mt-0.5 font-bold text-primary">{formatMoney(product.priceFob)} <span className="font-normal text-muted-foreground">/ {product.unit}</span></dd></div>
+                </dl>
+              </motion.div>
+
+              <motion.div {...rise(1)} className="grid gap-4 sm:grid-cols-2">
+                <Field label={t.product.quantity} htmlFor="rfq-q">
+                  <div className="relative">
+                    <Package className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input id="rfq-q" className="h-11 pl-10" style={{ paddingRight: Math.min(product.unit.length, 14) * 7.5 + 32 }} placeholder={tx('VD: 1000', 'e.g. 1000', '예: 1000')} name="quantity" type="number" min={product.moq || 1} defaultValue={draft.quantity ?? (product.moq || '')} required />
+                    <span className="pointer-events-none absolute right-4 top-1/2 max-w-[40%] -translate-y-1/2 truncate text-xs font-semibold text-muted-foreground">{product.unit}</span>
+                  </div>
+                </Field>
+                <Field label={t.product.destination} htmlFor="rfq-d">
+                  <div className="relative">
+                    <MapPin className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input id="rfq-d" className="h-11 pl-10" name="destination" placeholder="Busan, KR" defaultValue={draft.destination} required />
+                  </div>
+                </Field>
+              </motion.div>
+
+              <motion.div {...rise(2)}>
+                <Field label={t.product.message} htmlFor="rfq-m">
+                  <Textarea ref={messageRef} id="rfq-m" name="message" className="min-h-28" placeholder={t.product.messagePh} value={message} onChange={(e) => setMessage(e.target.value)} required />
+                </Field>
+                {/* gợi ý nhanh: bấm để thêm một dòng vào lời nhắn (người dùng điền tiếp ngay sau dấu hai chấm) */}
+                <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+                  <Sparkles aria-label={tx('Thêm nhanh', 'Quick add', '빠른 추가')} className="mr-0.5 size-4 text-primary" />
+                  {MESSAGE_HINTS.map((h) => (
+                    <button key={h.vi} type="button" onClick={() => addHint(tx(h.vi, h.en, h.ko))} className="inline-flex h-7 items-center gap-1 rounded-full border bg-card px-2.5 text-xs font-semibold text-foreground/80 transition-colors hover:border-primary/40 hover:bg-primary-soft hover:text-primary">
+                      <Plus className="size-3" />{tx(h.vi, h.en, h.ko)}
+                    </button>
+                  ))}
+                </div>
+              </motion.div>
+
+              <div className="sticky bottom-0 z-10 -mx-6 flex flex-wrap items-center justify-end gap-2 border-t bg-muted px-6 py-4">
                 {!session && !USE_MOCK && <Link to="/register" className="mr-auto text-sm font-semibold text-primary hover:underline">{tx('Chưa có tài khoản? Đăng ký', 'No account? Register', '계정이 없나요? 등록')}</Link>}
-                <Button variant="ghost" onClick={() => close(false)}>{t.common.cancel}</Button>
-                <Button type="submit"><Send /> {session || USE_MOCK ? t.common.submit : tx('Đăng nhập để gửi', 'Sign in to send', '로그인 후 보내기')}</Button>
+                <Button variant="ghost" className="rounded-full" onClick={() => close(false)}>{t.common.cancel}</Button>
+                <Button type="submit" size="lg" className="group h-11 rounded-full px-7">
+                  <Send className="transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:translate-x-1" /> {session || USE_MOCK ? t.common.submit : tx('Đăng nhập để gửi', 'Sign in to send', '로그인 후 보내기')}
+                </Button>
               </div>
             </motion.form>
           )}
