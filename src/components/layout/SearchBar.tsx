@@ -56,18 +56,21 @@ export function SearchBar({ size = 'md', className, autoFocusKey, autoFocus, ini
   const trendingKeywords = useHomeTrending().data ?? []
   // live: GET /api/products/search?keyword=&size=4 (debounced); mock: filter the in-memory catalogue
   const [liveMatches, setLiveMatches] = useState<{ q: string; list: Product[] }>({ q: '', list: [] })
+  // product suggestions only in the "products" scope: other scopes must not surface products
+  const suggest = scope === 'products'
   useEffect(() => {
-    if (USE_MOCK || !q.trim()) return
+    if (USE_MOCK || !suggest || !q.trim()) return
     let alive = true
     const id = setTimeout(() => liveApi.suggestProducts(q.trim()).then((list) => alive && setLiveMatches({ q, list }), () => {}), 250)
     return () => { alive = false; clearTimeout(id) }
-  }, [q])
+  }, [q, suggest])
   const matches = useMemo(() => {
-    if (!q.trim()) return []
-    if (!USE_MOCK) return liveMatches.list
+    if (!suggest || !q.trim()) return []
+    // ignore a response for an older text, so the list never shows items for something the user no longer typed
+    if (!USE_MOCK) return liveMatches.q === q ? liveMatches.list : []
     const n = q.toLowerCase()
-    return products.filter((p) => L(p.productName).toLowerCase().includes(n) || p.industry.toLowerCase().includes(n)).slice(0, 4)
-  }, [q, L, liveMatches])
+    return products.filter((p) => L(p.productName).toLowerCase().includes(n)).slice(0, 4)
+  }, [q, L, liveMatches, suggest])
 
   function submit(term = q) {
     setOpen(false)

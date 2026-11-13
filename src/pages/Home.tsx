@@ -12,7 +12,6 @@ import { Tabs } from '@/components/ui/overlay'
 import { Pager, usePaged } from '@/components/ui/pager'
 import { buttonClass } from '@/components/ui/primitives'
 import { useI18n } from '@/lib/i18n'
-import { useProfile } from '@/lib/profile'
 import { tx } from '@/lib/tx'
 import { EventsAgenda, FeaturedBusiness, HomeEmpty, SponsorTiers, WhyList } from '@/pages/home/sections'
 import { type ImportRequest } from '@/data/mock'
@@ -62,10 +61,9 @@ function Hero() {
     if (v.paused) { void v.play(); setPlaying(true) } else { v.pause(); setPlaying(false) }
   }
 
-  const { session } = useProfile()
   const doors = [
-    { to: '/search', title: tx('Tôi muốn mua', 'I want to buy', '구매하려고 해요'), sub: tx('Tìm sản phẩm, gửi yêu cầu báo giá', 'Find products, send an RFQ', '상품 찾기, 견적 요청') },
-    { to: session ? '/requests' : '/register', title: tx('Tôi muốn bán', 'I want to sell', '판매하려고 해요'), sub: tx('Nhận yêu cầu nhập khẩu, gửi báo giá', 'Get import requests, send quotes', '수입 요청 받기, 견적 보내기') },
+    { to: '/search', title: tx('Tìm nguồn hàng Việt Nam', 'Source from Vietnam', '베트남 상품 소싱'), sub: tx('Tìm sản phẩm xuất khẩu, gửi yêu cầu báo giá', 'Find export products, request a quote', '수출 상품 찾기, 견적 요청') },
+    { to: '/requests', title: tx('Xem yêu cầu nhập khẩu', 'Browse import requests', '수입 요청 보기'), sub: tx('Đơn hàng từ người mua quốc tế, gửi báo giá ngay', 'Orders from global buyers, quote now', '해외 바이어 주문, 바로 견적') },
   ]
   const st = useHomeStats().data
   const trendingKeywords = useHomeTrending().data ?? []
@@ -244,10 +242,9 @@ function RequestRow({ request: r }: { request: ImportRequest }) {
   const cat = getCategory(r.categoryId)
   const left = daysLeft(r.endTime)
   return (
-    <Link
-      to={`/requests/${r.id}`}
-      className="group relative grid items-center gap-x-6 gap-y-2 overflow-hidden rounded-2xl border bg-card px-5 py-4 transition duration-300 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-[0_18px_40px_-24px_rgba(0,102,153,0.45)] md:grid-cols-[minmax(0,1fr)_150px_minmax(0,220px)_150px_32px] md:px-6"
-    >
+    <Link to={`/requests/${r.id}`} className="group block rounded-2xl outline-none focus-visible:ring-2 focus-visible:ring-primary">
+      {/* Link đứng yên làm vùng hover; chỉ lớp trong nhấc lên → không giật ở mép */}
+      <div className="relative grid items-center gap-x-6 gap-y-2 overflow-hidden rounded-2xl border bg-card px-5 py-4 transition duration-300 group-hover:-translate-y-0.5 group-hover:border-primary/40 group-hover:shadow-[0_18px_40px_-24px_rgba(0,102,153,0.45)] md:grid-cols-[minmax(0,1fr)_150px_minmax(0,220px)_150px_32px] md:px-6">
       <span aria-hidden className="absolute inset-y-0 left-0 w-1 origin-top scale-y-0 bg-gradient-to-b from-[#1a8cc4] to-primary transition-transform duration-300 group-hover:scale-y-100" />
       <div className="min-w-0">
         <span className="inline-block rounded-full bg-primary-soft px-2.5 py-0.5 text-[11px] font-semibold text-primary">{cat ? L(cat.categoryName) : r.productType}</span>
@@ -260,6 +257,7 @@ function RequestRow({ request: r }: { request: ImportRequest }) {
         <p className={cn('text-xs', left <= 7 ? 'font-semibold text-amber-600 dark:text-amber-400' : 'text-muted-foreground')}>{left} {t.common.daysLeft}</p>
       </div>
       <span className="hidden size-8 place-items-center rounded-full bg-muted text-muted-foreground transition group-hover:bg-primary group-hover:text-primary-foreground md:grid"><ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" /></span>
+      </div>
     </Link>
   )
 }

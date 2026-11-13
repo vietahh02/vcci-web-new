@@ -153,7 +153,7 @@ export default function RequestDetail() {
 
       {matches.length > 0 && (
         <section className="mt-16">
-          <SectionHeader title={t.product.related} />
+          <SectionHeader title={tx('Sản phẩm phù hợp với yêu cầu', 'Products matching this request', '이 요청에 맞는 제품')} />
           <div className="grid grid-cols-2 gap-4 md:grid-cols-4">{matches.map((p) => <ProductCard key={p.id} product={p} />)}</div>
         </section>
       )}

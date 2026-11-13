@@ -239,6 +239,19 @@
   }
 }
 
+/* Hover-lift jitter fix: a card that lifts on hover leaves the cursor at its bottom edge → un-hover → drops back → loops.
+   A strip under the lifted card keeps the old bottom edge hoverable (translate makes the card the containing block).
+   shortcut: clipped by overflow-hidden — such cards use the static-wrapper pattern instead (see ProductCard). */
+@media (hover: hover) {
+  [class*="hover:-translate-y"]:not([class*="group-hover:-translate-y"]):hover::after {
+    content: '';
+    position: absolute;
+    inset-inline: 0;
+    top: 100%;
+    height: 6px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.001ms !important;
