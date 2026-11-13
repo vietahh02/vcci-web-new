@@ -14,7 +14,7 @@ import { buttonClass } from '@/components/ui/primitives'
 import { useI18n } from '@/lib/i18n'
 import { useProfile } from '@/lib/profile'
 import { tx } from '@/lib/tx'
-import { EventsAgenda, FeaturedBusiness, HomeEmpty, SponsorTiers, Testimonials, WhyList } from '@/pages/home/sections'
+import { EventsAgenda, FeaturedBusiness, HomeEmpty, SponsorTiers, WhyList } from '@/pages/home/sections'
 import { type ImportRequest } from '@/data/mock'
 import { cn, daysLeft, formatMoney, formatNumber } from '@/lib/utils'
 
@@ -27,7 +27,7 @@ export default function Home() {
       <ProductsSection />
       <FeaturedBusiness />
       <RequestsSection />
-      <Testimonials />
+      {/* Testimonials ("Tiếng nói từ hội chợ") tạm ẩn khỏi trang chủ; component vẫn giữ trong home/sections.tsx */}
       <WhyList />
       <SponsorTiers />
       <CtaSection />
