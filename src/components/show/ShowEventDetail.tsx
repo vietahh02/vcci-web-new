@@ -32,7 +32,10 @@ import { useShowVisitor, type VisitorBadge } from '@/lib/showReg'
 import { ShowFormatContext, useShowT } from '@/lib/showText'
 import { cn, formatDate, formatMoney, formatNumber, img } from '@/lib/utils'
 
-type Tab = 'overview' | 'booths' | 'products' | 'launches' | 'agenda' | 'speakers'
+type Tab = 'overview' | 'booths' | 'products' | 'launches' | 'streams' | 'agenda' | 'speakers'
+
+/** Show Sân chơi: the co-organisers' day slots (no product) are the show's live sessions. */
+const coorganizerStreams = (show: Show) => (show.showType === 'HOSTED' ? show.launches.filter((l) => !l.productId) : [])
 const fmtTime = (iso: string, locale: string) => new Date(iso).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit', hour12: false })
 const fmtDay = (iso: string, locale: string) => formatDate(iso, locale, { weekday: 'short', day: '2-digit', month: '2-digit' })
 
@@ -77,7 +80,8 @@ export function ShowEventDetail({ show }: { show: Show }) {
     { value: 'overview', label: x.tabs.overview },
     ...(online ? [] : [{ value: 'booths' as const, label: `${x.tabs.booths} (${show.booths.length})` }]),
     { value: 'products', label: `${x.tabs.products} (${productCount})` },
-    ...(show.launches.length ? [{ value: 'launches' as const, label: x.tabs.launches }] : []),
+    ...(show.launches.length > coorganizerStreams(show).length ? [{ value: 'launches' as const, label: x.tabs.launches }] : []),
+    ...(coorganizerStreams(show).length ? [{ value: 'streams' as const, label: `${tx('Phát trực tiếp', 'Live streams', '라이브 방송')} (${coorganizerStreams(show).length})` }] : []),
     { value: 'agenda', label: `${x.tabs.agenda} (${show.sessions.length})` },
     { value: 'speakers', label: x.tabs.speakers },
   ]
@@ -168,6 +172,20 @@ export function ShowEventDetail({ show }: { show: Show }) {
                 <LiveDot /> {x.joinLive}
               </Button>
             )}
+            {show.showType === 'HOSTED' && !ended && show.status !== 'CANCELED' && (
+              <div className="mt-5 space-y-3 rounded-2xl bg-white/5 p-4 text-xs leading-relaxed text-white/75 ring-1 ring-white/10" data-testid="hosted-ways">
+                <p className="text-sm font-bold text-white">{tx('Hai cách tham gia Show Sân chơi', 'Two ways to join this open-platform show', '오픈 플랫폼 쇼 참여 방법 두 가지')}</p>
+                <div>
+                  <p className="font-semibold text-white">{tx('Chỉ xem', 'Watch only', '시청만')}</p>
+                  <p>{tx(`Đăng ký một lần với VCCI bằng nút "${x.registerVisit}" ở trên. Khi được xác nhận, bạn xem được mọi phiên live trong Show, kể cả phiên do doanh nghiệp đồng tổ chức phát, không cần đăng ký từng phiên.`, `Register once with VCCI using "${x.registerVisit}" above. Once confirmed you can watch every live session in the show, including those streamed by co-organisers, with no per-session sign-up.`, `위의 "${x.registerVisit}" 버튼으로 VCCI에 한 번만 등록하세요. 확인되면 공동 주최 기업의 방송을 포함한 모든 라이브 세션을 세션별 신청 없이 시청할 수 있습니다.`)}</p>
+                </div>
+                <div>
+                  <p className="font-semibold text-white">{tx('Đồng tổ chức - phát live', 'Co-organise - stream live', '공동 주최 - 라이브 방송')}</p>
+                  <p>{tx('Doanh nghiệp đăng ký theo ngày, có phí đồng tổ chức do VCCI quy định. VCCI duyệt đơn và xác nhận phí thì doanh nghiệp tự phát live trong các ngày đã đăng ký.', 'Businesses apply by day and pay the co-organiser fee set by VCCI. Once VCCI approves and confirms the fee, you stream live on your chosen days.', '기업은 일자별로 신청하며 VCCI가 정한 공동 주최 비용을 냅니다. VCCI가 승인하고 비용을 확인하면 선택한 날에 직접 라이브 방송합니다.')}</p>
+                  <Link to="/account/catalog?tab=booths" className="mt-1.5 inline-block font-semibold text-gold-bright hover:underline">{tx('Đăng ký đồng tổ chức', 'Apply to co-organise', '공동 주최 신청')} →</Link>
+                </div>
+              </div>
+            )}
             {!ended && show.status !== 'CANCELED' && <AddToCalendar ev={showToEvent(show)} className="mt-4" />}
           </Reveal>
         </div>
@@ -182,6 +200,7 @@ export function ShowEventDetail({ show }: { show: Show }) {
           {tab === 'booths' && !online && <Booths show={show} onOpen={setBooth} />}
           {tab === 'products' && <ProductsTab show={show} onAsk={openInquiry} onOpenBooth={setBooth} />}
           {tab === 'launches' && <Launches show={show} visitor={visitor} onRegister={() => setRegOpen(true)} onOpenBooth={setBooth} />}
+          {tab === 'streams' && <CoorganizerStreams show={show} />}
           {tab === 'agenda' && <Agenda show={show} visitor={visitor} onRegister={() => setRegOpen(true)} onOpen={setSession} />}
           {tab === 'speakers' && <Speakers show={show} />}
         </div>
@@ -603,6 +622,37 @@ function Launches({ show, visitor, onRegister, onOpenBooth }: { show: Show; visi
   )
 }
 
+/* ------------------------------------------------------------ co-organiser streams (HOSTED) */
+function CoorganizerStreams({ show }: { show: Show }) {
+  const { L, locale } = useI18n()
+  const x = useShowT()
+  const now = new Date().toISOString()
+  const slots = coorganizerStreams(show).sort((a, b) => Number(b.live) - Number(a.live) || a.start.localeCompare(b.start))
+  return (
+    <div>
+      <h2 className="text-xl font-extrabold">{tx('Phát trực tiếp của doanh nghiệp đồng tổ chức', 'Live streams by co-organisers', '공동 주최 기업 라이브 방송')}</h2>
+      <p className="mt-1 text-sm text-muted-foreground">{tx('Đã đăng ký tham gia với VCCI thì bấm vào phiên đang phát để xem, không cần đăng ký từng phiên.', 'Registered with VCCI? Click a session that is live to watch, no per-session sign-up.', 'VCCI에 등록했다면 방송 중인 세션을 눌러 바로 시청하세요. 세션별 신청은 필요 없습니다.')}</p>
+      <ul className="mt-6 divide-y rounded-2xl border bg-card" data-testid="coorganizer-streams">
+        {slots.map((l) => {
+          const org = l.organizationName ?? (() => { const b = show.booths.find((bb) => bb.id === l.boothId); return b ? L(b.org) : undefined })()
+          const ended = !l.live && l.end < now
+          return (
+            <li key={l.id} className="grid gap-3 p-4 md:grid-cols-[1fr_auto] md:items-center">
+              <div className="min-w-0">
+                <p className="text-xs font-semibold text-primary">{fmtDay(l.start, locale)} · {fmtTime(l.start, locale)}–{fmtTime(l.end, locale)}</p>
+                <p className="mt-0.5 line-clamp-1 font-bold">{org ?? tx('Doanh nghiệp đồng tổ chức', 'Co-organiser', '공동 주최 기업')}</p>
+              </div>
+              {l.live && l.streamEventId
+                ? <Link to={showLivePath(show.id, { launch: l.id })} className={buttonClass('default', 'sm', 'bg-live hover:bg-live/90')}><LiveDot /> {x.joinLive}</Link>
+                : <Badge variant="outline">{ended ? x.sessionStatus.ENDED : x.sessionStatus.PUBLISHED}</Badge>}
+            </li>
+          )
+        })}
+      </ul>
+    </div>
+  )
+}
+
 /* ------------------------------------------------------------ agenda */
 /** Capacity 0 means no seat limit was set, not a full session. */
 const isFull = (s: ShowSession) => s.capacity > 0 && s.booked >= s.capacity
@@ -614,6 +664,8 @@ function Agenda({ show, visitor, onRegister, onOpen }: { show: Show; visitor: Re
   const sessions = [...show.sessions].sort((a, b) => a.start.localeCompare(b.start))
   const byDay = sessions.reduce<Record<string, ShowSession[]>>((acc, s) => { (acc[s.start.slice(0, 10)] ??= []).push(s); return acc }, {})
   const badgeOk = visitor.badge?.status === 'ISSUED'
+  // Show Sân chơi: agenda chỉ là lịch chữ do VCCI soạn - không xem live, không đặt chỗ
+  const textOnly = show.showType === 'HOSTED'
   if (!sessions.length) return <p className="text-muted-foreground">{x.noSessions}</p>
 
   const book = (s: ShowSession) => {
@@ -648,8 +700,9 @@ function Agenda({ show, visitor, onRegister, onOpen }: { show: Show; visitor: Re
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
                       <Badge variant="secondary">{x.kind[s.kind]}</Badge>
-                      {s.status === 'LIVE' ? <Badge variant="live" className="gap-1"><LiveDot /> {x.sessionStatus.LIVE}</Badge> : <Badge variant={canceled ? 'muted' : 'outline'}>{x.sessionStatus[s.status]}</Badge>}
-                      {s.hasReplay && s.status === 'ENDED' && <Badge variant="success"><Video /> {x.label.REPLAY}</Badge>}
+                      {textOnly ? <Badge variant={canceled ? 'muted' : 'outline'}>{s.status === 'LIVE' ? x.label.ONGOING : x.sessionStatus[s.status]}</Badge>
+                        : s.status === 'LIVE' ? <Badge variant="live" className="gap-1"><LiveDot /> {x.sessionStatus.LIVE}</Badge> : <Badge variant={canceled ? 'muted' : 'outline'}>{x.sessionStatus[s.status]}</Badge>}
+                      {!textOnly && s.hasReplay && s.status === 'ENDED' && <Badge variant="success"><Video /> {x.label.REPLAY}</Badge>}
                     </div>
                     <button type="button" onClick={() => onOpen(s)} className={cn('mt-1.5 text-left font-bold leading-snug hover:text-primary', canceled && 'line-through')}>{L(s.title)}</button>
                     <p className="mt-1 text-xs text-muted-foreground">
@@ -659,7 +712,7 @@ function Agenda({ show, visitor, onRegister, onOpen }: { show: Show; visitor: Re
                       <p className="mt-1 inline-flex items-center gap-1.5 text-xs text-muted-foreground"><Users className="size-3.5" /> {s.booked}/{s.capacity} {x.seats}{full ? ` · ${x.waitlist}` : ` · ${x.left} ${s.capacity - s.booked}`}</p>
                     )}
                   </div>
-                  <div className="flex flex-wrap items-center gap-2 md:justify-end">
+                  {!textOnly && <div className="flex flex-wrap items-center gap-2 md:justify-end">
                     {s.status === 'LIVE' && <Button size="sm" className="bg-live hover:bg-live/90" onClick={() => onOpen(s)}><LiveDot /> {x.joinLive}</Button>}
                     {s.status === 'ENDED' && (s.hasReplay || s.recordingUrl) && <Button size="sm" variant="outline" onClick={() => onOpen(s)}><PlayCircle /> {x.watchReplay}</Button>}
                     {s.status === 'PUBLISHED' && (mine ? (
@@ -674,7 +727,7 @@ function Agenda({ show, visitor, onRegister, onOpen }: { show: Show; visitor: Re
                     ) : (
                       <Button size="sm" variant={full ? 'outline' : 'default'} onClick={() => book(s)} title={badgeOk ? undefined : x.needBadgeBook}>{full ? x.joinWaitlist : x.book}</Button>
                     ))}
-                  </div>
+                  </div>}
                 </li>
               )
             })}
@@ -721,7 +774,9 @@ function SessionDialog({ show, session, badgeOk, onClose, onRegister }: { show: 
   const live = session.status === 'LIVE'
   const replay = session.status === 'ENDED' && (session.hasReplay || !!session.recordingUrl)
   // status của /full tính theo giờ Timeline; có phòng phát thì vẫn cho vào, phòng xem hiện trạng thái thật của phiên
-  const watchable = live || replay || (!!session.live && session.status !== 'CANCELED')
+  // Show Sân chơi: agenda chỉ là lịch chữ, không có phòng xem; phiên live là của DN đồng tổ chức
+  const textOnly = show.showType === 'HOSTED'
+  const watchable = !textOnly && (live || replay || (!!session.live && session.status !== 'CANCELED'))
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-2xl" title={L(session.title)} description={`${fmtDay(session.start, locale)} · ${fmtTime(session.start, locale)}–${fmtTime(session.end, locale)} · ${L(session.room)}`}>
@@ -751,7 +806,7 @@ function SessionDialog({ show, session, badgeOk, onClose, onRegister }: { show: 
               ) : <SessionWatch show={show} session={session} live={live} />}
             </>
           )}
-          {!watchable && <p className="text-sm font-medium text-muted-foreground">{session.status === 'CANCELED' ? x.sessionStatus.CANCELED : x.notStarted}</p>}
+          {!watchable && !textOnly && <p className="text-sm font-medium text-muted-foreground">{session.status === 'CANCELED' ? x.sessionStatus.CANCELED : x.notStarted}</p>}
         </div>
       </DialogContent>
     </Dialog>

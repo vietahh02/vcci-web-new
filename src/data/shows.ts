@@ -59,6 +59,8 @@ export interface ShowLaunch {
   /** Live mode: the broadcast behind this launch slot, when one is linked. */
   streamEventId?: string
   streamSessionId?: string
+  /** Business behind the booth; a co-organiser's day slot (HOSTED show) has no product to name it by. */
+  organizationName?: string
 }
 export interface ShowSpeaker { id: string; name: string; title: Bilingual; org: Bilingual; country: string; bio: Bilingual; accent: string }
 export interface ShowSession {
@@ -117,6 +119,8 @@ export interface Show {
   visitorTicketFee: number
   ticketCurrency: 'VND' | 'USD'
   requireVisitorApproval: boolean
+  /** VCCI | ORGANIZATION | HOSTED ("Sân chơi": businesses either visit, or co-organise and stream by day). */
+  showType?: 'VCCI' | 'ORGANIZATION' | 'HOSTED'
   boothFee: number
   registrationDeadline: string
   issuedBadges: number
