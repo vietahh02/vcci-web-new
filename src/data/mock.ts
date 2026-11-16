@@ -132,6 +132,10 @@ export interface Business {
   businessType: BusinessType
   verified: boolean
   coverImage: string
+  /** logo thật của doanh nghiệp (live); undefined → hiện chữ viết tắt */
+  logoUrl?: string
+  /** false khi doanh nghiệp chưa có ảnh bìa thật (live) → dùng nền gradient thay vì ảnh stock; undefined = coi như có */
+  hasCover?: boolean
   accent: string
   description: Bilingual
   capabilities: Bilingual[]

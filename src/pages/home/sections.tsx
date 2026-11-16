@@ -8,7 +8,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { searchBusinesses, useEvents, useFeaturedBusinesses, useHomeTestimonials, useOrgProducts, useRemote } from '@/api'
 import { countryName, type Business } from '@/data/mock'
-import { SectionHeader, VerifiedBadge } from '@/components/brand'
+import { CompanyMark, SectionHeader, VerifiedBadge } from '@/components/brand'
 import { LiveDot, Marquee, Reveal, Stagger, StaggerItem } from '@/components/effects'
 import { goldSponsors, mainSponsor, partnerSponsors } from '@/components/sponsor'
 import { buttonClass } from '@/components/ui/primitives'
@@ -103,7 +103,11 @@ function FeaturedBusinessRow({ business: b }: { business: Business }) {
   return (
     <article className="flex flex-col rounded-3xl bg-muted/60 p-4 md:p-5">
       <div className="flex items-center gap-4">
-        <img src={img(b.coverImage, 160, 160)} alt="" loading="lazy" className="size-16 shrink-0 rounded-2xl object-cover" />
+        {b.logoUrl || b.hasCover === false ? (
+          <CompanyMark name={b.nameEn} accent={b.accent} logo={b.logoUrl} className="size-16 rounded-2xl text-lg" />
+        ) : (
+          <img src={img(b.coverImage, 160, 160)} alt="" loading="lazy" className="size-16 shrink-0 rounded-2xl object-cover" />
+        )}
         <div className="min-w-0">
           <p className="flex items-center gap-2 text-sm text-muted-foreground">
             <img src={`https://flagcdn.com/${b.country.toLowerCase()}.svg`} alt="" width={20} height={14} className="h-3.5 w-5 rounded-[2px] object-cover" />

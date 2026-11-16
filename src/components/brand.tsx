@@ -1,6 +1,6 @@
 import { ArrowRight, BadgeCheck, Boxes, Cpu, Fish, Gem, Hammer, Shirt, Sofa, Star, Truck, Wheat, Zap, type LucideIcon } from 'lucide-react'
 import { Link } from 'react-router-dom'
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import type { CategoryIcon } from '@/data/mock'
 import { Reveal } from '@/components/effects'
 import { Tooltip } from '@/components/ui/overlay'
@@ -45,7 +45,15 @@ export function Stars({ score, className }: { score: number; className?: string 
 }
 
 /** Monogram logo — companies upload real logos via /api/organization/my-company/logo. */
-export function CompanyMark({ name, accent, className }: { name: string; accent: string; className?: string }) {
+export function CompanyMark({ name, accent, className, logo }: { name: string; accent: string; className?: string; logo?: string }) {
+  const [broken, setBroken] = useState(false)
+  if (logo && !broken) {
+    return (
+      <div className={cn('grid shrink-0 place-items-center overflow-hidden rounded-xl bg-white shadow-inner ring-1 ring-black/10', className)}>
+        <img src={logo} alt={name} loading="lazy" onError={() => setBroken(true)} className="size-full object-contain p-[12%]" />
+      </div>
+    )
+  }
   return (
     <div
       className={cn('grid shrink-0 place-items-center rounded-xl text-sm font-extrabold text-white shadow-inner ring-1 ring-black/5', className)}

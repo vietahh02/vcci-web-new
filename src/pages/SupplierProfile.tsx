@@ -7,7 +7,7 @@ import { AnimatePresence, motion, useScroll, useTransform } from 'motion/react'
 import { Award, BadgeCheck, Building2, Camera, ChevronLeft, ChevronRight, Download, Eye, Factory, FileText, Globe, Mail, MapPin, MessageSquare, Package, Phone, Send, ShieldCheck, Users, UsersRound, Video, X, type LucideIcon } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { liveApi, USE_MOCK, useBusiness, useOrgProducts } from '@/api'
+import { liveApi, USE_MOCK, useAllOrgProducts, useBusiness } from '@/api'
 import { ErrorBlock, LoadingBlock } from '@/components/ui/StateViews'
 import { openB2bChat } from '@/components/layout/useBizChat'
 import { buildPublicProfile, type PublicProfile } from '@/data/capability'
@@ -69,7 +69,7 @@ function Storefront({ b, remote }: { b: Business; remote: PublicProfile | null }
   const coverRef = useRef<HTMLDivElement>(null)
   const { scrollYProgress } = useScroll({ target: coverRef, offset: ['start start', 'end start'] })
   const coverY = useTransform(scrollYProgress, [0, 1], ['0%', '25%'])
-  const items = useOrgProducts(b.id).data ?? []
+  const items = useAllOrgProducts(b.id).data ?? []
   const hasProducts = sellsProducts(b.businessType)
   const gallerySlides: Slide[] = pp.gallery.map((m) => ({ url: m.url, caption: caption(m, L) }))
 
@@ -78,7 +78,11 @@ function Storefront({ b, remote }: { b: Business; remote: PublicProfile | null }
       {/* ảnh bìa tan dần về nền trang (không có đường cắt ngang); thẻ hồ sơ nổi lên trên phần ảnh đang mờ */}
       <div className="relative isolate">
         <div ref={coverRef} aria-hidden className="absolute inset-x-0 top-0 -z-10 h-[21rem] overflow-hidden" style={{ maskImage: 'linear-gradient(to bottom, #000 0%, #000 30%, transparent 80%)', WebkitMaskImage: 'linear-gradient(to bottom, #000 0%, #000 30%, transparent 80%)' }}>
-          <motion.img style={{ y: coverY }} src={pp.cover ?? img(b.coverImage, 1800, 700)} alt="" className="absolute inset-0 size-full scale-110 object-cover" />
+          {pp.cover || b.hasCover !== false ? (
+            <motion.img style={{ y: coverY }} src={pp.cover ?? img(b.coverImage, 1800, 700)} alt="" className="absolute inset-0 size-full scale-110 object-cover" />
+          ) : (
+            <div className="absolute inset-0" style={{ background: `radial-gradient(90% 120% at 80% 0%, color-mix(in oklab, ${b.accent} 70%, white) 0%, ${b.accent} 50%, color-mix(in oklab, ${b.accent} 50%, #08082e) 100%)` }} />
+          )}
           <div className="absolute inset-0 bg-gradient-to-br from-[#2b1a8f]/60 via-navy/35 to-navy/15" />
         </div>
         <div className="container-page pt-6 md:pt-8">
@@ -92,11 +96,7 @@ function Storefront({ b, remote }: { b: Business; remote: PublicProfile | null }
           <div className="pt-16 md:pt-24">
         <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col gap-5 rounded-3xl border bg-card/95 p-5 backdrop-blur-md shadow-[0_20px_50px_-24px_rgba(8,8,46,0.45)] md:flex-row md:items-center md:justify-between md:gap-8 md:p-6">
           <div className="flex min-w-0 items-center gap-5">
-            {pp.logo ? (
-              <img src={pp.logo} alt={b.name} className="size-20 shrink-0 rounded-2xl border bg-white object-contain p-1.5 shadow-sm md:size-28" />
-            ) : (
-              <CompanyMark name={b.nameEn} accent={b.accent} className="size-20 rounded-2xl text-2xl md:size-28 md:text-3xl" />
-            )}
+            <CompanyMark name={b.nameEn} accent={b.accent} logo={pp.logo ?? b.logoUrl} className="size-20 rounded-2xl text-2xl md:size-28 md:text-3xl" />
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
                 {b.verified && <VerifiedBadge />}

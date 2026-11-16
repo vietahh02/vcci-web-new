@@ -74,7 +74,14 @@ export function SupplierCard({ business, corner }: { business: Business; corner?
         className="group flex h-full flex-col overflow-hidden rounded-2xl border bg-card shadow-sm transition-[box-shadow,border-color] duration-300 hover:border-primary/30 hover:shadow-2xl hover:shadow-navy/12"
       >
         <div className="relative h-36 overflow-hidden">
-          <img src={img(business.coverImage, 640, 300)} alt="" loading="lazy" className="size-full object-cover transition-transform duration-700 ease-out group-hover:scale-110" />
+          {business.hasCover === false ? (
+            <div
+              className="size-full transition-transform duration-700 ease-out group-hover:scale-110"
+              style={{ background: `radial-gradient(120% 140% at 85% 0%, color-mix(in oklab, ${business.accent} 70%, white) 0%, ${business.accent} 45%, color-mix(in oklab, ${business.accent} 55%, #08082e) 100%)` }}
+            />
+          ) : (
+            <img src={img(business.coverImage, 640, 300)} alt="" loading="lazy" className="size-full object-cover transition-transform duration-700 ease-out group-hover:scale-110" />
+          )}
           <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
           {business.verified && <VerifiedBadge className="absolute right-3 top-3 bg-white/90 dark:bg-black/50" />}
           {/* product strip revealed on hover */}
@@ -92,7 +99,7 @@ export function SupplierCard({ business, corner }: { business: Business; corner?
           </div>
         </div>
         <div className="relative flex flex-1 flex-col px-5 pb-5">
-          <CompanyMark name={business.nameEn} accent={business.accent} className="-mt-8 size-16 rounded-full border-4 border-card text-lg shadow-md" />
+          <CompanyMark name={business.nameEn} accent={business.accent} logo={business.logoUrl} className="-mt-8 size-16 rounded-full border-4 border-card text-lg shadow-md" />
           <p className="mt-3 line-clamp-2 text-[16px] font-bold leading-snug transition-colors group-hover:text-primary">{business.name}</p>
           <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] text-muted-foreground">
             <ReputationStars orgId={business.id} legacyScore={business.reputationScore} className="text-foreground" />
@@ -120,7 +127,7 @@ export function SupplierRow({ business }: { business: Business }) {
   return (
     <article className="group grid gap-5 border-b py-6 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
       <div className="flex gap-4">
-        <CompanyMark name={business.nameEn} accent={business.accent} className="size-14 rounded-full text-base" />
+        <CompanyMark name={business.nameEn} accent={business.accent} logo={business.logoUrl} className="size-14 rounded-full text-base" />
         <div className="min-w-0">
           <Link to={`/suppliers/${business.id}`} className="text-[17px] font-bold leading-snug hover:text-primary">{business.name}</Link>
           <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] text-muted-foreground">

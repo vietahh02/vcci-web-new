@@ -65,7 +65,7 @@ function ProductView({ product }: { product: Product }) {
   }, [active])
   const [tab, setTab] = useState('overview')
   const [zoom, setZoom] = useState({ on: false, x: 50, y: 50 })
-  const related = useRelatedProducts(product.id, product.categoryId).data ?? []
+  const related = useRelatedProducts(product.id, product.categoryId, product.industry).data ?? []
   const none = tx('Chưa cung cấp', 'Not provided', '미제공')
 
   const images = product.productImages
@@ -273,7 +273,7 @@ function SupplierCard({ product }: { product: Product }) {
     <div className="rounded-2xl border bg-gradient-to-b from-primary-soft/70 to-card p-5 xl:sticky xl:top-32">
       <p className="text-[13px] font-medium text-muted-foreground">{t.product.supplierCard}</p>
       <div className="mt-3 flex items-start gap-3">
-        <CompanyMark name={supplier.nameEn} accent={supplier.accent} className="size-12" />
+        <CompanyMark name={supplier.nameEn} accent={supplier.accent} logo={supplier.logoUrl} className="size-12" />
         <div className="min-w-0">
           <Link to={`/suppliers/${supplier.id}`} className="line-clamp-2 text-base font-bold leading-snug underline-offset-4 hover:text-primary hover:underline">{supplier.name}</Link>
           <div className="mt-1.5 flex flex-wrap items-center gap-2">{supplier.verified && <VerifiedBadge />}<ReputationStars orgId={supplier.id} legacyScore={supplier.reputationScore} /></div>

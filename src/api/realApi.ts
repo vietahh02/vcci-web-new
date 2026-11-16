@@ -28,6 +28,7 @@ export type { ImportRequestInput }
 export interface ProductQuery {
   keyword?: string
   categoryId?: string
+  industry?: string
   verifiedOnly?: boolean
   maxMoq?: number
   certificates?: string[]
@@ -83,7 +84,7 @@ export async function searchProductsPage(q: ProductQuery = {}): Promise<Page<Pro
   return cached(key, { ttl: 5 * 60 * 1000 }, async () => {
     const size = q.size ?? 24
     const page = toPage<Raw>(await apiFetch('/api/products/search', {
-      query: { keyword: q.keyword, categoryId: q.categoryId, maxMoq: q.maxMoq, certificates: q.certificates, sort: q.sort, page: q.page ?? 0, size },
+      query: { keyword: q.keyword, categoryId: q.categoryId, industry: q.industry, maxMoq: q.maxMoq, certificates: q.certificates, sort: q.sort, page: q.page ?? 0, size },
     }), size)
     return { ...page, items: page.items.map(toProduct) }
   })
@@ -102,6 +103,17 @@ export async function getProduct(pid: string): Promise<Product | null> {
 }
 /** GET /api/products/search?organizationId= */
 export const fetchOrgProducts = async (orgId: string) => embeddedProducts.get(orgId) ?? toPage<Raw>(await apiFetch('/api/products/search', { query: { organizationId: orgId, page: 0, size: 50 } }), 50).items.map(toProduct)
+/** Full product list of one organisation for the company detail page. Never reads the embedded top-N (cards only) and walks every page. */
+export async function fetchAllOrgProducts(orgId: string): Promise<Product[]> {
+  const size = 50
+  const all: Product[] = []
+  for (let page = 0; page < 100; page++) {
+    const res = toPage<Raw>(await apiFetch('/api/products/search', { query: { organizationId: orgId, page, size } }), size)
+    all.push(...res.items.map(toProduct))
+    if (res.items.length < size || all.length >= res.total) break
+  }
+  return all
+}
 /** POST /api/products/{id}/rfq with {quantity, destination, message} (stored on the quotation and put in the seller's email). `sourceEventPid`: the show the buyer came from, counted as interest there. */
 export async function sendProductRfq(pid: string, body: { quantity: number | string; destination: string; message: string; sourceEventPid?: string }) {
   return apiFetch(`/api/products/${encodeURIComponent(pid)}/rfq`, {

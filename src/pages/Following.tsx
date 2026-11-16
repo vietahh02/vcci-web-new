@@ -4,6 +4,7 @@ import { ArrowRight, BellRing, Building2, UsersRound } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { fetchFeaturedBusinesses, getBusiness, liveApi, tokens, USE_MOCK } from '@/api'
+import { CompanyMark } from '@/components/brand'
 import { SupplierCard } from '@/components/cards'
 import { FollowButton } from '@/components/catalog/FollowButton'
 import { PageHero } from '@/components/PageHero'
@@ -168,7 +169,7 @@ function CompanyStack({ items, total }: { items: Business[]; total: number }) {
             style={{ zIndex: s.z }}
             className="absolute left-1/2 top-4 -ml-[72px] h-[196px] w-[144px] overflow-hidden rounded-2xl border-4 border-white bg-white shadow-xl shadow-navy/20 dark:border-white/90"
           >
-            {b ? <img src={img(b.coverImage, 300, 380)} alt="" className="size-full object-cover" /> : <div className="grid size-full place-items-center bg-gradient-to-br from-primary-soft to-white text-primary/50"><Building2 className="size-10" /></div>}
+            {b && b.hasCover !== false ? <img src={img(b.coverImage, 300, 380)} alt="" className="size-full object-cover" /> : b ? <CompanyMark name={b.nameEn} accent={b.accent} logo={b.logoUrl} className="size-full rounded-none text-3xl" /> : <div className="grid size-full place-items-center bg-gradient-to-br from-primary-soft to-white text-primary/50"><Building2 className="size-10" /></div>}
           </motion.div>
         )
       })}
