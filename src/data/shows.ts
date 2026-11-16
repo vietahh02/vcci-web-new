@@ -347,7 +347,7 @@ export const shows: Show[] = [
   {
     id: 'sh-eu-green-2026', cover: IMG.remoteCall, status: 'UPCOMING', direction: 'IMPORT', exhibitorScope: 'DOMESTIC',
     title: b('EU Green Supply Show 2026 — Công nghệ xanh & Cơ khí', 'EU Green Supply Show 2026 — Green Tech & Engineering'),
-    tagline: b('Nhà cung ứng Việt Nam cho chuỗi cung ứng xanh của châu Âu', 'Vietnamese suppliers for Europe’s green supply chains'),
+    tagline: b('Nhà cung ứng Việt Nam cho chuỗi cung ứng xanh của châu Âu', 'Vietnamese businesses for Europe’s green supply chains'),
     introduction: b('Show dành cho nhà nhập khẩu và nhà phân phối châu Âu tìm nguồn cung năng lượng sạch, cơ khí chính xác, điện tử. Tham gia có phí; BTC duyệt trước khi xác nhận tham gia.', 'A show for European importers and distributors sourcing clean energy, precision engineering and electronics. Participation is paid; organisers approve registrations before confirming.'),
     targetMarkets: ['DE', 'NL', 'FR', 'SE'], industries: ['Solar', 'Machinery', 'Electronics'],
     startDate: dateOnly(28), endDate: dateOnly(33), organizer: b('VCCI & GIZ', 'VCCI & GIZ'),

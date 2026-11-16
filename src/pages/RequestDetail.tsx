@@ -3,16 +3,16 @@ import { AnimatePresence, motion } from 'motion/react'
 import { CalendarClock, FileUp, MapPin, Package, Paperclip, Send, Tag, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { browseImportRequests, catalogApi, getCategory, liveApi, searchProducts, tokens, USE_MOCK, useImportRequest } from '@/api'
+import { browseImportRequests, catalogApi, getCategory, liveApi, tokens, USE_MOCK, useImportRequest } from '@/api'
 import { LoginRequiredDialog } from '@/components/auth/LoginRequiredDialog'
 import { useProfile } from '@/lib/profile'
 import type { MyProduct } from '@/api/catalogApi'
 import { chatApi, chatConfigured } from '@/api/chat'
 import { Select } from '@/components/ui/select'
-import { type ImportRequest, type Product } from '@/data/mock'
+import { type ImportRequest } from '@/data/mock'
 import { ErrorBlock, LoadingBlock } from '@/components/ui/StateViews'
 import { CountryChip, SectionHeader } from '@/components/brand'
-import { ProductCard, RequestCard } from '@/components/cards'
+import { RequestCard } from '@/components/cards'
 import { Countdown, Reveal } from '@/components/effects'
 import { SheetContent, useToast } from '@/components/ui/overlay'
 import { Badge, Button, Field, Input, Textarea } from '@/components/ui/primitives'
@@ -27,7 +27,6 @@ export default function RequestDetail() {
   const { t, L, lang, locale } = useI18n()
   const { data: r, loading, error, reload } = useImportRequest(id)
   const [quoteOpen, setQuoteOpen] = useState(false)
-  const [matches, setMatches] = useState<Product[]>([])
   const [others, setOthers] = useState<ImportRequest[]>([])
   const catId = r?.categoryId
   const navigate = useNavigate()
@@ -64,7 +63,6 @@ export default function RequestDetail() {
 
   useEffect(() => {
     if (!r) return
-    searchProducts({ categoryId: catId }).then((p) => setMatches(p.slice(0, 4)), () => setMatches([]))
     browseImportRequests().then((l) => setOthers(l.filter((x) => x.id !== r.id).slice(0, 4)), () => setOthers([]))
   }, [r, catId, lang])
 
@@ -141,7 +139,7 @@ export default function RequestDetail() {
                     {quoteBlock === 'closed'
                       ? tx('Yêu cầu này đã đóng, không nhận thêm báo giá.', 'This request is closed and no longer takes quotes.', '이 요청은 마감되어 더 이상 견적을 받지 않습니다.')
                       : quoteBlock === 'own'
-                        ? tx('Đây là yêu cầu của doanh nghiệp bạn. Báo giá từ nhà cung cấp sẽ gửi về email của doanh nghiệp.', 'This is your company\'s request. Supplier quotes arrive at your company email.', '귀사의 요청입니다. 공급업체 견적은 회사 이메일로 도착합니다.')
+                        ? tx('Đây là yêu cầu của doanh nghiệp bạn. Báo giá từ nhà cung cấp sẽ gửi về email của doanh nghiệp.', 'This is your company\'s request. Business quotes arrive at your company email.', '귀사의 요청입니다. 기업 견적은 회사 이메일로 도착합니다.')
                         : tx('Tài khoản cần được gắn với một doanh nghiệp để gửi báo giá.', 'Your account must belong to a company to send quotes.', '견적을 보내려면 계정이 기업에 연결되어 있어야 합니다.')}
                   </p>
                 )}
@@ -151,12 +149,6 @@ export default function RequestDetail() {
         </aside>
       </div>
 
-      {matches.length > 0 && (
-        <section className="mt-16">
-          <SectionHeader title={tx('Sản phẩm phù hợp với yêu cầu', 'Products matching this request', '이 요청에 맞는 제품')} />
-          <div className="grid grid-cols-2 gap-4 md:grid-cols-4">{matches.map((p) => <ProductCard key={p.id} product={p} />)}</div>
-        </section>
-      )}
       <section className="mt-16">
         <SectionHeader title={t.home.requestsTitle} action={{ to: '/requests', label: t.common.viewAll }} />
         <div className="grid gap-4 md:grid-cols-2">{others.map((o) => <RequestCard key={o.id} request={o} />)}</div>

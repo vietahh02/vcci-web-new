@@ -38,7 +38,7 @@ const BUSINESS_TYPES = [
 const STAFF = ['1 – 10', '11 – 50', '51 – 200', '201 – 500', '501 – 1.000', '1.000+']
 const VOLUME = [b('Dưới 100.000 USD', 'Under USD 100K', '10만 달러 미만'), b('100.000 – 500.000 USD', 'USD 100K – 500K', '10만 – 50만 달러'), b('500.000 – 1 triệu USD', 'USD 500K – 1M', '50만 – 100만 달러'), b('1 – 5 triệu USD', 'USD 1M – 5M', '100만 – 500만 달러'), b('Trên 5 triệu USD', 'Over USD 5M', '500만 달러 초과')]
 const ROLES = [b('Người quyết định mua', 'Final decision maker', '최종 구매 결정권자'), b('Đề xuất / ảnh hưởng quyết định', 'Recommend / influence', '구매 추천 / 영향'), b('Tìm hiểu thông tin', 'Research only', '정보 수집')]
-const PURPOSES = [b('Tìm nhà cung cấp mới', 'Find new suppliers', '신규 공급업체 발굴'), b('Tìm sản phẩm mới', 'Source new products', '신제품 소싱'), b('Gặp nhà cung cấp hiện tại', 'Meet current suppliers', '기존 공급업체 미팅'), b('Nắm bắt xu hướng thị trường', 'Market trends', '시장 트렌드 파악'), b('Tìm đối tác đầu tư / liên doanh', 'Investment / JV partners', '투자 / 합작 파트너')]
+const PURPOSES = [b('Tìm nhà cung cấp mới', 'Find new businesses', '신규 기업 발굴'), b('Tìm sản phẩm mới', 'Source new products', '신제품 소싱'), b('Gặp nhà cung cấp hiện tại', 'Meet current businesses', '기존 기업 미팅'), b('Nắm bắt xu hướng thị trường', 'Market trends', '시장 트렌드 파악'), b('Tìm đối tác đầu tư / liên doanh', 'Investment / JV partners', '투자 / 합작 파트너')]
 const COUNTRIES = ['VN', 'KR', 'JP', 'CN', 'US', 'DE', 'FR', 'GB', 'AU', 'SG', 'TH', 'IN', 'AE']
 const DIAL: Record<string, string> = { VN: '+84', KR: '+82', JP: '+81', CN: '+86', US: '+1', DE: '+49', FR: '+33', GB: '+44', AU: '+61', SG: '+65', TH: '+66', IN: '+91', AE: '+971' }
 
@@ -352,7 +352,7 @@ function RegisterFlow({ ev }: { ev: EventItem }) {
                     {programme && (
                       <>
                         <p className="mb-1 mt-6 text-[13px] font-semibold">{tx('Đặt lịch gặp sau phần ra mắt sản phẩm', 'Book a meeting after a product launch', '신제품 런칭 후 미팅 예약')}</p>
-                        <p className="mb-2.5 text-xs text-muted-foreground">{tx('Chỉ hiện các phiên trong ngày bạn chọn. Nhà cung cấp sẽ xác nhận lịch gặp qua email.', 'Only sessions on your chosen days are shown. Suppliers confirm by email.', '선택한 날짜의 세션만 표시됩니다. 공급업체가 이메일로 확정합니다.')}</p>
+                        <p className="mb-2.5 text-xs text-muted-foreground">{tx('Chỉ hiện các phiên trong ngày bạn chọn. Nhà cung cấp sẽ xác nhận lịch gặp qua email.', 'Only sessions on your chosen days are shown. Businesses confirm by email.', '선택한 날짜의 세션만 표시됩니다. 기업이 이메일로 확정합니다.')}</p>
                         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                           {programme.schedule.filter((s) => f.dates.includes(s.date)).map((s) => {
                             const key = `${s.date}-${s.start}`
@@ -572,7 +572,7 @@ function Sidebar({ ev }: { ev: EventItem }) {
     { icon: Gift, text: tx('Tài liệu và bản ghi sau sự kiện (khi Ban tổ chức đăng tải)', 'Materials and the recording after the event (once the organisers publish them)', '행사 후 자료 및 녹화본(주최 측 게시 시)') },
   ] : [
     { icon: Ticket, text: tx('Thẻ tham dự điện tử, check-in nhanh bằng QR', 'E-badge with fast QR check-in', 'QR 빠른 체크인 전자 배지') },
-    { icon: Handshake, text: tx('Đặt lịch gặp nhà cung cấp ngay trên hệ thống', 'Book supplier meetings online', '온라인으로 공급업체 미팅 예약') },
+    { icon: Handshake, text: tx('Đặt lịch gặp nhà cung cấp ngay trên hệ thống', 'Book business meetings online', '온라인으로 기업 미팅 예약') },
     { icon: Sparkles, text: tx('Xem trước sản phẩm ra mắt và danh sách gian hàng', 'Preview launches and exhibitor list', '신제품 및 참가사 목록 미리 보기') },
     { icon: Gift, text: tx('Tài liệu, bản ghi và báo cáo ngành sau sự kiện', 'Post-event materials and recordings', '행사 후 자료 및 녹화본 제공') },
   ]

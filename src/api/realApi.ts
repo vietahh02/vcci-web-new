@@ -132,6 +132,8 @@ export async function searchBusinesses(keyword = '', categoryId?: string, busine
 }
 /** true when a list response already carried this business' products (cards then skip the extra request) */
 export const hasEmbeddedProducts = (bid: string) => embeddedProducts.has(bid)
+/** how many products a list response embedded for this business (0 when none or not loaded) */
+export const embeddedProductCount = (bid: string) => embeddedProducts.get(bid)?.length ?? 0
 /** GET /api/business/featured */
 const embeddedProducts = new Map<string, Product[]>() // featured businesses embed their top products: avoids one request per business
 export async function fetchFeaturedBusinesses() {

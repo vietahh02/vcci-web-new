@@ -13,7 +13,7 @@ export function LoginRequiredDialog({ open, onOpenChange, onLogin, title, descri
 }) {
   const { t } = useI18n()
   points ??= [
-    tx('Nhà cung cấp Việt Nam đã được VCCI xác thực gửi báo giá thẳng qua email', 'VCCI-verified Vietnamese suppliers send quotes straight to your email', 'VCCI 인증 베트남 공급업체가 이메일로 바로 견적을 보냅니다'),
+    tx('Nhà cung cấp Việt Nam đã được VCCI xác thực gửi báo giá thẳng qua email', 'VCCI-verified Vietnamese businesses send quotes straight to your email', 'VCCI 인증 베트남 기업이 이메일로 바로 견적을 보냅니다'),
     tx('Theo dõi lượt xem và số báo giá của từng yêu cầu', 'Follow the views and quotes on each request', '요청별 조회수와 견적 수를 확인'),
   ]
   return (

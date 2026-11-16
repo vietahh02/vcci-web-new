@@ -169,7 +169,7 @@ export function ChatWidget() {
                     <button onClick={() => setOpen(false)} className={iconBtn} aria-label={tx('Thu nhỏ', 'Minimize', '최소화')}><Minus className="size-4" /></button>
                   </div>
                   <strong className="mt-2 text-xl">{greetName ? `${tx('Xin chào', 'Hello', '안녕하세요')}, ${greetName}` : t.chat.title}</strong>
-                  <span className="text-[13px] text-white/70">{tx('Trao đổi với nhà cung cấp hoặc nhận hỗ trợ từ VCCI.', 'Talk to suppliers or get help from VCCI.', '공급업체와 대화하거나 VCCI의 지원을 받으세요.')}</span>
+                  <span className="text-[13px] text-white/70">{tx('Trao đổi với nhà cung cấp hoặc nhận hỗ trợ từ VCCI.', 'Talk to businesses or get help from VCCI.', '기업과 대화하거나 VCCI의 지원을 받으세요.')}</span>
                 </div>
                 <div className="-mt-10 flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto px-4 pb-4">
                   {!configured && <p className="rounded-[14px] border bg-card p-3.5 text-xs text-muted-foreground">{tx2.notConfigured}</p>}
@@ -201,7 +201,7 @@ export function ChatWidget() {
                       {supplierId && supplierId !== myOrgId && (
                         <button onClick={() => openB2b(supplierId)} className="flex items-center gap-2.5 rounded-[14px] border bg-card p-3.5 text-left shadow-sm transition hover:border-primary">
                           <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary-soft text-primary"><Handshake className="size-5" /></span>
-                          <span className="min-w-0 flex-1"><strong className="block">{tx('Chat với nhà cung cấp', 'Chat with this supplier', '공급업체와 채팅')}</strong><span className="block truncate text-xs text-muted-foreground">{tx('Nhắn tin trực tiếp với doanh nghiệp đang xem', 'Message the business you are viewing', '보고 있는 기업에 메시지 보내기')}</span></span>
+                          <span className="min-w-0 flex-1"><strong className="block">{tx('Chat với nhà cung cấp', 'Chat with this business', '기업과 채팅')}</strong><span className="block truncate text-xs text-muted-foreground">{tx('Nhắn tin trực tiếp với doanh nghiệp đang xem', 'Message the business you are viewing', '보고 있는 기업에 메시지 보내기')}</span></span>
                           <ChevronRight className="size-4 text-muted-foreground" />
                         </button>
                       )}
