@@ -17,6 +17,7 @@ import { Dialog, DialogContent, DialogTrigger, UnderlineTabs, useToast } from '@
 import { Badge, Button, Field, Input, Skeleton, Textarea } from '@/components/ui/primitives'
 import NotFound from '@/pages/NotFound'
 import { useI18n } from '@/lib/i18n'
+import { RichText } from '@/components/RichText'
 import { useProfile } from '@/lib/profile'
 import { tx } from '@/lib/tx'
 import { cn, formatMoney, formatNumber, img } from '@/lib/utils'
@@ -218,7 +219,7 @@ function ProductView({ product }: { product: Product }) {
         />
         <AnimatePresence mode="wait">
           <motion.div key={tab} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.2 }} className="py-5">
-            {tab === 'overview' && <p className="leading-relaxed text-foreground/90">{L(product.description) || none}</p>}
+            {tab === 'overview' && (L(product.description) ? <RichText text={L(product.description)} /> : <p className="leading-relaxed text-foreground/90">{none}</p>)}
             {tab === 'specs' && (
               /* cùng kiểu khung với "Thông tin sản phẩm" và "Thông tin doanh nghiệp": ô nhãn tô nền, đường kẻ dọc, hai cột trên màn rộng */
               <dl className="grid overflow-hidden rounded-xl border sm:grid-cols-2">
