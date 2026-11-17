@@ -12,6 +12,7 @@ import { connectParticipant, useEventParticipants, type ConnectionType } from '@
 import type { Participant, Side } from '@/data/eventParticipants'
 import { businesses, type EventItem } from '@/data/mock'
 import { useI18n } from '@/lib/i18n'
+import { OPTIONS } from '@/lib/profile'
 import { cn } from '@/lib/utils'
 import { tx } from '@/lib/tx'
 import { isOnlineShowEvent } from '@/lib/eventStatus'
@@ -30,7 +31,12 @@ const verifiedIds = new Set(businesses.filter((x) => x.verified).map((x) => x.id
 
 /** `embedded`: rendered inside a page block that already provides the page container (the Show overview). */
 export function EventParticipants({ ev, onRegister, listed, embedded }: { ev: EventItem; onRegister?: string; listed?: Participant[]; embedded?: boolean }) {
-  const { L, lang } = useI18n()
+  const { L, lang, t } = useI18n()
+  // The API lists every event registrant as BUYER; the columns are domestic vs foreign, so a registrant from Viet Nam goes in the domestic column.
+  const columnOf = (p: Participant): Side => (p.side === 'BUYER' && p.country === 'VN' ? 'SELLER' : p.side)
+  // business type and industry arrive as codes (VN_EXPORTER, FOOD_DRINK): show their labels
+  const kindLabel = (p: Participant) => { const k = L(p.kind); return (t.supplier.types as Record<string, string>)[k] ?? k }
+  const industryLabel = (code: string) => { const o = OPTIONS.industries.find((x) => x.value === code); return o ? L(o) : code }
   const toast = useToast()
   const remote = useEventParticipants(ev).data ?? []
   // `listed`: the businesses from the show's own payload, used until the API has a participant list for this show
@@ -86,10 +92,10 @@ export function EventParticipants({ ev, onRegister, listed, embedded }: { ev: Ev
             <span className="min-w-0 break-words">{lang === 'vi' ? p.name : p.nameEn ?? p.name}</span>
             {p.businessId && verifiedIds.has(p.businessId) && <VerifiedBadge compact />}
           </p>
-          <p className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground"><CountryChip code={p.country} /> {L(p.kind)}</p>
+          <p className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground"><CountryChip code={p.country} /> {kindLabel(p)}</p>
         </div>
       </div>
-      {p.industries.filter(Boolean).length > 0 && <div className="flex flex-wrap gap-1.5">{p.industries.filter(Boolean).slice(0, 3).map((i) => <Badge key={i} variant="muted">{i}</Badge>)}</div>}
+      {p.industries.filter(Boolean).length > 0 && <div className="flex flex-wrap gap-1.5">{p.industries.filter(Boolean).slice(0, 3).map((i) => <Badge key={i} variant="muted">{industryLabel(i)}</Badge>)}</div>}
       {p.side === 'SELLER' && p.offer && p.offer.length > 0 && (
         <p className="text-sm"><span className="inline-flex items-center gap-1.5 font-semibold text-primary"><ArrowRightLeft className="size-3.5" /> {tx('Cung ứng', 'Supplies', '공급')}:</span> <span className="text-muted-foreground">{p.offer.map((o) => L(o)).join(' · ')}</span></p>
       )}
@@ -107,7 +113,7 @@ export function EventParticipants({ ev, onRegister, listed, embedded }: { ev: Ev
     </li>
   )
 
-  const columns = onlineShow ? COLUMNS.filter((c) => all.some((p) => p.side === c.side)) : COLUMNS
+  const columns = onlineShow ? COLUMNS.filter((c) => all.some((p) => columnOf(p) === c.side)) : COLUMNS
   // Show overview: no block without data. Webinar tab (onRegister set) keeps its "no organisations yet" columns and register prompt.
   if (!all.length && !onRegister) return null
 
@@ -128,7 +134,7 @@ export function EventParticipants({ ev, onRegister, listed, embedded }: { ev: Ev
 
       <div className={cn('mt-6 grid items-start gap-5', columns.length === 3 ? 'lg:grid-cols-3' : columns.length === 2 && 'lg:grid-cols-2')}>
         {columns.map(({ side, icon: Icon, tone, chip, title, hint }) => {
-          const total = all.filter((p) => p.side === side)
+          const total = all.filter((p) => columnOf(p) === side)
           const matched = total.filter((p) => !onlineOnly || p.online)
           const expanded = !!showAll[side]
           const list = expanded ? matched : matched.slice(0, FEATURED)
