@@ -17,10 +17,10 @@ import { tx } from '@/lib/tx'
 import { isOnlineShowEvent } from '@/lib/eventStatus'
 
 /** Seller → domestic business, Buyer → foreign business, Support service → sponsor. */
-const COLUMNS: { side: Side; icon: typeof MapPin; tone: string; title: () => string; hint: () => string }[] = [
-  { side: 'SELLER', icon: MapPin, tone: 'border-t-primary', title: () => tx('Doanh nghiệp trong nước', 'Domestic businesses', '국내 기업'), hint: () => tx('Nhà xuất khẩu Việt Nam, cung ứng sản phẩm', 'Vietnamese exporters supplying products', '제품을 공급하는 베트남 수출기업') },
-  { side: 'BUYER', icon: Globe2, tone: 'border-t-gold', title: () => tx('Doanh nghiệp nước ngoài', 'Foreign businesses', '해외 기업'), hint: () => tx('Nhà nhập khẩu, phân phối, thu mua', 'Importers, distributors, sourcing offices', '수입·유통·소싱 기업') },
-  { side: 'SUPPORT', icon: Landmark, tone: 'border-t-navy', title: () => tx('Nhà tài trợ', 'Sponsors', '후원사'), hint: () => tx('Đơn vị đồng hành và hỗ trợ sự kiện', 'Organisations backing and supporting the event', '행사를 후원하고 지원하는 기관') },
+const COLUMNS: { side: Side; icon: typeof MapPin; tone: string; chip: string; title: () => string; hint: () => string }[] = [
+  { side: 'SELLER', icon: MapPin, tone: 'bg-primary', chip: 'bg-primary-soft text-primary', title: () => tx('Doanh nghiệp trong nước', 'Domestic businesses', '국내 기업'), hint: () => tx('Nhà xuất khẩu Việt Nam, cung ứng sản phẩm', 'Vietnamese exporters supplying products', '제품을 공급하는 베트남 수출기업') },
+  { side: 'BUYER', icon: Globe2, tone: 'bg-gold', chip: 'bg-gold-soft text-gold', title: () => tx('Doanh nghiệp nước ngoài', 'Foreign businesses', '해외 기업'), hint: () => tx('Nhà nhập khẩu, phân phối, thu mua', 'Importers, distributors, sourcing offices', '수입·유통·소싱 기업') },
+  { side: 'SUPPORT', icon: Landmark, tone: 'bg-navy', chip: 'bg-navy/10 text-navy dark:text-white', title: () => tx('Nhà tài trợ', 'Sponsors', '후원사'), hint: () => tx('Đơn vị đồng hành và hỗ trợ sự kiện', 'Organisations backing and supporting the event', '행사를 후원하고 지원하는 기관') },
 ]
 
 /** Featured organisations shown per column before "view all". */
@@ -28,7 +28,8 @@ const FEATURED = 3
 
 const verifiedIds = new Set(businesses.filter((x) => x.verified).map((x) => x.id))
 
-export function EventParticipants({ ev, onRegister, listed }: { ev: EventItem; onRegister?: string; listed?: Participant[] }) {
+/** `embedded`: rendered inside a page block that already provides the page container (the Show overview). */
+export function EventParticipants({ ev, onRegister, listed, embedded }: { ev: EventItem; onRegister?: string; listed?: Participant[]; embedded?: boolean }) {
   const { L, lang } = useI18n()
   const toast = useToast()
   const remote = useEventParticipants(ev).data ?? []
@@ -111,7 +112,7 @@ export function EventParticipants({ ev, onRegister, listed }: { ev: EventItem; o
   if (!all.length && !onRegister) return null
 
   return (
-    <section className="mt-14 w-full px-4 sm:px-6 lg:px-10" aria-label="participants">
+    <section className={cn('mt-10', embedded ? 'mt-14 w-full px-4 sm:px-6 lg:px-10' : 'container-page')} aria-label="participants">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h2 className="text-2xl font-extrabold tracking-tight">{tx('Đơn vị nổi bật', 'Featured organisations', '주요 참가 기관')}</h2>
@@ -126,23 +127,29 @@ export function EventParticipants({ ev, onRegister, listed }: { ev: EventItem; o
       </div>
 
       <div className={cn('mt-6 grid items-start gap-5', columns.length === 3 ? 'lg:grid-cols-3' : columns.length === 2 && 'lg:grid-cols-2')}>
-        {columns.map(({ side, icon: Icon, tone, title, hint }) => {
+        {columns.map(({ side, icon: Icon, tone, chip, title, hint }) => {
           const total = all.filter((p) => p.side === side)
           const matched = total.filter((p) => !onlineOnly || p.online)
           const expanded = !!showAll[side]
           const list = expanded ? matched : matched.slice(0, FEATURED)
           const hidden = matched.length - list.length
           return (
-            <div key={side} className={cn('min-w-0 overflow-hidden rounded-2xl border border-t-4 bg-card', tone)}>
-              <div className="flex items-start justify-between gap-3 border-b bg-muted/40 p-4">
-                <div className="min-w-0">
-                  <h3 className="flex items-center gap-2 text-lg font-extrabold"><Icon className="size-5 shrink-0" /> {title()}</h3>
-                  <p className="mt-0.5 text-xs text-muted-foreground">{onlineShow && side === 'BUYER' ? tx('Doanh nghiệp nước ngoài tham gia Show', 'Foreign businesses taking part', '참가 해외 기업') : onlineShow && side === 'SELLER' ? tx('Doanh nghiệp Việt Nam tham gia Show', 'Vietnamese businesses taking part', '참가 베트남 기업') : hint()}</p>
+            <div key={side} className="relative flex min-w-0 flex-col overflow-hidden rounded-3xl border bg-card shadow-[0_18px_40px_-30px_rgba(0,70,110,0.45)]">
+              <span aria-hidden className={cn('absolute inset-x-0 top-0 h-1', tone)} />
+              <div className={cn('flex items-start gap-3.5 p-5 pt-6', list.length > 0 && 'border-b')}>
+                <span className={cn('grid size-11 shrink-0 place-items-center rounded-2xl', chip)}><Icon className="size-5" /></span>
+                <div className="min-w-0 flex-1">
+                  <h3 className="text-[17px] font-extrabold leading-snug">{title()}</h3>
+                  <p className="mt-1 text-[13px] leading-snug text-muted-foreground">{onlineShow && side === 'BUYER' ? tx('Doanh nghiệp nước ngoài tham gia Show', 'Foreign businesses taking part', '참가 해외 기업') : onlineShow && side === 'SELLER' ? tx('Doanh nghiệp Việt Nam tham gia Show', 'Vietnamese businesses taking part', '참가 베트남 기업') : hint()}</p>
                 </div>
-                <span className="shrink-0 rounded-full bg-background px-3 py-1 text-sm font-bold tabular-nums ring-1 ring-border">{total.length}</span>
+                <span className="shrink-0 rounded-full bg-muted px-3 py-1 text-sm font-bold tabular-nums">{total.length}</span>
               </div>
               {list.length === 0 ? (
-                <p className="p-6 text-center text-sm text-muted-foreground">{tx('Chưa có đơn vị nào.', 'No organisations yet.', '아직 없습니다.')}</p>
+                <div className="mx-5 mb-5 grid flex-1 place-items-center gap-1.5 rounded-2xl border border-dashed bg-muted/30 px-4 py-9 text-center">
+                  <Icon className="size-6 text-muted-foreground/50" />
+                  <p className="text-sm font-semibold">{tx('Chưa có đơn vị nào', 'No organisations yet', '아직 없습니다')}</p>
+                  <p className="text-xs text-muted-foreground">{tx('Hiển thị khi đơn vị được duyệt tham gia.', 'Shown once organisations are approved.', '참가가 승인되면 표시됩니다.')}</p>
+                </div>
               ) : (
                 <ul>{list.map(row)}</ul>
               )}
@@ -159,7 +166,7 @@ export function EventParticipants({ ev, onRegister, listed }: { ev: EventItem; o
       </div>
 
       {!ended && onRegister && (
-        <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-primary-soft p-4">
+        <div className="mt-6 flex flex-wrap items-center justify-between gap-4 rounded-3xl bg-primary-soft px-6 py-5">
           <p className="text-sm font-medium text-primary">{tx('Bạn là doanh nghiệp trong nước hay nước ngoài? Đăng ký để tên và nhu cầu của bạn được công khai trong danh sách này và đặt lịch gặp đối tác.', 'Are you a domestic or a foreign business? Register to appear here and book meetings.', '국내 또는 해외 기업이신가요? 등록하고 미팅을 예약하세요.')}</p>
           <Link to={onRegister} className={buttonClass('default', 'sm')}>{tx('Đăng ký tham gia', 'Register', '등록')}</Link>
         </div>

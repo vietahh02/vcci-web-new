@@ -6,6 +6,7 @@ import { Button, Field, Input, Textarea } from '@/components/ui/primitives'
 import { Select } from '@/components/ui/select'
 import { dateTime, tx } from '@/lib/tx'
 import { cn } from '@/lib/utils'
+import { joinAddress } from '@/lib/dataI18n'
 import { fmtSize, listTime } from './chatFormat'
 import { ChatAvatar } from './ChatMessages'
 
@@ -44,7 +45,7 @@ export function PartnerPanel({
   const facts: [string, string | null | undefined][] = [
     [tx('Mã số thuế', 'Tax code', '사업자번호'), biz?.taxCode],
     [tx('Loại hình', 'Business type', '기업 유형'), biz?.businessType],
-    [tx('Địa chỉ', 'Address', '주소'), [biz?.address, biz?.province].filter(Boolean).join(', ')],
+    [tx('Địa chỉ', 'Address', '주소'), joinAddress(biz?.address ?? '', biz?.province ?? '')],
     [tx('Người liên hệ', 'Contact', '담당자'), [biz?.contactName, biz?.contactPhone].filter(Boolean).join(' · ')],
     [tx('Website', 'Website', '웹사이트'), biz?.website],
   ]

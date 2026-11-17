@@ -18,6 +18,7 @@ import { SheetContent, useToast } from '@/components/ui/overlay'
 import { Badge, Button, Field, Input, Textarea } from '@/components/ui/primitives'
 import NotFound from '@/pages/NotFound'
 import { SuccessState } from '@/pages/ProductDetail'
+import { RichText } from '@/components/RichText'
 import { useI18n } from '@/lib/i18n'
 import { tx } from '@/lib/tx'
 import { cn, formatDate, formatMoney, formatNumber } from '@/lib/utils'
@@ -104,9 +105,9 @@ export default function RequestDetail() {
           </div>
 
           <h2 className="mt-8 text-lg font-bold">{t.requests.detail}</h2>
-          <p className="mt-2 leading-relaxed text-foreground/85">{L(r.description)}</p>
+          <RichText text={L(r.description)} className="mt-3" />
           <p className="mt-4 text-sm text-muted-foreground">
-            {t.requests.start}: {formatDate(r.startTime, locale)} · {t.requests.end}: {formatDate(r.endTime, locale)} · {r.productType}
+            {t.requests.start}: {formatDate(r.startTime, locale)} · {t.requests.end}: {formatDate(r.endTime, locale)} · {r.categoryName || r.productType}
           </p>
         </Reveal>
 

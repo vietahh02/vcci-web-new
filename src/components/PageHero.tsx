@@ -87,7 +87,7 @@ export function PageHero({ crumbs, title, titleKey, subtitle, kicker, search, ch
         <div className="container-page">
           <div className="min-w-0 max-w-2xl">
             {nav}
-            <motion.h1 key={titleKey} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className={cn('mt-6 line-clamp-2 py-1.5 text-4xl font-extrabold leading-[1.25] tracking-tight md:mt-10 md:text-5xl md:leading-[1.25]', navy ? 'text-white' : tone === 'pearl' ? 'text-navy dark:text-white' : 'text-primary dark:text-white')}>
+            <motion.h1 key={titleKey} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className={cn('mt-6 line-clamp-2 py-1.5 text-4xl font-extrabold leading-[1.25] tracking-tight md:mt-10 md:text-5xl md:leading-[1.25]', navy ? 'text-white' : 'text-primary dark:text-white')}>
               {title}
             </motion.h1>
             {navy && <span aria-hidden className="mt-1 block h-1 w-14 rounded-full bg-gold-bright" />}
@@ -240,7 +240,7 @@ const HERO_IMG_MASK = { maskImage: HERO_IMG_FADE, maskComposite: 'intersect', We
 
 export type HeroTone = 'sky' | 'navy' | 'brand' | 'warm' | 'azure' | 'pearl'
 
-/** Bản "pearl" (trang Về VCCI): nền trắng ngọc xanh xám có lưới chấm mờ và vệt tím nhạt, ảnh bản đồ Việt Nam kết nối bằng kính xanh đậm, chữ navy. */
+/** Bản "pearl" (trang Về VCCI): nền trắng ngọc xanh xám có lưới chấm mờ và vệt tím nhạt, ảnh bản đồ Việt Nam kết nối bằng kính xanh đậm; tiêu đề dùng màu primary như trang Sản phẩm / Doanh nghiệp. */
 const PEARL_MESH_LIGHT = [
   'radial-gradient(42% 90% at 0% 0%, rgba(176,196,236,.65) 0%, rgba(176,196,236,0) 70%)',
   'radial-gradient(40% 90% at 70% 110%, rgba(255,214,214,.45) 0%, rgba(255,214,214,0) 70%)',

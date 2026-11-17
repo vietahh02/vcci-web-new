@@ -2,6 +2,7 @@ import type { EventFormat, EventItem, EventStatus, EventType } from '@/data/mock
 import { IMG } from '@/data/mock'
 import { isOnlineFormat, withComputedStatus } from '@/lib/eventStatus'
 import type { SectionKey } from '@/lib/profile'
+import { dt } from '@/lib/dataI18n'
 import { arr, bi, id, num, str, url, type Raw } from './common'
 import { toShowLabel } from './show'
 
@@ -30,9 +31,9 @@ export function toEvent(r: Raw): EventItem {
     participationFeeCurrency: str(r.participationFeeCurrency, 'VND') === 'USD' ? 'USD' : 'VND',
     registeredSlots: num(r.registeredSlots),
     maxSlots: num(r.maxSlots),
-    organizedBy: bi(r.organizedBy),
+    organizedBy: bi(dt(str(r.organizedBy))),
     // an ONLINE show has no address, whatever is left in the catalog row: the UI says "Online"
-    location: bi(str(r.eventType) === 'SHOW' && isOnlineFormat(str(r.format)) ? '' : r.location),
+    location: bi(str(r.eventType) === 'SHOW' && isOnlineFormat(str(r.format)) ? '' : dt(str(r.location))),
     format: (str(r.format, 'ONLINE') || 'ONLINE') as EventFormat,
     // SRS / Jitsi are our own streaming back ends: to the visitor that is simply "on the VCCI platform"
     platform: r.platform && !/^(srs|jitsi)$/i.test(str(r.platform)) ? str(r.platform) : undefined,
@@ -40,12 +41,12 @@ export function toEvent(r: Raw): EventItem {
     agendaOptions: arr(r.agendaOptions).map((a) => ({
       agendaStartTime: hhmm(a.startTime ?? a.agendaStartTime),
       agendaEndTime: hhmm(a.endTime ?? a.agendaEndTime),
-      agendaTitle: bi(a.title ?? a.agendaTitle),
+      agendaTitle: bi(dt(str(a.title ?? a.agendaTitle))),
       speaker: a.speaker ? bi(a.speaker) : a.description ? bi(a.description) : undefined,
     })),
     series: r.series ? bi(r.series) : undefined,
-    partner: r.partner ? bi(r.partner) : undefined,
-    targetMarket: r.targetMarket ? bi(r.targetMarket) : undefined,
+    partner: r.partner ? bi(dt(str(r.partner))) : undefined,
+    targetMarket: r.targetMarket ? bi(dt(str(r.targetMarket))) : undefined,
     eligibility: r.eligibility ? arr<string>(r.eligibility).map(bi) : undefined,
     requiredSections: r.requiredSections ? (arr<string>(r.requiredSections) as SectionKey[]) : undefined,
     registrationDeadline: r.registrationDeadline ? str(r.registrationDeadline) : undefined,

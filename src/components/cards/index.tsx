@@ -192,7 +192,7 @@ export function RequestCard({ request }: { request: ImportRequest }) {
   return (
     <Link to={`/requests/${request.id}`} className="group flex items-start justify-between gap-4 rounded-xl border bg-card p-4 transition hover:border-primary/40 hover:shadow-md md:p-5">
       <div className="min-w-0">
-        <p className="text-xs font-medium text-muted-foreground">{cat ? L(cat.categoryName) : request.productType}</p>
+        <p className="text-xs font-medium text-muted-foreground">{cat ? L(cat.categoryName) : request.categoryName || request.productType}</p>
         <p className="mt-1 line-clamp-2 text-[15px] font-semibold leading-snug group-hover:text-primary">{L(request.requestName)}</p>
         <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[13px] text-muted-foreground">
           <span>{formatNumber(request.quantity, locale)} {request.unit}</span>

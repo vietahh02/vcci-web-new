@@ -1,6 +1,7 @@
 import { IMG, type Product } from '@/data/mock'
 import { arr, bi, id, num, str, url, type Raw } from './common'
 import { formatTerms } from '@/lib/utils'
+import { dt } from '@/lib/dataI18n'
 
 /** ProductListItemResponse | ProductResponse -> FE Product. Fields BE does not expose yet (specs, leadTime) stay empty. */
 export function toProduct(r: Raw): Product {
@@ -14,8 +15,8 @@ export function toProduct(r: Raw): Product {
     industry: str(r.industry),
     description: bi(r.description),
     productImages: arr<string>(r.productImages).length ? arr<string>(r.productImages).map((u) => url(u)) : [IMG.warehouse],
-    origin: str(r.origin),
-    unit: str(r.unit),
+    origin: dt(str(r.origin)),
+    unit: dt(str(r.unit)),
     moq: num(r.moq),
     priceFob: num(r.priceFob),
     priceCif: num(r.priceCif),
@@ -24,7 +25,7 @@ export function toProduct(r: Raw): Product {
     certificates: arr<string>(r.certificateLabels).length ? arr<string>(r.certificateLabels) : arr<string>(r.certificates).filter((c) => !/^(https?:)?\//.test(c)),
     viewCount: num(r.viewCount),
     createdDate: str(r.createdDate, new Date().toISOString()),
-    leadTime: bi(str(r.leadTime)),
-    specs: arr(r.specs).map((s) => ({ label: bi(s.label), value: str(s.value) })),
+    leadTime: bi(dt(str(r.leadTime))),
+    specs: arr(r.specs).map((s) => ({ label: bi(s.label), value: dt(str(s.value)) })),
   }
 }

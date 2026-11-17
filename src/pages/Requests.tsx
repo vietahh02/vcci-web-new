@@ -132,7 +132,7 @@ export default function Requests() {
                   >
                     <div className="col-span-2 min-w-0 lg:col-span-1">
                       <p className="truncate font-semibold group-hover:text-primary">{L(r.requestName)}</p>
-                      <p className="text-xs text-muted-foreground">{c ? L(c.categoryName) : r.productType}</p>
+                      <p className="text-xs text-muted-foreground">{c ? L(c.categoryName) : r.categoryName || r.productType}</p>
                     </div>
                     <span className="text-sm">{formatNumber(r.quantity, locale)} {r.unit}</span>
                     <span className="text-sm font-semibold max-lg:text-right">{formatMoney(r.price)}/{r.unit}</span>

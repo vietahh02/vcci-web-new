@@ -214,7 +214,7 @@ export const vi = {
     quantity: 'Số lượng',
     destination: 'Nơi nhận',
     deadline: 'Hạn chót',
-    buyer: 'Người mua',
+    buyer: 'Doanh nghiệp',
     sendQuote: 'Gửi báo giá',
     requirements: 'Yêu cầu kỹ thuật',
     detail: 'Mô tả nhu cầu',
@@ -328,7 +328,7 @@ export const vi = {
     submittedDesc: 'Trạng thái: Chờ duyệt. VCCI sẽ gửi email kích hoạt khi hồ sơ được phê duyệt.',
   },
   about: {
-    title: 'Về VCCI Trade Hub',
+    title: 'Về VCCI',
     sub: 'Nền tảng số của Liên đoàn Thương mại và Công nghiệp Việt Nam nhằm kết nối cộng đồng doanh nghiệp Việt với thị trường toàn cầu.',
   },
   chat: {
@@ -604,7 +604,7 @@ export const en: Dict = {
     quantity: 'Quantity',
     destination: 'Destination',
     deadline: 'Deadline',
-    buyer: 'Buyer',
+    buyer: 'Business',
     sendQuote: 'Send quote',
     requirements: 'Requirements',
     detail: 'Request details',
@@ -718,7 +718,7 @@ export const en: Dict = {
     submittedDesc: 'Status: Pending review. VCCI will email an activation link once approved.',
   },
   about: {
-    title: 'About VCCI Trade Hub',
+    title: 'About VCCI',
     sub: 'The digital platform of the Vietnam Chamber of Commerce and Industry connecting Vietnamese businesses with global markets.',
   },
   chat: {
@@ -988,7 +988,7 @@ export const ko: Dict = {
     quantity: '수량',
     destination: '도착지',
     deadline: '마감일',
-    buyer: '바이어',
+    buyer: '기업',
     sendQuote: '견적 보내기',
     requirements: '기술 요구사항',
     detail: '요청 상세',
@@ -1102,7 +1102,7 @@ export const ko: Dict = {
     submittedDesc: '상태: 심사 대기. 승인되면 VCCI가 활성화 링크를 이메일로 보내 드립니다.',
   },
   about: {
-    title: 'VCCI Trade Hub 소개',
+    title: 'VCCI 소개',
     sub: '베트남 기업 커뮤니티를 세계 시장과 연결하는 베트남 상공회의소의 디지털 플랫폼.',
   },
   chat: {

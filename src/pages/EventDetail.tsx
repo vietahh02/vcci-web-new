@@ -13,6 +13,7 @@ import { getShow } from '@/data/shows'
 import { ShowEventDetail } from '@/components/show/ShowEventDetail'
 import { SectionHeader } from '@/components/brand'
 import { PageHero } from '@/components/PageHero'
+import { RichText } from '@/components/RichText'
 import { SponsorVerticalBanner } from '@/components/sponsor'
 import { ScheduleGrid } from '@/components/event/ScheduleGrid'
 import { AddToCalendar } from '@/components/event/AddToCalendar'
@@ -108,7 +109,7 @@ function WebinarView({ ev }: { ev: EventItem }) {
         }
         title={L(ev.title)}
         titleKey={ev.id}
-        subtitle={L(ev.introduction)}
+        subtitle={L(ev.introduction).split(/\n\s*\n/)[0]}
         aside={
           <Reveal delay={0.15} className="h-fit w-full max-w-[400px] rounded-3xl bg-white/90 p-6 shadow-[0_30px_60px_-34px_rgba(0,70,110,0.55)] ring-1 ring-primary/15 backdrop-blur dark:bg-white/5 dark:ring-white/10">
             {ev.eventStatus === 'UPCOMING' && (
@@ -121,7 +122,7 @@ function WebinarView({ ev }: { ev: EventItem }) {
               <span className="text-sm text-muted-foreground">{t.events.fee}</span>
               <span className="text-2xl font-extrabold">{ev.participationFee ? formatMoney(ev.participationFee, ev.participationFeeCurrency, locale) : t.common.free}</span>
             </div>
-            {ev.eventStatus !== 'ENDED' && <div className="mt-4">
+            {ev.eventStatus !== 'ENDED' && (ev.maxSlots > 0 || ev.registeredSlots > 0) && <div className="mt-4">
               <div className="mb-1.5 flex justify-between text-xs text-muted-foreground">
                 <span className="inline-flex items-center gap-1.5"><Users className="size-3.5" /> {formatNumber(ev.registeredSlots, locale)}{ev.maxSlots > 0 && `/${formatNumber(ev.maxSlots, locale)}`} {t.events.slots}</span>
                 {ev.maxSlots > 0 && <span>{Math.round(pct)}%</span>}
@@ -176,7 +177,11 @@ function WebinarView({ ev }: { ev: EventItem }) {
         <div className="container-page mt-10 grid gap-10 lg:grid-cols-[1fr_380px]">
           <section>
             <ProgramInfo ev={ev} part="overview" />
-            {!hasProgramInfo(ev) && <p className="text-muted-foreground">{L(ev.introduction)}</p>}
+            {(() => {
+              const paras = L(ev.introduction).split(/\n\s*\n/)
+              const text = paras.length > 1 ? paras.slice(1).join('\n\n') : hasProgramInfo(ev) ? '' : paras[0]!
+              return text ? <RichText text={text} className="text-muted-foreground" /> : null
+            })()}
           </section>
           <aside className="space-y-4">
             <SponsorVerticalBanner className="lg:sticky lg:top-32" />
@@ -203,9 +208,9 @@ function WebinarView({ ev }: { ev: EventItem }) {
           </div>
         </>
       ) : (
-        <div className="container-page mt-10 max-w-3xl">
+        <div className="container-page mt-10">
         <h2 className="text-xl font-extrabold">{t.events.agenda}</h2>
-        <ol className="relative mt-6 space-y-4 border-l-2 border-dashed border-border pl-6">
+        <ol className="relative ml-2 mt-6 max-w-3xl space-y-4 border-l-2 border-dashed border-border pl-6">
           {ev.agendaOptions.map((a, i) => (
             <motion.li
               key={i}
