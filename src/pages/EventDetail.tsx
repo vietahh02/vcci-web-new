@@ -209,7 +209,7 @@ function WebinarView({ ev }: { ev: EventItem }) {
         </>
       ) : (
         <div className="container-page mt-10">
-        <h2 className="text-xl font-extrabold">{t.events.agenda}</h2>
+        <h2 className="text-2xl font-extrabold tracking-tight">{t.events.agenda}</h2>
         <ol className="relative ml-2 mt-6 max-w-3xl space-y-4 border-l-2 border-dashed border-border pl-6">
           {ev.agendaOptions.map((a, i) => (
             <motion.li

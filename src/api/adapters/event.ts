@@ -6,9 +6,12 @@ import { dt } from '@/lib/dataI18n'
 import { arr, bi, id, num, str, url, type Raw } from './common'
 import { toShowLabel } from './show'
 
+/** "HH:mm" from a time or ISO string; anything that is not a time (e.g. a step label) gives '' instead of "Invalid Date". */
 const hhmm = (s: unknown) => {
   const v = str(s)
-  return /^\d{2}:\d{2}/.test(v) ? v.slice(0, 5) : v ? new Date(v).toTimeString().slice(0, 5) : ''
+  if (/^\d{2}:\d{2}/.test(v)) return v.slice(0, 5)
+  const d = v ? new Date(v) : null
+  return d && !Number.isNaN(d.getTime()) ? d.toTimeString().slice(0, 5) : ''
 }
 
 /** EventItemDto (GET /api/event/search, /api/event/{id}) -> FE EventItem. Status is computed by BE (clock); FE recomputes the same way. */
