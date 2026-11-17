@@ -1,4 +1,5 @@
 import type { ImportRequest } from '@/data/mock'
+import { dt } from '@/lib/dataI18n'
 import { arr, bi, id, num, str, type Raw } from './common'
 
 /** ImportRequestListItem/DetailResponse -> FE ImportRequest. `displayStatus` (OPEN|CLOSED) is the FE-facing status. */
@@ -11,6 +12,7 @@ export function toImportRequest(r: Raw): ImportRequest {
     description: bi(r.description),
     productType: str(r.productType),
     categoryId: id(r.categoryId),
+    categoryName: str(r.categoryName) || undefined,
     organizationId: str(r.organizationId),
     organizationName: str(r.organizationName),
     organizationEmail: str(r.organizationEmail),
@@ -20,13 +22,13 @@ export function toImportRequest(r: Raw): ImportRequest {
     address: str(r.address),
     price: num(r.price),
     quantity: num(r.quantity),
-    unit: str(r.unit),
+    unit: dt(str(r.unit)),
     startTime: str(r.startTime),
     endTime: str(r.endTime),
     status: st === 'CLOSED' ? 'CLOSED' : 'OPEN',
     viewCount: num(r.viewCount),
     quoteCount: num(r.quoteCount),
-    requirements: arr<string>(r.requirements).map(bi),
+    requirements: arr<string>(r.requirements).map((x) => bi(dt(x))),
   }
 }
 

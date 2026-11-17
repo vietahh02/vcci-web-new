@@ -25,6 +25,7 @@ import { useI18n, type Bilingual } from '@/lib/i18n'
 import { OPTIONS, sellsProducts, useProfile, type MediaItem, type VerifyStatus } from '@/lib/profile'
 import { onFollowChange } from '@/lib/follows'
 import { tx } from '@/lib/tx'
+import { joinAddress } from '@/lib/dataI18n'
 import { formatSize } from '@/lib/upload'
 import { cn, formatDate, formatNumber, img } from '@/lib/utils'
 
@@ -591,7 +592,7 @@ function InfoCard({ b, pp }: { b: Business; pp: PublicProfile }) {
     <dl className="h-fit space-y-4 rounded-2xl bg-muted/50 p-6 text-sm">
       {[
         { icon: Building2, k: t.supplier.taxCode, v: b.taxCode },
-        { icon: MapPin, k: t.supplier.address, v: `${b.address}, ${b.province}` },
+        { icon: MapPin, k: t.supplier.address, v: joinAddress(b.address, b.province) },
         { icon: Globe, k: t.supplier.website, v: f.website },
         { icon: Mail, k: t.supplier.email, v: f.contact.email },
         { icon: Phone, k: t.supplier.phone, v: f.contact.phone },

@@ -106,7 +106,7 @@ export default function RequestDetail() {
           <h2 className="mt-8 text-lg font-bold">{t.requests.detail}</h2>
           <p className="mt-2 leading-relaxed text-foreground/85">{L(r.description)}</p>
           <p className="mt-4 text-sm text-muted-foreground">
-            {t.requests.start}: {formatDate(r.startTime, locale)} · {t.requests.end}: {formatDate(r.endTime, locale)} · {r.productType}
+            {t.requests.start}: {formatDate(r.startTime, locale)} · {t.requests.end}: {formatDate(r.endTime, locale)} · {r.categoryName || r.productType}
           </p>
         </Reveal>
 

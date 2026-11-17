@@ -69,6 +69,12 @@ export async function searchBusinesses(keyword = '', categoryId?: string, busine
   })
 }
 
+/** GET /api/business/search?page&size */
+export async function searchBusinessesPage(keyword = '', categoryId?: string, businessType?: string, pageNo = 0, size = 100) {
+  const all = await searchBusinesses(keyword, categoryId, businessType)
+  return { items: all.slice(pageNo * size, (pageNo + 1) * size), total: all.length, page: pageNo, size }
+}
+
 /** GET /api/business/featured */
 export function featuredBusinesses() {
   return [...businesses].sort((a, b) => b.reputationScore - a.reputationScore)

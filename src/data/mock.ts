@@ -492,6 +492,8 @@ export interface ImportRequest {
   description: Bilingual
   productType: string
   categoryId: string
+  /** Tên danh mục theo ngôn ngữ đang chọn (BE đã dịch); dùng khi danh mục không nằm trong danh sách danh mục của trang chủ. */
+  categoryName?: string
   /** Doanh nghiệp mua (chat B2B báo giá). */
   organizationId?: string
   organizationName: string

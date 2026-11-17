@@ -24,6 +24,7 @@ export const searchProductsPage = (q?: ProductQuery) => USE_MOCK
 export const getProduct = USE_MOCK ? mock.getProduct : live.getProduct
 export const fetchOrgProducts = USE_MOCK ? mock.fetchOrgProducts : live.fetchOrgProducts
 export const searchBusinesses = USE_MOCK ? mock.searchBusinesses : live.searchBusinesses
+export const searchBusinessesPage = USE_MOCK ? mock.searchBusinessesPage : live.searchBusinessesPage
 export const fetchFeaturedBusinesses = USE_MOCK ? mock.fetchFeaturedBusinesses : live.fetchFeaturedBusinesses
 export const fetchBusiness = USE_MOCK ? mock.fetchBusiness : live.fetchBusiness
 export const browseImportRequests = USE_MOCK ? mock.browseImportRequests : live.browseImportRequests

@@ -1,6 +1,6 @@
 import { AnimatePresence, MotionConfig, motion } from 'motion/react'
-import { useEffect } from 'react'
-import { Route, Routes, useLocation } from 'react-router-dom'
+import { useEffect, useRef } from 'react'
+import { Route, Routes, useLocation, useNavigationType } from 'react-router-dom'
 import { ScrollProgress } from '@/components/effects'
 import { ChatWidget } from '@/components/layout/ChatWidget'
 import { Footer } from '@/components/layout/Footer'
@@ -34,11 +34,54 @@ import SearchPage from '@/pages/Search'
 import SupplierProfile from '@/pages/SupplierProfile'
 import Suppliers from '@/pages/Suppliers'
 
+/** Vị trí cuộn theo từng lần điều hướng (location.key); khôi phục khi bấm Back/Forward. */
+const scrollPositions = new Map<string, number>()
+
+/**
+ * Đổi đường dẫn mới → về đầu trang. Back/Forward → khôi phục đúng vị trí đã rời.
+ * Không dùng khôi phục mặc định của trình duyệt: lúc đó trang chi tiết (dài) còn hiện trong hiệu ứng thoát nên vị trí bị
+ * kẹp xuống cuối khi trang danh sách (ngắn, đang tải) thay vào. Ở đây ta chờ nội dung đủ dài rồi mới cuộn.
+ */
 function ScrollToTop() {
-  const { pathname } = useLocation()
+  const { pathname, key } = useLocation()
+  const navType = useNavigationType()
+  const prevPath = useRef(pathname)
+
   useEffect(() => {
-    window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior })
-  }, [pathname])
+    if ('scrollRestoration' in window.history) window.history.scrollRestoration = 'manual'
+  }, [])
+
+  // ghi nhớ vị trí cuộn của trang hiện tại cho tới khi rời đi
+  useEffect(() => {
+    const save = () => scrollPositions.set(key, window.scrollY)
+    window.addEventListener('scroll', save, { passive: true })
+    return () => window.removeEventListener('scroll', save)
+  }, [key])
+
+  useEffect(() => {
+    const samePath = prevPath.current === pathname
+    prevPath.current = pathname
+    const target = navType === 'POP' ? scrollPositions.get(key) : undefined
+    if (target == null || target <= 0) {
+      // trang mới (hoặc Back về vị trí đầu): chỉ cuộn lên đầu khi đổi đường dẫn, đổi ?query (phân trang, lọc) giữ nguyên
+      if (!samePath || navType === 'POP') window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior })
+      return
+    }
+    let frame = 0
+    let tries = 0
+    const attempt = () => {
+      const reachable = document.documentElement.scrollHeight - window.innerHeight
+      if (reachable >= target - 2 || tries > 120) {
+        window.scrollTo({ top: Math.min(target, Math.max(reachable, 0)), behavior: 'instant' as ScrollBehavior })
+        return
+      }
+      tries += 1
+      frame = requestAnimationFrame(attempt)
+    }
+    // chờ hiệu ứng thoát của trang cũ (AnimatePresence, ~0.35s) xong để đo chiều cao của trang MỚI, rồi mới khôi phục
+    const timer = window.setTimeout(() => { frame = requestAnimationFrame(attempt) }, 450)
+    return () => { window.clearTimeout(timer); cancelAnimationFrame(frame) }
+  }, [pathname, key, navType])
   return null
 }
 
