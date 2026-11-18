@@ -213,7 +213,7 @@ function RealLiveRoom() {
   return (
     <div className="bg-[#141b33] pb-16 text-white">
       <div className="container-page">
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3 pt-3">
           <Link to={backTo} className="inline-flex items-center gap-2 text-sm text-white/70 hover:text-white"><ArrowLeft className="size-4" /> {t.live.back}</Link>
           <div className="flex items-center gap-2">
             {room.status === 'LIVE' && <Badge variant="live" className="gap-1.5 px-2.5 py-1"><LiveDot /> {t.events.live}</Badge>}
