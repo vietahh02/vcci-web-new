@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from 'motion/react'
-import { Award, Check, CheckCircle2, ChevronLeft, ChevronRight, FileText, MapPin, MessageSquare, Package, Plus, Send, Share2, Sparkles } from 'lucide-react'
+import { Award, BadgeCheck, Check, CheckCircle2, ChevronLeft, ChevronRight, FileText, ListChecks, MapPin, MessageSquare, Package, Plus, Send, Share2, Sparkles } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { getCategory, getProduct, liveApi, USE_MOCK, useBusiness, useRelatedProducts } from '@/api'
@@ -13,7 +13,7 @@ import { ProductCard } from '@/components/cards'
 import { FavoriteButton } from '@/components/catalog/FavoriteButton'
 import { FollowButton } from '@/components/catalog/FollowButton'
 import { Reveal, Stagger, StaggerItem } from '@/components/effects'
-import { Dialog, DialogContent, DialogTrigger, UnderlineTabs, useToast } from '@/components/ui/overlay'
+import { Dialog, DialogContent, DialogTrigger, SegmentTabs, useToast } from '@/components/ui/overlay'
 import { Badge, Button, Field, Input, Skeleton, Textarea } from '@/components/ui/primitives'
 import NotFound from '@/pages/NotFound'
 import { useI18n } from '@/lib/i18n'
@@ -206,19 +206,19 @@ function ProductView({ product }: { product: Product }) {
         </aside>
       </div>
 
-      <div ref={tabsRef} className="mt-14 max-w-4xl scroll-mt-28">
-        <UnderlineTabs
+      <div ref={tabsRef} className="mt-14 scroll-mt-28">
+        <SegmentTabs
           layoutId="pd-tabs"
           value={tab}
           onValueChange={setTab}
           items={[
-            { value: 'overview', label: t.product.overview },
-            { value: 'specs', label: t.product.specs },
-            { value: 'certs', label: t.product.certs },
+            { value: 'overview', label: t.product.overview, icon: FileText },
+            { value: 'specs', label: t.product.specs, icon: ListChecks },
+            { value: 'certs', label: t.product.certs, count: product.certificates.length, icon: BadgeCheck },
           ]}
         />
         <AnimatePresence mode="wait">
-          <motion.div key={tab} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.2 }} className="py-5">
+          <motion.div key={tab} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.2 }} className="mt-5 rounded-3xl border bg-card p-6 md:p-8">
             {tab === 'overview' && (L(product.description) ? <RichText text={L(product.description)} /> : <p className="leading-relaxed text-foreground/90">{none}</p>)}
             {tab === 'specs' && (
               /* cùng kiểu khung với "Thông tin sản phẩm" và "Thông tin doanh nghiệp": ô nhãn tô nền, đường kẻ dọc, hai cột trên màn rộng */
@@ -239,7 +239,7 @@ function ProductView({ product }: { product: Product }) {
               </dl>
             )}
             {tab === 'certs' && (
-              product.certificates.length ? <div className="grid gap-3 sm:grid-cols-2">
+              product.certificates.length ? <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {product.certificates.map((c) => (
                   <div key={c} className="flex items-center gap-3 rounded-xl bg-muted/60 p-4">
                     <div className="grid size-10 place-items-center rounded-lg bg-gold-soft text-gold"><Award className="size-5" /></div>

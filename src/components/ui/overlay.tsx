@@ -4,7 +4,7 @@ import * as TabsPrimitive from '@radix-ui/react-tabs'
 import * as TooltipPrimitive from '@radix-ui/react-tooltip'
 import { AnimatePresence, motion } from 'motion/react'
 import { CheckCircle2, Info, X } from 'lucide-react'
-import { createContext, useCallback, useContext, useState, type ReactNode } from 'react'
+import { createContext, useCallback, useContext, useState, type ComponentType, type ReactNode } from 'react'
 import { useI18n } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
 
@@ -170,6 +170,44 @@ export function UnderlineTabs({
           {value === it.value && <motion.span layoutId={layoutId} className="absolute inset-x-0 -bottom-px h-0.5 rounded-full bg-primary" />}
         </button>
       ))}
+    </div>
+  )
+}
+
+/** Full-width segmented tab bar for detail pages (events, products): equal-width tabs with an icon and an optional count, a sliding highlight on the active one, horizontal scroll on a phone. */
+export function SegmentTabs<T extends string>({
+  value,
+  onValueChange,
+  items,
+  layoutId,
+  className,
+}: {
+  value: T
+  onValueChange: (v: T) => void
+  items: { value: T; label: ReactNode; icon?: ComponentType<{ className?: string }>; count?: number }[]
+  layoutId: string
+  className?: string
+}) {
+  return (
+    <div role="tablist" className={cn('no-scrollbar flex gap-1 overflow-x-auto rounded-2xl border bg-card p-1.5 shadow-[0_14px_32px_-28px_rgba(0,70,110,0.5)]', className)}>
+      {items.map((it) => {
+        const on = value === it.value
+        return (
+          <button
+            key={it.value}
+            type="button"
+            role="tab"
+            aria-selected={on}
+            onClick={() => onValueChange(it.value)}
+            className={cn('relative flex min-w-max flex-1 items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold transition-colors', on ? 'text-primary-foreground' : 'text-muted-foreground hover:bg-primary-soft hover:text-primary')}
+          >
+            {on && <motion.span layoutId={layoutId} className="absolute inset-0 rounded-xl bg-primary shadow-[0_10px_22px_-12px_rgba(0,102,153,0.9)]" transition={{ type: 'spring', bounce: 0.18, duration: 0.45 }} />}
+            {it.icon && <it.icon className="relative size-4 shrink-0" />}
+            <span className="relative">{it.label}</span>
+            {!!it.count && <span className={cn('relative rounded-full px-2 text-xs tabular-nums', on ? 'bg-white/20' : 'bg-muted')}>{it.count}</span>}
+          </button>
+        )
+      })}
     </div>
   )
 }

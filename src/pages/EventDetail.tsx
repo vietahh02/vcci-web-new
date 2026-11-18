@@ -23,6 +23,7 @@ import { EventProducts } from '@/components/event/EventProducts'
 import { EventParticipants } from '@/components/event/EventParticipants'
 import { EventCard } from '@/components/cards'
 import { Countdown, LiveDot, Reveal } from '@/components/effects'
+import { SegmentTabs } from '@/components/ui/overlay'
 import { Badge, Button, buttonClass, Progress } from '@/components/ui/primitives'
 import NotFound from '@/pages/NotFound'
 import { useI18n } from '@/lib/i18n'
@@ -168,26 +169,7 @@ function WebinarView({ ev }: { ev: EventItem }) {
       </PageHero>
 
       <div className="container-page mt-8">
-        <div role="tablist" className="no-scrollbar flex gap-1 overflow-x-auto rounded-2xl border bg-card p-1.5 shadow-[0_14px_32px_-28px_rgba(0,70,110,0.5)]">
-          {tabs.map((it) => {
-            const on = tab === it.value
-            return (
-              <button
-                key={it.value}
-                type="button"
-                role="tab"
-                aria-selected={on}
-                onClick={() => setTab(it.value)}
-                className={cn('relative flex min-w-max flex-1 items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold transition-colors', on ? 'text-primary-foreground' : 'text-muted-foreground hover:bg-primary-soft hover:text-primary')}
-              >
-                {on && <motion.span layoutId="ev-tabs" className="absolute inset-0 rounded-xl bg-primary shadow-[0_10px_22px_-12px_rgba(0,102,153,0.9)]" transition={{ type: 'spring', bounce: 0.18, duration: 0.45 }} />}
-                <it.icon className="relative size-4 shrink-0" />
-                <span className="relative">{it.label}</span>
-                {!!it.count && <span className={cn('relative rounded-full px-2 text-xs tabular-nums', on ? 'bg-white/20' : 'bg-muted')}>{it.count}</span>}
-              </button>
-            )
-          })}
-        </div>
+        <SegmentTabs layoutId="ev-tabs" value={tab} onValueChange={setTab} items={tabs} />
       </div>
 
       {tab === 'overview' && (
