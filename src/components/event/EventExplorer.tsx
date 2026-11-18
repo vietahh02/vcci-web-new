@@ -212,7 +212,7 @@ export function EventExplorer({ list, search }: { list: EventItem[]; search?: { 
   return (
     <section className="container-page mt-16" id="explorer">
       <div className="flex flex-wrap items-end justify-between gap-4">
-        <h2 className="text-3xl font-extrabold tracking-tight">{onlyShows ? tx('Tất cả hội chợ', 'All trade shows', '전체 박람회') : tx('Tất cả sự kiện', 'All events', '전체 행사')}</h2>
+        <h2 className="text-3xl font-extrabold tracking-tight">{onlyShows ? tx('Tất cả sự kiện', 'All trade shows', '전체 박람회') : tx('Tất cả sự kiện', 'All events', '전체 행사')}</h2>
         <div className="flex flex-wrap gap-2">
           {hasMine && (
             <Tabs layoutId="ev-scope" size="sm" value={scope} onValueChange={(v) => setScope(v as typeof scope)}
@@ -225,7 +225,7 @@ export function EventExplorer({ list, search }: { list: EventItem[]; search?: { 
 
       <div className={cn('mt-5 grid gap-3', search ? (hasTypes && hasFormats ? 'md:grid-cols-[220px_160px_auto]' : hasTypes ? 'md:grid-cols-[220px_auto]' : hasFormats ? 'md:grid-cols-[160px_auto]' : 'md:grid-cols-[auto]') : hasTypes && hasFormats ? 'md:grid-cols-[1fr_220px_160px_auto]' : hasTypes ? 'md:grid-cols-[1fr_220px_auto]' : hasFormats ? 'md:grid-cols-[1fr_160px_auto]' : 'md:grid-cols-[1fr_auto]')}>
         {!search && <div className="relative"><Search className="absolute left-3 top-3 size-4 text-muted-foreground" /><Input className="pl-9" value={q} onChange={(e) => setQ(e.target.value)} placeholder={onlyShows
-          ? (hasVenue ? tx('Tìm hội chợ, đơn vị tổ chức, địa điểm…', 'Search trade shows, organizers, venues…', '박람회, 주최, 장소 검색…') : tx('Tìm hội chợ, đơn vị tổ chức…', 'Search trade shows, organizers…', '박람회, 주최 검색…'))
+          ? (hasVenue ? tx('Tìm sự kiện, đơn vị tổ chức, địa điểm…', 'Search trade shows, organizers, venues…', '박람회, 주최, 장소 검색…') : tx('Tìm sự kiện, đơn vị tổ chức…', 'Search trade shows, organizers…', '박람회, 주최 검색…'))
           : (hasVenue ? tx('Tìm sự kiện, đơn vị tổ chức, địa điểm…', 'Search events, organizers, venues…', '행사, 주최, 장소 검색…') : tx('Tìm sự kiện, đơn vị tổ chức…', 'Search events, organizers…', '행사, 주최 검색…'))} aria-label="search" /></div>}
         {hasTypes && <Select value={type} onValueChange={setType} aria-label={tx('Loại sự kiện', 'Event type', '행사 유형')} options={[{ value: 'ALL', label: tx('Mọi loại sự kiện', 'All event types', '모든 유형') }, ...FILTER_TYPES.map((x) => ({ value: x, label: t.events.type[x] }))]} />}
         {hasFormats && <Select value={fmt} onValueChange={setFormat} aria-label={tx('Hình thức', 'Format', '형식')} options={[{ value: 'ALL', label: tx('Mọi hình thức', 'Any format', '모든 형식') }, ...(['ONLINE', 'OFFLINE', 'HYBRID'] as const).map((x) => ({ value: x, label: formatLabel(x) }))]} />}

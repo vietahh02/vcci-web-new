@@ -329,7 +329,7 @@ export const shows: Show[] = [
     id: 'sh-agri-2026', cover: IMG.videoCall, status: 'ONGOING', direction: 'EXPORT', exhibitorScope: 'DOMESTIC',
     title: b('Vietnam Online Export Expo 2026 — Nông sản & Thực phẩm', 'Vietnam Online Export Expo 2026 — Agri & Food'),
     tagline: b('9 ngày, hơn 100 doanh nghiệp kết nối nhà xuất khẩu Việt với người mua toàn cầu', '9 days, 100+ businesses connecting Vietnamese exporters with global buyers'),
-    introduction: b('Hội chợ trực tuyến do VCCI tổ chức: xem sản phẩm, xem ra mắt sản phẩm trực tiếp trên sân khấu ảo, dự hội thảo và đặt lịch kết nối 1-1. Toàn bộ chương trình diễn ra trực tuyến — không cần di chuyển.', 'An online fair by VCCI: browse products, watch live product launches on virtual stages, join seminars and book 1-on-1 meetings. Fully online — no travel needed.'),
+    introduction: b('Sự kiện trực tuyến do VCCI tổ chức: xem sản phẩm, xem ra mắt sản phẩm trực tiếp trên sân khấu ảo, dự hội thảo và đặt lịch kết nối 1-1. Toàn bộ chương trình diễn ra trực tuyến — không cần di chuyển.', 'An online fair by VCCI: browse products, watch live product launches on virtual stages, join seminars and book 1-on-1 meetings. Fully online — no travel needed.'),
     targetMarkets: ['DE', 'KR', 'JP', 'US', 'NL'], industries: ['Coffee', 'Seafood', 'Spices', 'Furniture', 'Textiles'],
     startDate: dateOnly(-3), endDate: dateOnly(9), organizer: b('VCCI — Trung tâm Xúc tiến Thương mại', 'VCCI — Trade Promotion Center'),
     virtualVenue: b('Không gian ảo VCCI Trade Hub (portal)', 'VCCI Trade Hub virtual space (portal)'),

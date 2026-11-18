@@ -1,5 +1,5 @@
 /**
- * "Hội chợ của tôi", decided per show by its format.
+ * "Sự kiện của tôi", decided per show by its format.
  * ONLINE: tick products and consent; they go straight into the show, nothing else to fill in (CR-2026-008 §4.6, DEC-EV8-12).
  * OFFLINE/HYBRID: apply for a booth, fill the booth profile, add products, submit for review and pay the fee. This part only exists while such a show is open or the business already has a booth in one.
  */
@@ -211,7 +211,7 @@ const feeText = (o: ParticipationOptions) =>
   o.showType === 'HOSTED' ? `${tx('Phí đồng tổ chức', 'Co-organiser fee', '공동 주최 비용')}: ${money(o.feePerDay, o.currency)} / ${tx('ngày', 'day', '일')}`
     : o.feeAmount ? `${tx('Phí tham gia', 'Participation fee', '참가비')}: ${money(o.feeAmount, o.currency)}` : tx('Miễn phí', 'Free', '무료')
 
-/** Đơn đăng ký tham gia hội chợ kèm sản phẩm mới ra mắt (Leader chốt 05/11/2026), theo 3 loại hội chợ (09/11/2026): một đơn/show. */
+/** Đơn đăng ký tham gia sự kiện kèm sản phẩm mới ra mắt (Leader chốt 05/11/2026), theo 3 loại sự kiện (09/11/2026): một đơn/show. */
 function ShowParticipations() {
   useI18n() // đăng ký đổi ngôn ngữ để tx() tính lại
   const [shows, setShows] = useState<OnlineShow[] | null>(null)
@@ -236,9 +236,9 @@ function ShowParticipations() {
 
   return (
     <section>
-      <h2 className="mb-4 text-lg font-extrabold">{tx('Đăng ký tham gia hội chợ', 'Show participation', '쇼 참가 신청')}</h2>
+      <h2 className="mb-4 text-lg font-extrabold">{tx('Đăng ký tham gia sự kiện', 'Show participation', '쇼 참가 신청')}</h2>
       {!shows ? <Skeleton className="h-24" /> : shows.length === 0 ? (
-        <p className="rounded-xl border border-dashed p-10 text-center text-sm text-muted-foreground">{tx('Hiện không có hội chợ nào đang nhận đơn.', 'No show is taking applications right now.', '현재 신청을 받는 쇼가 없습니다.')}</p>
+        <p className="rounded-xl border border-dashed p-10 text-center text-sm text-muted-foreground">{tx('Hiện không có sự kiện nào đang nhận đơn.', 'No show is taking applications right now.', '현재 신청을 받는 쇼가 없습니다.')}</p>
       ) : (
         <ul className="space-y-4">
           {shows.map((s) => {
@@ -426,7 +426,7 @@ function ParticipationDialog({ show, options, existing, onClose }: { show: Onlin
           {productsAllowed && (
             <fieldset>
               <legend className="mb-1.5 block text-[13px] font-semibold">{tx('Sản phẩm tham gia', 'Products to show', '참가 제품')} ({picked.length}/{MAX_PRODUCTS})</legend>
-              <p className="mb-3 text-xs text-muted-foreground">{tx('Không bắt buộc. Chọn từ danh mục sản phẩm đang công khai của doanh nghiệp; sản phẩm hiện trong hội chợ sau khi VCCI duyệt đơn (và xác nhận phí nếu có).', 'Optional. Pick from your public catalogue; the products appear in the show once VCCI approves the application (and confirms the fee, if any).', '선택 사항. 공개된 카탈로그에서 선택하세요. VCCI가 신청을 승인(비용이 있으면 확인)하면 박람회에 표시됩니다.')}</p>
+              <p className="mb-3 text-xs text-muted-foreground">{tx('Không bắt buộc. Chọn từ danh mục sản phẩm đang công khai của doanh nghiệp; sản phẩm hiện trong sự kiện sau khi VCCI duyệt đơn (và xác nhận phí nếu có).', 'Optional. Pick from your public catalogue; the products appear in the show once VCCI approves the application (and confirms the fee, if any).', '선택 사항. 공개된 카탈로그에서 선택하세요. VCCI가 신청을 승인(비용이 있으면 확인)하면 박람회에 표시됩니다.')}</p>
               {!catalog ? <Skeleton className="h-16" /> : catalog.length === 0 ? (
                 <p className="rounded-xl border border-dashed p-4 text-center text-sm text-muted-foreground">{tx('Doanh nghiệp chưa có sản phẩm công khai. Thêm sản phẩm ở mục Danh mục sản phẩm trước.', 'Your business has no public product yet. Add products in your catalogue first.', '공개된 제품이 없습니다. 먼저 카탈로그에 제품을 추가하세요.')}</p>
               ) : (
@@ -458,9 +458,9 @@ function ParticipationDialog({ show, options, existing, onClose }: { show: Onlin
                   <span className="font-semibold">{tx('Phí tham gia', 'Participation fee', '참가비')}</span>
                   <span className="font-extrabold">{options.feeAmount ? money(options.feeAmount, options.currency) : tx('Miễn phí', 'Free', '무료')}</span>
                   <span className="basis-full text-xs">
-                    {options.showType === 'ORGANIZATION' ? tx('Hội chợ do doanh nghiệp tổ chức luôn miễn phí cho người tham gia.', 'Business-organised shows are always free for participants.', '기업 주최 박람회는 참가자에게 항상 무료입니다.')
+                    {options.showType === 'ORGANIZATION' ? tx('Sự kiện do doanh nghiệp tổ chức luôn miễn phí cho người tham gia.', 'Business-organised shows are always free for participants.', '기업 주최 박람회는 참가자에게 항상 무료입니다.')
                       : options.feeAmount ? tx('Mức chung; số tiền chính xác được chốt khi VCCI duyệt. Nộp biên lai sau khi được duyệt.', 'Standard rate; the exact amount is set when VCCI approves. Upload the receipt after approval.', '기본 요금이며 정확한 금액은 VCCI 승인 시 확정됩니다. 승인 후 영수증을 제출하세요.')
-                        : tx('VCCI không thu phí tham gia hội chợ này.', 'VCCI charges no participation fee for this show.', 'VCCI는 이 박람회에 참가비를 받지 않습니다.')}
+                        : tx('VCCI không thu phí tham gia sự kiện này.', 'VCCI charges no participation fee for this show.', 'VCCI는 이 박람회에 참가비를 받지 않습니다.')}
                   </span>
                 </div>
               )}

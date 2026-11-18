@@ -26,7 +26,7 @@ function AuthShell({ children, wide }: { children: ReactNode; wide?: boolean }) 
   const { t } = useI18n()
   const points = [
     tx('Hồ sơ doanh nghiệp do chính VCCI rà soát và gắn huy hiệu Xác thực VCCI', 'Company profiles reviewed by VCCI itself and marked VCCI Verified', 'VCCI가 직접 심사하고 VCCI 인증 배지를 부여한 기업 프로필'),
-    tx('Hội chợ, Show Hub và livestream do VCCI tổ chức, dùng chung một tài khoản', 'Fairs, Show Hub and livestreams run by VCCI, on the same account', 'VCCI가 주최하는 박람회·Show Hub·라이브를 하나의 계정으로'),
+    tx('Sự kiện, Show Hub và livestream do VCCI tổ chức, dùng chung một tài khoản', 'Fairs, Show Hub and livestreams run by VCCI, on the same account', 'VCCI가 주최하는 박람회·Show Hub·라이브를 하나의 계정으로'),
     tx('Khai hồ sơ năng lực một lần, đăng ký sự kiện bằng một lần xác nhận', 'Fill in your capability profile once, register for events with one confirmation', '역량 프로필은 한 번만 작성, 행사 신청은 한 번의 확인으로'),
   ]
   return (

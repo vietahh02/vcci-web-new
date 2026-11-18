@@ -26,7 +26,7 @@ export default function Home() {
       <ProductsSection />
       <FeaturedBusiness />
       <RequestsSection />
-      {/* Testimonials ("Tiếng nói từ hội chợ") tạm ẩn khỏi trang chủ; component vẫn giữ trong home/sections.tsx */}
+      {/* Testimonials ("Tiếng nói từ sự kiện") tạm ẩn khỏi trang chủ; component vẫn giữ trong home/sections.tsx */}
       <WhyList />
       <SponsorTiers />
       <CtaSection />
