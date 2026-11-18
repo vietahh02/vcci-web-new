@@ -27,6 +27,8 @@ import { tx } from '@/lib/tx'
 import { cn, formatDate, formatMoney, formatNumber } from '@/lib/utils'
 
 const TYPES: EventType[] = ['WEBINAR', 'LIVESTREAM', 'CONFERENCE', 'TRADE_MISSION', 'TRAINING', 'MATCHMAKING', 'SUPPORT_1TO1', 'SHOW']
+/** The type filter only offers the two kinds VCCI streams on its own platform; other kinds stay under "All event types". */
+const FILTER_TYPES: EventType[] = ['WEBINAR', 'LIVESTREAM']
 const typeTone: Record<EventType, string> = {
   WEBINAR: 'bg-sky-500', LIVESTREAM: 'bg-rose-500', CONFERENCE: 'bg-indigo-500', TRADE_MISSION: 'bg-amber-500',
   TRAINING: 'bg-emerald-500', MATCHMAKING: 'bg-violet-500', SUPPORT_1TO1: 'bg-teal-500', SHOW: 'bg-fuchsia-500',
@@ -73,7 +75,7 @@ export function EventRow({ ev, hint, i = 0 }: { ev: EventItem; hint?: ReactNode;
           <div className="flex flex-wrap items-center gap-1.5">
             {live ? <Badge variant="live" className="gap-1.5"><LiveDot /> {t.events.status.ONGOING}</Badge> : <Badge variant={ev.eventStatus === 'ENDED' ? 'muted' : 'outline'}>{t.events.status[ev.eventStatus]}</Badge>}
             <Badge variant="secondary"><span className={cn('size-2 rounded-full', typeTone[ev.eventType])} /> {t.events.type[ev.eventType]}</Badge>
-            <Badge variant="outline"><Globe2 /> {formatLabel(ev.format)}{ev.platform ? ` · ${ev.platform}` : ''}</Badge>
+            {ev.format && ev.format !== 'ONLINE' && <Badge variant="outline"><Globe2 /> {formatLabel(ev.format)}</Badge>}
             <RegBadge ev={ev} />
           </div>
           <p className="mt-1.5 text-lg font-bold leading-snug transition-colors group-hover:text-primary">{L(ev.title)}</p>
@@ -165,10 +167,10 @@ export function EventExplorer({ list, search }: { list: EventItem[]; search?: { 
   const fmt = hasFormats ? format : 'ALL'
   // The BE decides which kinds are listed (vcci.event.visible-source-kinds); with one kind left a type filter has nothing to choose.
   const types = useMemo(() => TYPES.filter((x) => list.some((e) => e.eventType === x)), [list])
-  const hasTypes = types.length > 1
-  const typeFilter = hasTypes ? type : 'ALL'
   // the wording follows what is listed: only shows, and an address only when some event has one
   const onlyShows = types.length === 1 && types[0] === 'SHOW'
+  const hasTypes = !onlyShows && types.length > 0
+  const typeFilter = hasTypes ? type : 'ALL'
   const hasVenue = list.some((e) => L(e.location))
 
   const filtered = useMemo(() => {
@@ -225,7 +227,7 @@ export function EventExplorer({ list, search }: { list: EventItem[]; search?: { 
         {!search && <div className="relative"><Search className="absolute left-3 top-3 size-4 text-muted-foreground" /><Input className="pl-9" value={q} onChange={(e) => setQ(e.target.value)} placeholder={onlyShows
           ? (hasVenue ? tx('Tìm hội chợ, đơn vị tổ chức, địa điểm…', 'Search trade shows, organizers, venues…', '박람회, 주최, 장소 검색…') : tx('Tìm hội chợ, đơn vị tổ chức…', 'Search trade shows, organizers…', '박람회, 주최 검색…'))
           : (hasVenue ? tx('Tìm sự kiện, đơn vị tổ chức, địa điểm…', 'Search events, organizers, venues…', '행사, 주최, 장소 검색…') : tx('Tìm sự kiện, đơn vị tổ chức…', 'Search events, organizers…', '행사, 주최 검색…'))} aria-label="search" /></div>}
-        {hasTypes && <Select value={type} onValueChange={setType} aria-label={tx('Loại sự kiện', 'Event type', '행사 유형')} options={[{ value: 'ALL', label: tx('Mọi loại sự kiện', 'All event types', '모든 유형') }, ...TYPES.map((x) => ({ value: x, label: t.events.type[x] }))]} />}
+        {hasTypes && <Select value={type} onValueChange={setType} aria-label={tx('Loại sự kiện', 'Event type', '행사 유형')} options={[{ value: 'ALL', label: tx('Mọi loại sự kiện', 'All event types', '모든 유형') }, ...FILTER_TYPES.map((x) => ({ value: x, label: t.events.type[x] }))]} />}
         {hasFormats && <Select value={fmt} onValueChange={setFormat} aria-label={tx('Hình thức', 'Format', '형식')} options={[{ value: 'ALL', label: tx('Mọi hình thức', 'Any format', '모든 형식') }, ...(['ONLINE', 'OFFLINE', 'HYBRID'] as const).map((x) => ({ value: x, label: formatLabel(x) }))]} />}
         <label className="flex h-10 items-center gap-2 whitespace-nowrap text-sm font-medium"><input type="checkbox" checked={free} onChange={(e) => setFree(e.target.checked)} /> {tx('Miễn phí', 'Free only', '무료만')}</label>
       </div>
@@ -324,7 +326,7 @@ function CalendarView({ list, types }: { list: EventItem[]; types: EventType[] }
           <ul className="mt-3 space-y-3">
             {selEvents.map((e) => (
               <li key={e.id} className="rounded-xl border p-3">
-                <div className="flex flex-wrap gap-1.5"><Badge variant="secondary"><span className={cn('size-2 rounded-full', typeTone[e.eventType])} /> {t.events.type[e.eventType]}</Badge><Badge variant="outline">{formatLabel(e.format)}</Badge><RegBadge ev={e} /></div>
+                <div className="flex flex-wrap gap-1.5"><Badge variant="secondary"><span className={cn('size-2 rounded-full', typeTone[e.eventType])} /> {t.events.type[e.eventType]}</Badge>{e.format && e.format !== 'ONLINE' && <Badge variant="outline">{formatLabel(e.format)}</Badge>}<RegBadge ev={e} /></div>
                 <Link to={`/events/${e.id}`} className="mt-1.5 block font-bold leading-snug hover:text-primary">{L(e.title)}</Link>
                 {(eventTimeRange(e) || L(e.location)) && <p className="mt-0.5 text-xs text-muted-foreground">{[eventTimeRange(e), L(e.location)].filter(Boolean).join(' · ')}</p>}
                 <div className="mt-2 flex flex-wrap items-center gap-2">

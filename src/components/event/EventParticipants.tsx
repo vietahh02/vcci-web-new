@@ -45,6 +45,9 @@ export function EventParticipants({ ev, onRegister, listed, embedded }: { ev: Ev
   const { pathname } = useLocation()
   const [onlineOnly, setOnlineOnly] = useState(false)
   const [showAll, setShowAll] = useState<Partial<Record<Side, boolean>>>({})
+  // event page (not embedded): one grid filtered by side instead of three fixed columns
+  const [pick, setPick] = useState<'ALL' | Side>('ALL')
+  const [gridAll, setGridAll] = useState(false)
   const live = ev.eventStatus === 'ONGOING'
   const ended = ev.eventStatus === 'ENDED'
   const onlineNow = all.filter((p) => p.online).length
@@ -83,8 +86,10 @@ export function EventParticipants({ ev, onRegister, listed, embedded }: { ev: Ev
     return <Button size="sm" variant="outline" disabled={sent.has(`${p.id}:PRE_MEETING`)} onClick={() => connect(p, 'PRE_MEETING', tx('Đã gửi lời hẹn gặp trước', 'Pre-meeting request sent', '사전 미팅 요청 전송'))}><CalendarClock /> {tx('Hẹn gặp trước', 'Pre-book', '사전 예약')}</Button>
   }
 
-  const row = (p: Participant) => (
-    <li key={p.id} className="flex flex-col gap-3 border-b p-4 last:border-b-0">
+  const row = (p: Participant) => <li key={p.id} className="flex flex-col gap-3 border-b p-4 last:border-b-0">{body(p)}</li>
+
+  const body = (p: Participant, card = false) => (
+    <>
       <div className="flex items-start gap-3">
         <CompanyMark name={p.nameEn ?? p.name} accent={p.accent} className="size-11 shrink-0" />
         <div className="min-w-0 flex-1">
@@ -106,16 +111,88 @@ export function EventParticipants({ ev, onRegister, listed, embedded }: { ev: Ev
         {status(p)}
         {(live || ended) && p.side === 'SELLER' && p.quotes > 0 && <Badge variant="secondary">{p.quotes} {tx('báo giá', 'quotes', '견적')}</Badge>}
       </div>
-      <div className="flex flex-wrap items-center gap-2">
+      <div className={cn('flex flex-wrap items-center gap-2', card && 'mt-auto border-t pt-3')}>
         {p.businessId && <Link to={`/suppliers/${p.businessId}`} className={buttonClass('ghost', 'sm', 'text-primary')}>{tx('Hồ sơ', 'Profile', '프로필')}</Link>}
         {ev.eventType === 'SHOW' && !USE_MOCK ? contactShow(p) : p.side !== 'SUPPORT' && action(p)}
       </div>
-    </li>
+    </>
   )
 
   const columns = onlineShow ? COLUMNS.filter((c) => all.some((p) => columnOf(p) === c.side)) : COLUMNS
   // Show overview: no block without data. Webinar tab (onRegister set) keeps its "no organisations yet" columns and register prompt.
   if (!all.length && !onRegister) return null
+
+  const subtitle = hasPresence ? tx(`${onlineNow} đơn vị đang trực tuyến lúc này.`, `${onlineNow} organisations are online right now.`, `현재 ${onlineNow}개 기관이 접속 중입니다.`)
+    : hasAttendance ? tx(`${attended} đơn vị đã tham dự.`, `${attended} organisations attended.`, `${attended}개 기관이 참석했습니다.`)
+    : onlineShow ? tx('Doanh nghiệp tham gia Show này.', 'Businesses taking part in this show.', '이 쇼에 참가하는 기업입니다.')
+    : tx('Một số đơn vị tiêu biểu tham gia sự kiện. Danh sách cập nhật khi đơn vị được duyệt.', 'A selection of organisations taking part. The list updates as organisations are approved.', '참가 기관 일부입니다. 승인되는 대로 업데이트됩니다.')
+
+  const registerCta = !ended && onRegister && (
+    <div className="mt-6 flex flex-wrap items-center justify-between gap-4 rounded-3xl bg-primary-soft px-6 py-5">
+      <p className="max-w-3xl text-sm font-medium text-primary">{tx('Bạn là doanh nghiệp trong nước hay nước ngoài? Đăng ký để tên và nhu cầu của bạn được công khai trong danh sách này và đặt lịch gặp đối tác.', 'Are you a domestic or a foreign business? Register to appear here and book meetings.', '국내 또는 해외 기업이신가요? 등록하고 미팅을 예약하세요.')}</p>
+      <Link to={onRegister} className={buttonClass('default', 'sm')}>{tx('Đăng ký tham gia', 'Register', '등록')}</Link>
+    </div>
+  )
+  const disclaimer = <p className="mt-3 text-[11px] text-muted-foreground">{tx('Tên doanh nghiệp, nhu cầu và năng lực cung ứng được công khai cho mọi người xem; thông tin liên hệ chỉ mở sau khi hai bên kết nối. '+(USE_MOCK ? 'Danh sách là dữ liệu minh hoạ.' : '')+'', 'Company names, needs and supply are public to everyone; contact details open only after both sides connect.'+(USE_MOCK ? ' The list is sample data.' : ''), '기업명, 수요, 공급 정보는 모두에게 공개되며 연락처는 연결 후에만 공개됩니다.'+(USE_MOCK ? ' 샘플 데이터입니다.' : ''))}</p>
+
+  if (!embedded) {
+    const GRID = 9
+    const visible = all.filter((p) => !onlineOnly || p.online)
+    const counts = COLUMNS.map((c) => ({ ...c, n: visible.filter((p) => columnOf(p) === c.side).length }))
+    const chosen = visible.filter((p) => pick === 'ALL' || columnOf(p) === pick)
+    const shown = gridAll ? chosen : chosen.slice(0, GRID)
+    const accent: Record<Side, string> = { SELLER: 'border-t-primary', BUYER: 'border-t-gold', SUPPORT: 'border-t-navy' }
+    const chip = (key: 'ALL' | Side, label: string, n: number, Icon?: typeof MapPin) => (
+      <button key={key} type="button" aria-pressed={pick === key} disabled={key !== 'ALL' && n === 0}
+        onClick={() => { setPick(key); setGridAll(false) }}
+        className={cn('inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-45',
+          pick === key ? 'border-primary bg-primary text-primary-foreground' : 'bg-card hover:border-primary/40 hover:text-primary')}>
+        {Icon && <Icon className="size-4" />} {label}
+        <span className={cn('rounded-full px-1.5 text-xs tabular-nums', pick === key ? 'bg-white/20' : 'bg-muted')}>{n}</span>
+      </button>
+    )
+    return (
+      <section className="container-page mt-10" aria-label="participants">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h2 className="text-2xl font-extrabold tracking-tight">{tx('Đơn vị nổi bật', 'Featured organisations', '주요 참가 기관')}</h2>
+            <p className="mt-1 text-sm text-muted-foreground">{subtitle}</p>
+          </div>
+          {hasPresence && <label className="flex w-fit items-center gap-2 text-sm font-medium"><input type="checkbox" checked={onlineOnly} onChange={(e) => setOnlineOnly(e.target.checked)} /> {tx('Chỉ hiện đơn vị đang trực tuyến', 'Show only organisations online now', '접속 중인 기관만 보기')}</label>}
+        </div>
+
+        <div className="mt-5 flex flex-wrap gap-2" role="group" aria-label={tx('Lọc theo nhóm', 'Filter by group', '그룹별 보기')}>
+          {chip('ALL', tx('Tất cả', 'All', '전체'), visible.length)}
+          {counts.map((c) => chip(c.side, c.title(), c.n, c.icon))}
+        </div>
+
+        {shown.length === 0 ? (
+          <div className="mt-6 grid place-items-center gap-2 rounded-3xl border border-dashed bg-muted/30 px-6 py-14 text-center">
+            <Handshake className="size-7 text-muted-foreground/50" />
+            <p className="font-semibold">{tx('Chưa có đơn vị nào', 'No organisations yet', '아직 없습니다')}</p>
+            <p className="max-w-md text-sm text-muted-foreground">{tx('Danh sách hiển thị khi đơn vị được duyệt tham gia.', 'Organisations appear here once approved.', '참가가 승인되면 표시됩니다.')}</p>
+          </div>
+        ) : (
+          <ul className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            {shown.map((p) => (
+              <li key={p.id} className={cn('flex flex-col gap-3 rounded-2xl border border-t-[3px] bg-card p-4 shadow-[0_14px_32px_-28px_rgba(0,70,110,0.5)] transition-shadow hover:shadow-[0_18px_40px_-26px_rgba(0,70,110,0.55)]', accent[columnOf(p)])}>
+                {body(p, true)}
+              </li>
+            ))}
+          </ul>
+        )}
+        {chosen.length > GRID && (
+          <div className="mt-5 text-center">
+            <Button variant="outline" size="sm" onClick={() => setGridAll((v) => !v)}>
+              {gridAll ? tx('Thu gọn', 'Show less', '접기') : tx(`Xem thêm ${chosen.length - GRID} đơn vị`, `Show ${chosen.length - GRID} more`, `${chosen.length - GRID}개 더 보기`)}
+            </Button>
+          </div>
+        )}
+        {registerCta}
+        {disclaimer}
+      </section>
+    )
+  }
 
   return (
     <section className={cn('mt-10', embedded ? 'mt-14 w-full px-4 sm:px-6 lg:px-10' : 'container-page')} aria-label="participants">

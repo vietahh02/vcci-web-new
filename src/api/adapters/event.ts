@@ -14,6 +14,9 @@ const hhmm = (s: unknown) => {
   return d && !Number.isNaN(d.getTime()) ? d.toTimeString().slice(0, 5) : ''
 }
 
+/** For an ONLINE event the UI already says "Online · on the VCCI platform": a location that only restates that, or names a third-party room, is dropped. */
+const THIRD_PARTY_ROOM = /zoom|google meet|microsoft teams|ms teams|webex|^\s*(trực tuyến|online)\b/i
+
 /** EventItemDto (GET /api/event/search, /api/event/{id}) -> FE EventItem. Status is computed by BE (clock); FE recomputes the same way. */
 export function toEvent(r: Raw): EventItem {
   const fee = r.participationFee == null ? 0 : num(r.participationFee)
@@ -36,10 +39,11 @@ export function toEvent(r: Raw): EventItem {
     maxSlots: num(r.maxSlots),
     organizedBy: bi(dt(str(r.organizedBy))),
     // an ONLINE show has no address, whatever is left in the catalog row: the UI says "Online"
-    location: bi(str(r.eventType) === 'SHOW' && isOnlineFormat(str(r.format)) ? '' : dt(str(r.location))),
+    // an ONLINE event streams on the VCCI platform: a location naming a third-party room ("Trực tuyến qua Zoom") is dropped too
+    location: bi((str(r.eventType) === 'SHOW' && isOnlineFormat(str(r.format))) || (isOnlineFormat(str(r.format)) && THIRD_PARTY_ROOM.test(str(r.location))) ? '' : dt(str(r.location))),
     format: (str(r.format, 'ONLINE') || 'ONLINE') as EventFormat,
-    // SRS / Jitsi are our own streaming back ends: to the visitor that is simply "on the VCCI platform"
-    platform: r.platform && !/^(srs|jitsi)$/i.test(str(r.platform)) ? str(r.platform) : undefined,
+    // every online event streams on the VCCI platform itself; a third-party room name (Zoom, Meet…) left in the row is never shown
+    platform: undefined,
     // BE contract: {startTime,endTime,title,description}; the older FE-shaped keys are still accepted
     agendaOptions: arr(r.agendaOptions).map((a) => ({
       agendaStartTime: hhmm(a.startTime ?? a.agendaStartTime),

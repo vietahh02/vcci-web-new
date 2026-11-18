@@ -1,11 +1,11 @@
 /** Trade-show layout: immersive countdown hero + live strip + month-grouped schedule + past recordings. */
 import { motion } from 'motion/react'
-import { ArrowRight, MapPin, Ticket, Video } from 'lucide-react'
+import { ArrowRight, MapPin, Ticket } from 'lucide-react'
 import { useEffect, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { searchEvents } from '@/api'
 import type { EventItem } from '@/data/mock'
-import { EventExplorer, formatLabel } from '@/components/event/EventExplorer'
+import { EventExplorer } from '@/components/event/EventExplorer'
 import { LiveDot, useCountdown } from '@/components/effects'
 import { HeroSearch } from '@/components/HeroSearch'
 import { PageHero } from '@/components/PageHero'
@@ -96,7 +96,6 @@ function CountdownHero({ ev, search }: { ev: EventItem; search: ReactNode }) {
             {time && ` · ${time}`}
           </span>
           {/* online-first: format/platform first, venue secondary and only when set */}
-          {ev.format !== 'OFFLINE' && <span className="inline-flex items-center gap-1.5"><Video className="size-4" /> {formatLabel(ev.format)}{ev.platform ? ` · ${ev.platform}` : ''}</span>}
           {L(ev.location) && <span className="inline-flex items-center gap-1.5 opacity-80"><MapPin className="size-4" /> {L(ev.location)}</span>}
         </span>
       }

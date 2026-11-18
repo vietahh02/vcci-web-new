@@ -3,7 +3,7 @@
  * journey steps, "My preparation" (checklist, organizer contact, speaker question, private messages, FAQ)
  * before the event, and recordings / materials / feedback after it.
  */
-import { Check, CircleDot, Download, FileText, Image as ImageIcon, MessageSquare, Phone, PlayCircle, Send, Star, Video } from 'lucide-react'
+import { Check, ChevronDown, Download, FileText, Image as ImageIcon, MessageSquare, Phone, PlayCircle, Send, Star, Ticket, Video } from 'lucide-react'
 import { useState } from 'react'
 import { USE_MOCK, invalidate, useRemote } from '@/api'
 import { askSpeaker, getPrep, listMessages, savePrep, sendFeedback, sendMessage, useEventMaterials } from '@/api/eventApi'
@@ -53,38 +53,64 @@ function Steps({ ev, registered }: { ev: EventItem; registered: boolean }) {
     { t: tx('Sau sự kiện', 'After', '행사 후'), d: tx('Bản ghi, tài liệu, đánh giá', 'Recording, materials, feedback', '녹화, 자료, 평가') },
   ]
   return (
-    <section aria-label="journey">
-      <ol className="grid gap-3 sm:grid-cols-5">
+    <section aria-label="journey" className="rounded-3xl border bg-card p-5 md:p-7">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <h2 className="text-xl font-extrabold tracking-tight">{tx('Các bước tham dự', 'How it works', '참가 절차')}</h2>
+        <p className="text-sm text-muted-foreground">{tx(`Bước ${current + 1}/${steps.length}`, `Step ${current + 1} of ${steps.length}`, `${steps.length}단계 중 ${current + 1}단계`)}</p>
+      </div>
+      <ol className="mt-6 grid gap-5 sm:grid-cols-5 sm:gap-0">
         {steps.map((s, i) => {
           const done = i < current
           const now = i === current
           return (
-            <li key={s.t} className={cn('rounded-xl border p-3', now && 'border-primary bg-primary-soft', done && 'bg-success-soft/50')}>
-              <span className={cn('grid size-6 place-items-center rounded-full text-xs font-bold', done ? 'bg-success text-white' : now ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground')}>{done ? <Check className="size-3.5" /> : i + 1}</span>
-              <p className="mt-2 text-sm font-bold">{s.t}</p>
-              <p className="mt-0.5 text-xs text-muted-foreground">{s.d}</p>
+            <li key={s.t} className="flex gap-3 sm:block sm:pr-4">
+              <div className="flex items-center">
+                <span className={cn('grid size-9 shrink-0 place-items-center rounded-full text-sm font-bold ring-4', done ? 'bg-success text-white ring-card' : now ? 'bg-primary text-primary-foreground ring-primary/15' : 'bg-muted text-muted-foreground ring-card')}>{done ? <Check className="size-4" /> : i + 1}</span>
+                {i < steps.length - 1 && <span aria-hidden className={cn('ml-3 hidden h-0.5 flex-1 rounded-full sm:block', done ? 'bg-success' : 'bg-border')} />}
+              </div>
+              <div className="sm:mt-3">
+                <p className={cn('text-sm font-bold', now && 'text-primary')}>{s.t}</p>
+                <p className="mt-0.5 text-xs leading-snug text-muted-foreground">{s.d}</p>
+                {now && <span className="mt-1.5 inline-block rounded-full bg-primary-soft px-2 py-0.5 text-[11px] font-semibold text-primary">{tx('Hiện tại', 'Current', '현재')}</span>}
+              </div>
             </li>
           )
         })}
       </ol>
-      {!registered && reg.state === 'CLOSING' && <p className="mt-3 text-sm font-medium text-gold">{tx(`Sắp hết hạn đăng ký — còn ${Math.max(reg.daysLeft, 0)} ngày.`, `Registration closes soon — ${Math.max(reg.daysLeft, 0)} days left.`, `등록 마감 임박 — ${Math.max(reg.daysLeft, 0)}일 남음.`)}</p>}
+      {!registered && reg.state === 'CLOSING' && <p className="mt-5 rounded-xl bg-gold-soft px-4 py-2.5 text-sm font-medium text-gold">{tx(`Sắp hết hạn đăng ký — còn ${Math.max(reg.daysLeft, 0)} ngày.`, `Registration closes soon — ${Math.max(reg.daysLeft, 0)} days left.`, `등록 마감 임박 — ${Math.max(reg.daysLeft, 0)}일 남음.`)}</p>}
     </section>
   )
 }
 
 /* ---------------------------------------------------------------- before registering */
 function BeforeRegister({ ev }: { ev: EventItem }) {
+  const { L } = useI18n()
   const items = prepTasks(ev)
+  const reg = registrationState(ev).state
+  const canRegister = reg === 'OPEN' || reg === 'CLOSING'
   return (
-    <section className="grid gap-6 lg:grid-cols-2">
-      <div className="rounded-2xl border bg-card p-5">
+    <section className="grid items-start gap-6 lg:grid-cols-2">
+      <div className="flex h-full flex-col rounded-3xl border bg-card p-5 md:p-7">
         <h2 className="text-lg font-extrabold">{tx('Bạn sẽ cần chuẩn bị', 'What you will need to prepare', '준비할 사항')}</h2>
-        <ul className="mt-3 space-y-2 text-sm">
-          {items.map((x) => <TaskText key={x.id} id={x.id} ev={ev} />)}
-        </ul>
-        <p className="mt-3 text-xs text-muted-foreground">{tx('Sau khi đăng ký, danh sách này trở thành checklist có nhắc hạn.', 'After registering, this becomes a checklist with deadline reminders.', '등록 후 마감 알림이 있는 체크리스트가 됩니다.')}</p>
+        <p className="mt-1 text-sm text-muted-foreground">{tx('Sau khi đăng ký, danh sách này trở thành checklist có nhắc hạn.', 'After registering, this becomes a checklist with deadline reminders.', '등록 후 마감 알림이 있는 체크리스트가 됩니다.')}</p>
+        <ol className="mt-5 space-y-3">
+          {items.map((x, i) => (
+            <li key={x.id} className="flex gap-3.5 rounded-2xl bg-muted/40 p-3.5">
+              <span className="grid size-8 shrink-0 place-items-center rounded-full bg-primary-soft text-sm font-bold text-primary">{i + 1}</span>
+              <span className="min-w-0 pt-1">
+                <span className="block text-sm font-semibold leading-snug">{L(x.title)}</span>
+                {x.hint && <span className="mt-0.5 block text-xs text-muted-foreground">{L(x.hint)}</span>}
+              </span>
+            </li>
+          ))}
+        </ol>
+        {canRegister && (
+          <div className="mt-auto pt-6">
+            <Link to={`/events/${ev.id}/register`} className={buttonClass('default', 'md', 'w-full sm:w-auto')}><Ticket /> {tx('Đăng ký tham gia', 'Register', '등록')}</Link>
+          </div>
+        )}
       </div>
-      <div className="rounded-2xl border bg-card p-5">
+      <div className="rounded-3xl border bg-card p-5 md:p-7">
         <h2 className="text-lg font-extrabold">{tx('Câu hỏi thường gặp', 'Frequently asked questions', '자주 묻는 질문')}</h2>
         <Faq />
       </div>
@@ -92,20 +118,17 @@ function BeforeRegister({ ev }: { ev: EventItem }) {
   )
 }
 
-function TaskText({ id, ev }: { id: string; ev: EventItem }) {
-  const { L } = useI18n()
-  const t = prepTasks(ev).find((x) => x.id === id)
-  return t ? <li className="flex gap-2"><CircleDot className="mt-0.5 size-4 shrink-0 text-primary" /> {L(t.title)}</li> : null
-}
-
 function Faq() {
   const { L } = useI18n()
   return (
-    <div className="mt-3 divide-y">
+    <div className="mt-4 space-y-2">
       {faqs().map((f, i) => (
-        <details key={i} className="group py-2.5">
-          <summary className="cursor-pointer list-none text-sm font-semibold marker:hidden group-open:text-primary">{L(f.q)}</summary>
-          <p className="mt-1.5 text-sm text-muted-foreground">{L(f.a)}</p>
+        <details key={i} className="group rounded-2xl border bg-background transition-colors open:border-primary/30 open:bg-primary-soft/40">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3.5 text-sm font-semibold marker:hidden [&::-webkit-details-marker]:hidden group-open:text-primary">
+            {L(f.q)}
+            <ChevronDown className="size-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-180 group-open:text-primary" />
+          </summary>
+          <p className="px-4 pb-4 text-sm leading-relaxed text-muted-foreground">{L(f.a)}</p>
         </details>
       ))}
     </div>

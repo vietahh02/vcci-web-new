@@ -5,7 +5,7 @@
  * POST /api/event/registrations (+ /payment multipart for paid events).
  */
 import { AnimatePresence, motion } from 'motion/react'
-import { ArrowLeft, ArrowRight, BadgeCheck, CalendarDays, CalendarPlus, Check, Copy, FileUp, Gift, Handshake, Info, MapPin, Printer, Sparkles, Ticket, Users } from 'lucide-react'
+import { ArrowLeft, ArrowRight, BadgeCheck, CalendarDays, CalendarPlus, Check, Clock, Copy, FileUp, Gift, Handshake, Info, MapPin, Printer, Sparkles, Ticket, Users } from 'lucide-react'
 import { useMemo, useState, type ReactNode } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { invalidate, liveApi, USE_MOCK, useEvent } from '@/api'
@@ -19,6 +19,7 @@ import { useToast } from '@/components/ui/overlay'
 import { Button, buttonClass, Field, Input, Textarea, Req } from '@/components/ui/primitives'
 import { Select } from '@/components/ui/select'
 import NotFound from '@/pages/NotFound'
+import { PageHero } from '@/components/PageHero'
 import { eventStartTime, eventTimeRange } from '@/lib/eventStatus'
 import { useI18n, type Bilingual } from '@/lib/i18n'
 import { markRegistered } from '@/lib/eventUser'
@@ -67,6 +68,7 @@ function RegisterFlow({ ev }: { ev: EventItem }) {
   const paid = ev.participationFee > 0
   const matchmaking = ev.eventType === 'MATCHMAKING'
   const steps = [tx('Thông tin đăng ký', 'Registration details', '등록 정보'), ...(paid ? [tx('Thanh toán', 'Payment', '결제')] : []), tx('Thẻ tham dự', 'Your badge', '참가 배지')]
+  const stepHints = [tx('Điền thông tin người tham dự', 'Fill in attendee details', '참석자 정보 입력'), ...(paid ? [tx('Chuyển khoản và tải biên lai', 'Transfer and upload the receipt', '송금 후 영수증 업로드')] : []), tx('Nhận thẻ có mã QR', 'Get your QR badge', 'QR 배지 받기')]
   const [step, setStep] = useState(0)
   const [proof, setProof] = useState<string | null>(null)
   const [proofFile, setProofFile] = useState<File | null>(null)
@@ -140,32 +142,57 @@ function RegisterFlow({ ev }: { ev: EventItem }) {
 
   return (
     <div className="pb-10">
-      {/* banner */}
-      <section className="relative isolate overflow-hidden bg-navy text-white">
-        <img src={img(ev.coverImage, 1800, 500)} alt="" className="absolute inset-0 -z-20 size-full object-cover opacity-25" />
-        <div className="absolute inset-0 -z-10 bg-navy/80" />
-        <div className="container-page py-10">
-          <Link to={`/events/${ev.id}`} className="inline-flex min-h-10 items-center gap-1.5 text-[13px] text-white/80 hover:text-white"><ArrowLeft className="size-4" /> {tx('Quay lại sự kiện', 'Back to event', '행사로 돌아가기')}</Link>
-          <p className="mt-3 text-[15px] font-semibold text-gold-bright">{registerTitle(ev.eventType)}</p>
-          <h1 className="mt-2 max-w-3xl text-2xl font-extrabold leading-tight md:text-4xl">{L(ev.title)}</h1>
-          <p className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-sm text-white/90">
-            <span className="inline-flex items-center gap-1.5"><CalendarDays className="size-4" /> {formatDate(ev.startDate, locale)}{ev.endDate.slice(0, 10) !== ev.startDate.slice(0, 10) && ` – ${formatDate(ev.endDate, locale)}`}</span>
-            {L(ev.location) && <span className="inline-flex items-center gap-1.5"><MapPin className="size-4" /> {L(ev.location)}</span>}
-          </p>
-          {/* steps */}
-          <ol className="mt-8 flex max-w-xl items-center gap-2">
+      {/* same light hero as the event page it comes from (PageHero azure), so the flow does not jump to a different look */}
+      <PageHero
+        tone="azure"
+        crumbs={[{ label: t.common.home, to: '/' }, { label: t.nav.events, to: '/events' }, { label: t.events.type[ev.eventType], to: `/events/${ev.id}` }, { label: registerTitle(ev.eventType) }]}
+        kicker={
+          <Link to={`/events/${ev.id}`} className="mb-3 inline-flex items-center gap-1.5 text-[13px] font-semibold text-primary hover:underline"><ArrowLeft className="size-4" /> {tx('Quay lại sự kiện', 'Back to event', '행사로 돌아가기')}</Link>
+        }
+        title={L(ev.title)}
+        titleKey={ev.id}
+        subtitle={
+          <span className="flex flex-wrap gap-x-6 gap-y-1 text-sm md:text-base">
+            <span className="inline-flex items-center gap-2"><CalendarDays className="size-4 text-primary" /> {formatDate(ev.startDate, locale)}{ev.endDate.slice(0, 10) !== ev.startDate.slice(0, 10) && ` – ${formatDate(ev.endDate, locale)}`}</span>
+            {eventTimeRange(ev) && <span className="inline-flex items-center gap-2"><Clock className="size-4 text-primary" /> {eventTimeRange(ev)} (GMT+7)</span>}
+            {L(ev.location) && <span className="inline-flex items-center gap-2"><MapPin className="size-4 text-primary" /> {L(ev.location)}</span>}
+          </span>
+        }
+        aside={
+          /* steps, desktop: a card in the same place as the register card on the event page */
+          <div className="hidden w-[380px] rounded-3xl bg-white/90 p-6 shadow-[0_30px_60px_-34px_rgba(0,70,110,0.55)] ring-1 ring-primary/15 backdrop-blur dark:bg-white/5 dark:ring-white/10 lg:block">
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{registerTitle(ev.eventType)}</p>
+            <ol className="mt-4">
+              {steps.map((s, i) => (
+                <li key={s} className="relative flex gap-3.5 pb-5 last:pb-0">
+                  {i < steps.length - 1 && <span aria-hidden className={cn('absolute left-4 top-9 h-[calc(100%-2.5rem)] w-0.5 -translate-x-1/2 rounded-full', i < step ? 'bg-success' : 'bg-border')} />}
+                  <span className={cn('grid size-8 shrink-0 place-items-center rounded-full text-xs font-bold transition', i < step ? 'bg-success text-white' : i === step ? 'bg-primary text-primary-foreground ring-4 ring-primary/15' : 'bg-muted text-muted-foreground')}>
+                    {i < step ? <Check className="size-4" /> : i + 1}
+                  </span>
+                  <span className="min-w-0 pt-1">
+                    <span className={cn('block text-sm font-bold', i === step ? 'text-primary' : i < step ? 'text-foreground' : 'text-muted-foreground')}>{s}</span>
+                    <span className="mt-0.5 block text-xs text-muted-foreground">{stepHints[i]}</span>
+                  </span>
+                </li>
+              ))}
+            </ol>
+          </div>
+        }
+        below={
+          /* steps, phone/tablet: one row, the current step named */
+          <ol className="mt-6 flex items-center gap-2 rounded-2xl bg-white/80 p-3 ring-1 ring-primary/15 backdrop-blur dark:bg-white/5 dark:ring-white/10 sm:px-5 lg:hidden">
             {steps.map((s, i) => (
-              <li key={s} className="flex flex-1 items-center gap-2">
-                <span className={cn('grid size-7 shrink-0 place-items-center rounded-full text-xs font-bold transition', i < step ? 'bg-success text-white' : i === step ? 'bg-gold-bright text-navy' : 'bg-white/15 text-white/70')}>
-                  {i < step ? <Check className="size-3.5" /> : i + 1}
+              <li key={s} className="flex flex-1 items-center gap-2 last:flex-none">
+                <span className={cn('grid size-8 shrink-0 place-items-center rounded-full text-xs font-bold transition', i < step ? 'bg-success text-white' : i === step ? 'bg-primary text-primary-foreground ring-4 ring-primary/15' : 'bg-muted text-muted-foreground')}>
+                  {i < step ? <Check className="size-4" /> : i + 1}
                 </span>
-                <span className={cn('hidden text-[13px] font-semibold sm:block', i <= step ? 'text-white' : 'text-white/55')}>{s}</span>
-                {i < steps.length - 1 && <span className={cn('h-px flex-1', i < step ? 'bg-success' : 'bg-white/20')} />}
+                <span className={cn('whitespace-nowrap text-[13px] font-semibold', i === step ? 'text-primary' : 'hidden sm:block', i < step ? 'text-foreground' : i > step && 'text-muted-foreground')}>{s}</span>
+                {i < steps.length - 1 && <span className={cn('mx-1 h-0.5 flex-1 rounded-full', i < step ? 'bg-success' : 'bg-border')} />}
               </li>
             ))}
           </ol>
-        </div>
-      </section>
+        }
+      />
 
       <div className="container-page mt-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_340px]">
         <div className="min-w-0">
