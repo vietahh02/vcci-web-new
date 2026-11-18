@@ -1,6 +1,7 @@
 /** Tiny request cache + hooks: components stay declarative (`const { data, loading, error } = useX(id)`). Keys include the UI language because BE content is localised. */
 import { useCallback, useEffect, useSyncExternalStore } from 'react'
 import { useI18n } from '@/lib/i18n'
+import type { Business } from '@/data/mock'
 import { USE_MOCK } from './config'
 import * as mockApi from './mockApi'
 import * as liveApi from './realApi'
@@ -45,6 +46,8 @@ function useBoth<T>(key: string | null, sync: () => T, fetcher: () => Promise<T>
 
 export const useBusiness = (bid: string) =>
   useBoth(bid ? 'biz:' + bid : null, () => ({ business: mockApi.getBusiness(bid), profile: null }), () => liveApi.fetchBusiness(bid))
+/** Every business in the directory, loaded once and cached: event participants (company name only) are matched to it for their cover and logo. Live mode only. */
+export const useBusinessDirectory = () => useRemote<Business[]>(USE_MOCK ? null : 'biz:directory', liveApi.fetchBusinessDirectory)
 /** `enabled=false` skips the request (list cards avoid an N+1 fetch; BE does not embed featured products in business cards yet). */
 export const useOrgProducts = (orgId: string, enabled = true) => useBoth(orgId && enabled ? 'orgp:' + orgId : null, () => mockApi.productsOf(orgId), () => liveApi.fetchOrgProducts(orgId))
 /** Every product of a company (detail page). Separate cache key: `useOrgProducts` may hold only the 3 products embedded in directory cards. */

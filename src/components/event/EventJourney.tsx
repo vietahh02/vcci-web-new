@@ -3,7 +3,7 @@
  * journey steps, "My preparation" (checklist, organizer contact, speaker question, private messages, FAQ)
  * before the event, and recordings / materials / feedback after it.
  */
-import { Check, ChevronDown, Download, FileText, Image as ImageIcon, MessageSquare, Phone, PlayCircle, Send, Star, Ticket, Video } from 'lucide-react'
+import { Check, ChevronDown, Download, FileText, Image as ImageIcon, Lock, MessageSquare, Phone, PlayCircle, Send, Star, Ticket, Video } from 'lucide-react'
 import { useState } from 'react'
 import { USE_MOCK, invalidate, useRemote } from '@/api'
 import { askSpeaker, getPrep, listMessages, savePrep, sendFeedback, sendMessage, useEventMaterials } from '@/api/eventApi'
@@ -275,6 +275,16 @@ function Prep({ ev }: { ev: EventItem }) {
   )
 }
 
+function EmptyMaterials({ icon: Icon, title, text }: { icon: typeof Lock; title: string; text: string }) {
+  return (
+    <div className="grid place-items-center gap-1.5 rounded-2xl border border-dashed bg-muted/30 px-6 py-8 text-center">
+      <span className="grid size-11 place-items-center rounded-full bg-primary-soft text-primary"><Icon className="size-5" /></span>
+      <p className="font-semibold">{title}</p>
+      <p className="max-w-sm text-sm text-muted-foreground">{text}</p>
+    </div>
+  )
+}
+
 /* ---------------------------------------------------------------- after the event */
 function PostEvent({ ev, registered }: { ev: EventItem; registered: boolean }) {
   const { L } = useI18n()
@@ -285,7 +295,7 @@ function PostEvent({ ev, registered }: { ev: EventItem; registered: boolean }) {
   const [note, setNote] = useStoredState<string>(`vcci.evnote.${ev.id}`, '')
   const [sent, setSent] = useStoredState<boolean>(`vcci.evfb.${ev.id}`, false)
   return (
-    <section id="materials" className="grid gap-6 lg:grid-cols-[1fr_380px]">
+    <section id="materials" className="grid items-start gap-6 lg:grid-cols-[1fr_380px]">
       <div className="rounded-2xl border bg-card p-5">
         <div className="flex flex-wrap items-center gap-2">
           <h2 className="text-xl font-extrabold">{tx('Bản ghi & tài liệu', 'Recording & materials', '녹화 및 자료')}</h2>
@@ -293,9 +303,9 @@ function PostEvent({ ev, registered }: { ev: EventItem; registered: boolean }) {
           {registered && <Badge variant="success">{tx('Bạn đã tham dự', 'You attended', '참석함')}</Badge>}
         </div>
         <ul className="mt-4 divide-y">
-          {!USE_MOCK && !registered && <li className="py-3 text-sm text-muted-foreground">{tx('Đăng ký sự kiện để xem tài liệu và bản ghi.', 'Register for the event to access recordings and materials.', '녹화와 자료는 행사 등록자에게만 제공됩니다.')}</li>}
+          {!USE_MOCK && !registered && <li className="py-3"><EmptyMaterials icon={Lock} title={tx('Dành cho người đã đăng ký', 'For registered participants', '등록자 전용')} text={tx('Bản ghi và tài liệu của sự kiện chỉ mở cho đơn vị đã đăng ký tham dự.', 'Recordings and materials are open to organisations that registered for the event.', '녹화와 자료는 행사 등록 기관에게만 공개됩니다.')} /></li>}
           {!USE_MOCK && registered && matR.error && <li className="py-3 text-sm text-muted-foreground">{matR.error.message}</li>}
-          {!USE_MOCK && registered && !matR.error && !matR.loading && mats.length === 0 && <li className="py-3 text-sm text-muted-foreground">{tx('Chưa có tài liệu.', 'No materials yet.', '아직 자료가 없습니다.')}</li>}
+          {!USE_MOCK && registered && !matR.error && !matR.loading && mats.length === 0 && <li className="py-3"><EmptyMaterials icon={FileText} title={tx('Chưa có tài liệu', 'No materials yet', '아직 자료가 없습니다')} text={tx('Ban Tổ chức sẽ đăng bản ghi và tài liệu tại đây khi sẵn sàng.', 'The organisers will post the recording and materials here when ready.', '준비되는 대로 녹화와 자료가 이곳에 게시됩니다.')} /></li>}
           {mats.map((m) => {
             const Icon = matIcon[m.kind]
             return (
@@ -309,7 +319,6 @@ function PostEvent({ ev, registered }: { ev: EventItem; registered: boolean }) {
             )
           })}
         </ul>
-        <div className="mt-4 text-sm text-muted-foreground">{tx('Tài liệu chỉ hiển thị cho người đã đăng ký (cấu hình theo từng sự kiện).', 'Materials are visible to registered participants (set per event).', '자료는 등록자에게만 표시됩니다 (행사별 설정).')}</div>
       </div>
 
       <div className="space-y-4">
