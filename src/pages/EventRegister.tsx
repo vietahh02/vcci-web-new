@@ -5,7 +5,7 @@
  * POST /api/event/registrations (+ /payment multipart for paid events).
  */
 import { AnimatePresence, motion } from 'motion/react'
-import { ArrowLeft, ArrowRight, BadgeCheck, CalendarDays, CalendarPlus, Check, Copy, FileUp, Gift, Handshake, Info, MapPin, Printer, Sparkles, Ticket, Users } from 'lucide-react'
+import { ArrowLeft, ArrowRight, BadgeCheck, CalendarDays, CalendarPlus, Check, Clock, Copy, FileUp, Gift, Handshake, Info, MapPin, Printer, Sparkles, Ticket, Users } from 'lucide-react'
 import { useMemo, useState, type ReactNode } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { invalidate, liveApi, USE_MOCK, useEvent } from '@/api'
@@ -19,6 +19,7 @@ import { useToast } from '@/components/ui/overlay'
 import { Button, buttonClass, Field, Input, Textarea, Req } from '@/components/ui/primitives'
 import { Select } from '@/components/ui/select'
 import NotFound from '@/pages/NotFound'
+import { PageHero } from '@/components/PageHero'
 import { eventStartTime, eventTimeRange } from '@/lib/eventStatus'
 import { useI18n, type Bilingual } from '@/lib/i18n'
 import { markRegistered } from '@/lib/eventUser'
@@ -38,7 +39,7 @@ const BUSINESS_TYPES = [
 const STAFF = ['1 – 10', '11 – 50', '51 – 200', '201 – 500', '501 – 1.000', '1.000+']
 const VOLUME = [b('Dưới 100.000 USD', 'Under USD 100K', '10만 달러 미만'), b('100.000 – 500.000 USD', 'USD 100K – 500K', '10만 – 50만 달러'), b('500.000 – 1 triệu USD', 'USD 500K – 1M', '50만 – 100만 달러'), b('1 – 5 triệu USD', 'USD 1M – 5M', '100만 – 500만 달러'), b('Trên 5 triệu USD', 'Over USD 5M', '500만 달러 초과')]
 const ROLES = [b('Người quyết định mua', 'Final decision maker', '최종 구매 결정권자'), b('Đề xuất / ảnh hưởng quyết định', 'Recommend / influence', '구매 추천 / 영향'), b('Tìm hiểu thông tin', 'Research only', '정보 수집')]
-const PURPOSES = [b('Tìm nhà cung cấp mới', 'Find new suppliers', '신규 공급업체 발굴'), b('Tìm sản phẩm mới', 'Source new products', '신제품 소싱'), b('Gặp nhà cung cấp hiện tại', 'Meet current suppliers', '기존 공급업체 미팅'), b('Nắm bắt xu hướng thị trường', 'Market trends', '시장 트렌드 파악'), b('Tìm đối tác đầu tư / liên doanh', 'Investment / JV partners', '투자 / 합작 파트너')]
+const PURPOSES = [b('Tìm nhà cung cấp mới', 'Find new businesses', '신규 기업 발굴'), b('Tìm sản phẩm mới', 'Source new products', '신제품 소싱'), b('Gặp nhà cung cấp hiện tại', 'Meet current businesses', '기존 기업 미팅'), b('Nắm bắt xu hướng thị trường', 'Market trends', '시장 트렌드 파악'), b('Tìm đối tác đầu tư / liên doanh', 'Investment / JV partners', '투자 / 합작 파트너')]
 const COUNTRIES = ['VN', 'KR', 'JP', 'CN', 'US', 'DE', 'FR', 'GB', 'AU', 'SG', 'TH', 'IN', 'AE']
 const DIAL: Record<string, string> = { VN: '+84', KR: '+82', JP: '+81', CN: '+86', US: '+1', DE: '+49', FR: '+33', GB: '+44', AU: '+61', SG: '+65', TH: '+66', IN: '+91', AE: '+971' }
 
@@ -67,6 +68,7 @@ function RegisterFlow({ ev }: { ev: EventItem }) {
   const paid = ev.participationFee > 0
   const matchmaking = ev.eventType === 'MATCHMAKING'
   const steps = [tx('Thông tin đăng ký', 'Registration details', '등록 정보'), ...(paid ? [tx('Thanh toán', 'Payment', '결제')] : []), tx('Thẻ tham dự', 'Your badge', '참가 배지')]
+  const stepHints = [tx('Điền thông tin người tham dự', 'Fill in attendee details', '참석자 정보 입력'), ...(paid ? [tx('Chuyển khoản và tải biên lai', 'Transfer and upload the receipt', '송금 후 영수증 업로드')] : []), tx('Nhận thẻ có mã QR', 'Get your QR badge', 'QR 배지 받기')]
   const [step, setStep] = useState(0)
   const [proof, setProof] = useState<string | null>(null)
   const [proofFile, setProofFile] = useState<File | null>(null)
@@ -140,32 +142,57 @@ function RegisterFlow({ ev }: { ev: EventItem }) {
 
   return (
     <div className="pb-10">
-      {/* banner */}
-      <section className="relative isolate overflow-hidden bg-navy text-white">
-        <img src={img(ev.coverImage, 1800, 500)} alt="" className="absolute inset-0 -z-20 size-full object-cover opacity-25" />
-        <div className="absolute inset-0 -z-10 bg-navy/80" />
-        <div className="container-page py-10">
-          <Link to={`/events/${ev.id}`} className="inline-flex min-h-10 items-center gap-1.5 text-[13px] text-white/80 hover:text-white"><ArrowLeft className="size-4" /> {tx('Quay lại sự kiện', 'Back to event', '행사로 돌아가기')}</Link>
-          <p className="mt-3 text-[15px] font-semibold text-gold-bright">{registerTitle(ev.eventType)}</p>
-          <h1 className="mt-2 max-w-3xl text-2xl font-extrabold leading-tight md:text-4xl">{L(ev.title)}</h1>
-          <p className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-sm text-white/90">
-            <span className="inline-flex items-center gap-1.5"><CalendarDays className="size-4" /> {formatDate(ev.startDate, locale)}{ev.endDate.slice(0, 10) !== ev.startDate.slice(0, 10) && ` – ${formatDate(ev.endDate, locale)}`}</span>
-            {L(ev.location) && <span className="inline-flex items-center gap-1.5"><MapPin className="size-4" /> {L(ev.location)}</span>}
-          </p>
-          {/* steps */}
-          <ol className="mt-8 flex max-w-xl items-center gap-2">
+      {/* same light hero as the event page it comes from (PageHero azure), so the flow does not jump to a different look */}
+      <PageHero
+        tone="azure"
+        crumbs={[{ label: t.common.home, to: '/' }, { label: t.nav.events, to: '/events' }, { label: t.events.type[ev.eventType], to: `/events/${ev.id}` }, { label: registerTitle(ev.eventType) }]}
+        kicker={
+          <Link to={`/events/${ev.id}`} className="mb-3 inline-flex items-center gap-1.5 text-[13px] font-semibold text-primary hover:underline"><ArrowLeft className="size-4" /> {tx('Quay lại sự kiện', 'Back to event', '행사로 돌아가기')}</Link>
+        }
+        title={L(ev.title)}
+        titleKey={ev.id}
+        subtitle={
+          <span className="flex flex-wrap gap-x-6 gap-y-1 text-sm md:text-base">
+            <span className="inline-flex items-center gap-2"><CalendarDays className="size-4 text-primary" /> {formatDate(ev.startDate, locale)}{ev.endDate.slice(0, 10) !== ev.startDate.slice(0, 10) && ` – ${formatDate(ev.endDate, locale)}`}</span>
+            {eventTimeRange(ev) && <span className="inline-flex items-center gap-2"><Clock className="size-4 text-primary" /> {eventTimeRange(ev)} (GMT+7)</span>}
+            {L(ev.location) && <span className="inline-flex items-center gap-2"><MapPin className="size-4 text-primary" /> {L(ev.location)}</span>}
+          </span>
+        }
+        aside={
+          /* steps, desktop: a card in the same place as the register card on the event page */
+          <div className="hidden w-[380px] rounded-3xl bg-white/90 p-6 shadow-[0_30px_60px_-34px_rgba(0,70,110,0.55)] ring-1 ring-primary/15 backdrop-blur dark:bg-white/5 dark:ring-white/10 lg:block">
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{registerTitle(ev.eventType)}</p>
+            <ol className="mt-4">
+              {steps.map((s, i) => (
+                <li key={s} className="relative flex gap-3.5 pb-5 last:pb-0">
+                  {i < steps.length - 1 && <span aria-hidden className={cn('absolute left-4 top-9 h-[calc(100%-2.5rem)] w-0.5 -translate-x-1/2 rounded-full', i < step ? 'bg-success' : 'bg-border')} />}
+                  <span className={cn('grid size-8 shrink-0 place-items-center rounded-full text-xs font-bold transition', i < step ? 'bg-success text-white' : i === step ? 'bg-primary text-primary-foreground ring-4 ring-primary/15' : 'bg-muted text-muted-foreground')}>
+                    {i < step ? <Check className="size-4" /> : i + 1}
+                  </span>
+                  <span className="min-w-0 pt-1">
+                    <span className={cn('block text-sm font-bold', i === step ? 'text-primary' : i < step ? 'text-foreground' : 'text-muted-foreground')}>{s}</span>
+                    <span className="mt-0.5 block text-xs text-muted-foreground">{stepHints[i]}</span>
+                  </span>
+                </li>
+              ))}
+            </ol>
+          </div>
+        }
+        below={
+          /* steps, phone/tablet: one row, the current step named */
+          <ol className="mt-6 flex items-center gap-2 rounded-2xl bg-white/80 p-3 ring-1 ring-primary/15 backdrop-blur dark:bg-white/5 dark:ring-white/10 sm:px-5 lg:hidden">
             {steps.map((s, i) => (
-              <li key={s} className="flex flex-1 items-center gap-2">
-                <span className={cn('grid size-7 shrink-0 place-items-center rounded-full text-xs font-bold transition', i < step ? 'bg-success text-white' : i === step ? 'bg-gold-bright text-navy' : 'bg-white/15 text-white/70')}>
-                  {i < step ? <Check className="size-3.5" /> : i + 1}
+              <li key={s} className="flex flex-1 items-center gap-2 last:flex-none">
+                <span className={cn('grid size-8 shrink-0 place-items-center rounded-full text-xs font-bold transition', i < step ? 'bg-success text-white' : i === step ? 'bg-primary text-primary-foreground ring-4 ring-primary/15' : 'bg-muted text-muted-foreground')}>
+                  {i < step ? <Check className="size-4" /> : i + 1}
                 </span>
-                <span className={cn('hidden text-[13px] font-semibold sm:block', i <= step ? 'text-white' : 'text-white/55')}>{s}</span>
-                {i < steps.length - 1 && <span className={cn('h-px flex-1', i < step ? 'bg-success' : 'bg-white/20')} />}
+                <span className={cn('whitespace-nowrap text-[13px] font-semibold', i === step ? 'text-primary' : 'hidden sm:block', i < step ? 'text-foreground' : i > step && 'text-muted-foreground')}>{s}</span>
+                {i < steps.length - 1 && <span className={cn('mx-1 h-0.5 flex-1 rounded-full', i < step ? 'bg-success' : 'bg-border')} />}
               </li>
             ))}
           </ol>
-        </div>
-      </section>
+        }
+      />
 
       <div className="container-page mt-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_340px]">
         <div className="min-w-0">
@@ -352,7 +379,7 @@ function RegisterFlow({ ev }: { ev: EventItem }) {
                     {programme && (
                       <>
                         <p className="mb-1 mt-6 text-[13px] font-semibold">{tx('Đặt lịch gặp sau phần ra mắt sản phẩm', 'Book a meeting after a product launch', '신제품 런칭 후 미팅 예약')}</p>
-                        <p className="mb-2.5 text-xs text-muted-foreground">{tx('Chỉ hiện các phiên trong ngày bạn chọn. Nhà cung cấp sẽ xác nhận lịch gặp qua email.', 'Only sessions on your chosen days are shown. Suppliers confirm by email.', '선택한 날짜의 세션만 표시됩니다. 공급업체가 이메일로 확정합니다.')}</p>
+                        <p className="mb-2.5 text-xs text-muted-foreground">{tx('Chỉ hiện các phiên trong ngày bạn chọn. Nhà cung cấp sẽ xác nhận lịch gặp qua email.', 'Only sessions on your chosen days are shown. Businesses confirm by email.', '선택한 날짜의 세션만 표시됩니다. 기업이 이메일로 확정합니다.')}</p>
                         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                           {programme.schedule.filter((s) => f.dates.includes(s.date)).map((s) => {
                             const key = `${s.date}-${s.start}`
@@ -572,7 +599,7 @@ function Sidebar({ ev }: { ev: EventItem }) {
     { icon: Gift, text: tx('Tài liệu và bản ghi sau sự kiện (khi Ban tổ chức đăng tải)', 'Materials and the recording after the event (once the organisers publish them)', '행사 후 자료 및 녹화본(주최 측 게시 시)') },
   ] : [
     { icon: Ticket, text: tx('Thẻ tham dự điện tử, check-in nhanh bằng QR', 'E-badge with fast QR check-in', 'QR 빠른 체크인 전자 배지') },
-    { icon: Handshake, text: tx('Đặt lịch gặp nhà cung cấp ngay trên hệ thống', 'Book supplier meetings online', '온라인으로 공급업체 미팅 예약') },
+    { icon: Handshake, text: tx('Đặt lịch gặp nhà cung cấp ngay trên hệ thống', 'Book business meetings online', '온라인으로 기업 미팅 예약') },
     { icon: Sparkles, text: tx('Xem trước sản phẩm ra mắt và danh sách gian hàng', 'Preview launches and exhibitor list', '신제품 및 참가사 목록 미리 보기') },
     { icon: Gift, text: tx('Tài liệu, bản ghi và báo cáo ngành sau sự kiện', 'Post-event materials and recordings', '행사 후 자료 및 녹화본 제공') },
   ]

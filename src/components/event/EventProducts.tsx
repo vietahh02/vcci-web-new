@@ -23,7 +23,7 @@ export function EventProducts({ ev }: { ev: EventItem }) {
     <section className="container-page mt-14" aria-label="products">
       <div className="flex flex-wrap items-end justify-between gap-2">
         <h2 className="flex items-center gap-2 text-2xl font-extrabold tracking-tight"><PackageCheck className="size-6 text-primary" /> {title}</h2>
-        <p className="text-sm text-muted-foreground">{tx('Báo giá và đặt hàng trực tiếp với nhà cung cấp trên hệ thống.', 'Request quotes and order directly with suppliers on the platform.', '플랫폼에서 공급업체에 직접 견적을 요청하세요.')}</p>
+        <p className="text-sm text-muted-foreground">{tx('Báo giá và đặt hàng trực tiếp với nhà cung cấp trên hệ thống.', 'Request quotes and order directly with businesses on the platform.', '플랫폼에서 기업에 직접 견적을 요청하세요.')}</p>
       </div>
       <div className="mt-6 grid gap-x-5 gap-y-9 sm:grid-cols-2 lg:grid-cols-4">
         {list.map(({ product, quotes }) => {

@@ -19,7 +19,7 @@ import { toProduct } from './adapters/product'
 import { fromImportRequestInput, toImportRequest, type ImportRequestInput } from './adapters/request'
 import { beShowId, isShowId, toShow, toShowLabel } from './adapters/show'
 import { mockFallback } from './config'
-import { cached, DAY } from './swr'
+import { cached, DAY, forget } from './swr'
 import { registerUploadToken, fileIdOf } from './uploads'
 import { ApiError, apiFetch, apiUnavailable, toPage, type Page } from './http'
 import * as mock from './mockApi'
@@ -28,6 +28,7 @@ export type { ImportRequestInput }
 export interface ProductQuery {
   keyword?: string
   categoryId?: string
+  industry?: string
   verifiedOnly?: boolean
   maxMoq?: number
   certificates?: string[]
@@ -53,10 +54,18 @@ const listOf = <T>(r: unknown) => (Array.isArray(r) ? (r as T[]) : toPage<T>(r).
 export const categoryIndustry = new Map<string, string>()
 /** Category list changes rarely: cached for a day (kept in localStorage, so a reload is instant), refreshed quietly when stale. */
 export async function loadCategories(): Promise<Category[]> {
-  const v = await cached('categories', { ttl: DAY, persist: true }, async () => ({
+  // 'v2': đã thêm bản dịch danh mục (en/ko); đổi khoá để trình duyệt bỏ cache cũ (chỉ có tên tiếng Việt)
+  const load = () => cached('categories:v2', { ttl: DAY, persist: true }, async () => ({
     cats: await fetchCategories(),
     industry: [...categoryIndustry],
   }))
+  let v = await load()
+  // An empty list is never worth keeping for a day: it is what the BE returns while the DB is being (re)seeded, and caching it
+  // leaves the header menu and the industry filter blank until the entry expires. Drop it and ask the BE again.
+  if (!v.cats.length) {
+    forget('categories:v2')
+    v = await load()
+  }
   v.industry.forEach(([k, x]) => categoryIndustry.set(k, x))
   return v.cats
 }
@@ -83,7 +92,7 @@ export async function searchProductsPage(q: ProductQuery = {}): Promise<Page<Pro
   return cached(key, { ttl: 5 * 60 * 1000 }, async () => {
     const size = q.size ?? 24
     const page = toPage<Raw>(await apiFetch('/api/products/search', {
-      query: { keyword: q.keyword, categoryId: q.categoryId, maxMoq: q.maxMoq, certificates: q.certificates, sort: q.sort, page: q.page ?? 0, size },
+      query: { keyword: q.keyword, categoryId: q.categoryId, industry: q.industry, maxMoq: q.maxMoq, certificates: q.certificates, sort: q.sort, page: q.page ?? 0, size },
     }), size)
     return { ...page, items: page.items.map(toProduct) }
   })
@@ -102,6 +111,17 @@ export async function getProduct(pid: string): Promise<Product | null> {
 }
 /** GET /api/products/search?organizationId= */
 export const fetchOrgProducts = async (orgId: string) => embeddedProducts.get(orgId) ?? toPage<Raw>(await apiFetch('/api/products/search', { query: { organizationId: orgId, page: 0, size: 50 } }), 50).items.map(toProduct)
+/** Full product list of one organisation for the company detail page. Never reads the embedded top-N (cards only) and walks every page. */
+export async function fetchAllOrgProducts(orgId: string): Promise<Product[]> {
+  const size = 50
+  const all: Product[] = []
+  for (let page = 0; page < 100; page++) {
+    const res = toPage<Raw>(await apiFetch('/api/products/search', { query: { organizationId: orgId, page, size } }), size)
+    all.push(...res.items.map(toProduct))
+    if (res.items.length < size || all.length >= res.total) break
+  }
+  return all
+}
 /** POST /api/products/{id}/rfq with {quantity, destination, message} (stored on the quotation and put in the seller's email). `sourceEventPid`: the show the buyer came from, counted as interest there. */
 export async function sendProductRfq(pid: string, body: { quantity: number | string; destination: string; message: string; sourceEventPid?: string }) {
   return apiFetch(`/api/products/${encodeURIComponent(pid)}/rfq`, {
@@ -112,14 +132,19 @@ export async function sendProductRfq(pid: string, body: { quantity: number | str
 
 /* ------------------------------------------------------------ businesses */
 /** GET /api/business/search?keyword&categoryId&businessType&page&size */
-export async function searchBusinesses(keyword = '', categoryId?: string, businessType?: string): Promise<Business[]> {
-  const page = toPage<Raw>(await apiFetch('/api/business/search', { query: { keyword, categoryId, businessType: businessType && businessType !== 'ALL' ? businessType : undefined, page: 0, size: 100 } }), 100)
+export async function searchBusinessesPage(keyword = '', categoryId?: string, businessType?: string, pageNo = 0, size = 100): Promise<Page<Business>> {
+  const page = toPage<Raw>(await apiFetch('/api/business/search', { query: { keyword, categoryId, businessType: businessType && businessType !== 'ALL' ? businessType : undefined, page: pageNo, size } }), size)
   // directory cards embed their top products (read-only view of the product service): no per-card request
   page.items.forEach((r) => { if (Array.isArray(r.products)) embeddedProducts.set(id(r.id), arr(r.products).map((p) => toProduct({ ...p, organizationId: r.id }))) })
-  return page.items.map(toBusiness)
+  return { ...page, items: page.items.map(toBusiness) }
+}
+export async function searchBusinesses(keyword = '', categoryId?: string, businessType?: string): Promise<Business[]> {
+  return (await searchBusinessesPage(keyword, categoryId, businessType, 0, 100)).items
 }
 /** true when a list response already carried this business' products (cards then skip the extra request) */
 export const hasEmbeddedProducts = (bid: string) => embeddedProducts.has(bid)
+/** how many products a list response embedded for this business (0 when none or not loaded) */
+export const embeddedProductCount = (bid: string) => embeddedProducts.get(bid)?.length ?? 0
 /** GET /api/business/featured */
 const embeddedProducts = new Map<string, Product[]>() // featured businesses embed their top products: avoids one request per business
 export async function fetchFeaturedBusinesses() {

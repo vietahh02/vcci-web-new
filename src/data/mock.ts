@@ -132,6 +132,10 @@ export interface Business {
   businessType: BusinessType
   verified: boolean
   coverImage: string
+  /** logo thật của doanh nghiệp (live); undefined → hiện chữ viết tắt */
+  logoUrl?: string
+  /** false khi doanh nghiệp chưa có ảnh bìa thật (live) → dùng nền gradient thay vì ảnh stock; undefined = coi như có */
+  hasCover?: boolean
   accent: string
   description: Bilingual
   capabilities: Bilingual[]
@@ -488,6 +492,8 @@ export interface ImportRequest {
   description: Bilingual
   productType: string
   categoryId: string
+  /** Tên danh mục theo ngôn ngữ đang chọn (BE đã dịch); dùng khi danh mục không nằm trong danh sách danh mục của trang chủ. */
+  categoryName?: string
   /** Doanh nghiệp mua (chat B2B báo giá). */
   organizationId?: string
   organizationName: string
@@ -518,7 +524,7 @@ export const importRequests: ImportRequest[] = [
   {
     id: 'r-1042', requestCode: 'IR-2026-1042', categoryId: 'c-sea', productType: 'Frozen shrimp',
     requestName: { vi: 'Cần mua tôm sú đông lạnh HOSO 26/30', en: 'Buying frozen black tiger shrimp HOSO 26/30', ko: '냉동 블랙타이거 새우 HOSO 26/30 구매' },
-    description: { vi: 'Chuỗi siêu thị tại Seoul cần nhà cung cấp ổn định cho mùa Tết âm lịch 2027, giao hàng chia 4 đợt.', en: 'Seoul supermarket chain seeks a steady supplier for Lunar New Year 2027, delivered in 4 shipments.', ko: '서울의 슈퍼마켓 체인이 2027년 설 시즌을 위한 안정적인 공급업체를 찾습니다. 4회 분할 선적.' },
+    description: { vi: 'Chuỗi siêu thị tại Seoul cần nhà cung cấp ổn định cho mùa Tết âm lịch 2027, giao hàng chia 4 đợt.', en: 'Seoul supermarket chain seeks a steady partner for Lunar New Year 2027, delivered in 4 shipments.', ko: '서울의 슈퍼마켓 체인이 2027년 설 시즌을 위한 안정적인 기업을 찾습니다. 4회 분할 선적.' },
     organizationName: 'Seoul Fresh Mart Co., Ltd', organizationEmail: 'sourcing@seoulfresh.example.kr', organizationPhone: '+82 2 555 0192',
     country: 'KR', countryName: { vi: 'Hàn Quốc', en: 'South Korea', ko: '대한민국' }, address: 'Busan Port', price: 9.5, quantity: 40000, unit: 'kg',
     startTime: day(-3), endTime: day(18), status: 'OPEN', viewCount: 1284, quoteCount: 14,
@@ -713,7 +719,7 @@ const rawEvents: EventItem[] = [
       { agendaStartTime: '19:45', agendaEndTime: '20:00', agendaTitle: { vi: 'Mở phòng & kiểm tra kết nối', en: 'Room opens & connection check' } },
       { agendaStartTime: '20:00', agendaEndTime: '20:10', agendaTitle: { vi: 'Khai mạc, giới thiệu chương trình', en: 'Opening and programme overview' }, speaker: { vi: 'VCCI', en: 'VCCI' } },
       { agendaStartTime: '20:10', agendaEndTime: '20:45', agendaTitle: { vi: 'Cơ hội và yêu cầu của thị trường châu Âu', en: 'EU opportunities and requirements' }, speaker: { vi: 'Nguyễn Thị Hoàng Thúy', en: 'Nguyen Thi Hoang Thuy' } },
-      { agendaStartTime: '20:45', agendaEndTime: '21:10', agendaTitle: { vi: 'Nhà mua hàng châu Âu cần gì ở nhà cung cấp Việt Nam', en: 'What EU buyers expect from Vietnamese suppliers' }, speaker: { vi: 'Lars Eriksson', en: 'Lars Eriksson' } },
+      { agendaStartTime: '20:45', agendaEndTime: '21:10', agendaTitle: { vi: 'Nhà mua hàng châu Âu cần gì ở nhà cung cấp Việt Nam', en: 'What EU buyers expect from Vietnamese businesses' }, speaker: { vi: 'Lars Eriksson', en: 'Lars Eriksson' } },
       { agendaStartTime: '21:10', agendaEndTime: '21:30', agendaTitle: { vi: 'Kinh nghiệm thực tiễn đáp ứng nhà mua hàng', en: 'Meeting buyer requirements in practice' }, speaker: { vi: 'Trần Văn Hiếu', en: 'Tran Van Hieu' } },
       { agendaStartTime: '21:30', agendaEndTime: '21:50', agendaTitle: { vi: 'Hỏi đáp trực tiếp', en: 'Live Q&A' }, speaker: { vi: 'Phạm Thu Hà', en: 'Pham Thu Ha' } },
       { agendaStartTime: '21:50', agendaEndTime: '22:00', agendaTitle: { vi: 'Tổng kết và giới thiệu chương trình kết nối tiếp theo', en: 'Wrap-up and next matchmaking programme' } },
@@ -762,7 +768,7 @@ const rawEvents: EventItem[] = [
       { agendaStartTime: '09:00', agendaEndTime: '09:30', agendaTitle: { vi: 'Khai mạc & tổng quan thị trường Hàn Quốc', en: 'Opening & Korean market outlook' }, speaker: { vi: 'VCCI', en: 'VCCI' } },
       { agendaStartTime: '09:30', agendaEndTime: '10:00', agendaTitle: { vi: 'Quy định nhập khẩu và nhãn mác thực phẩm Hàn Quốc', en: 'Korean import and labelling rules' }, speaker: { vi: 'Kim Ji-won', en: 'Kim Ji-won' } },
       { agendaStartTime: '10:00', agendaEndTime: '12:00', agendaTitle: { vi: 'Showcase: nông sản & cà phê', en: 'Showcase: produce & coffee' } },
-      { agendaStartTime: '13:30', agendaEndTime: '14:00', agendaTitle: { vi: 'Nhà nhập khẩu cần gì ở nhà cung cấp Việt Nam', en: 'What importers look for in Vietnamese suppliers' }, speaker: { vi: 'Park Min-ho', en: 'Park Min-ho' } },
+      { agendaStartTime: '13:30', agendaEndTime: '14:00', agendaTitle: { vi: 'Nhà nhập khẩu cần gì ở nhà cung cấp Việt Nam', en: 'What importers look for in Vietnamese businesses' }, speaker: { vi: 'Park Min-ho', en: 'Park Min-ho' } },
       { agendaStartTime: '14:00', agendaEndTime: '16:00', agendaTitle: { vi: 'Showcase: thuỷ sản & thực phẩm chế biến', en: 'Showcase: seafood & processed food' } },
       { agendaStartTime: '16:00', agendaEndTime: '17:00', agendaTitle: { vi: 'Kết nối B2B 1-1', en: '1-on-1 B2B matching' } },
     ],
@@ -912,7 +918,7 @@ const rawEvents: EventItem[] = [
   {
     id: 'e-ieae-tour', eventType: 'TRADE_MISSION', eventStatus: 'UPCOMING', coverImage: IMG.factory, format: 'ONLINE',
     title: { vi: 'Tham quan trực tuyến Triển lãm IEAE Hanoi 2026', en: 'Online tour of IEAE Hanoi 2026' },
-    introduction: { vi: 'Tham quan trực tuyến triển lãm quốc tế về thiết bị và công nghệ cùng cán bộ VCCI dẫn đường, kết nối trực tiếp với nhà cung cấp qua phòng họp ảo.', en: 'A guided online tour of the international equipment and technology exhibition, with live supplier meetings in virtual rooms.' },
+    introduction: { vi: 'Tham quan trực tuyến triển lãm quốc tế về thiết bị và công nghệ cùng cán bộ VCCI dẫn đường, kết nối trực tiếp với nhà cung cấp qua phòng họp ảo.', en: 'A guided online tour of the international equipment and technology exhibition, with live business meetings in virtual rooms.' },
     startDate: day(9, 9), endDate: day(9, 16), startTime: '09:00', endTime: '16:00', industry: ['Machinery', 'Electronics'],
     participationFee: 0, participationFeeCurrency: 'VND', registeredSlots: 38, maxSlots: 60, registrationDeadline: day(6, 17),
     organizedBy: { vi: 'Trung tâm Hỗ trợ DNNVV (VCCI)', en: 'VCCI SME Support Center' }, location: { vi: 'Trực tuyến — phát trực tiếp trên hệ thống VCCI', en: 'Online — live on the VCCI platform' },
@@ -920,7 +926,7 @@ const rawEvents: EventItem[] = [
     agendaOptions: [
       { agendaStartTime: '08:00', agendaEndTime: '', agendaTitle: { vi: 'Mở phòng & hướng dẫn tham quan', en: 'Room opens & tour briefing' } },
       { agendaStartTime: '09:00', agendaEndTime: '12:00', agendaTitle: { vi: 'Tham quan gian hàng trực tuyến theo nhóm ngành', en: 'Guided online booth visits by sector' } },
-      { agendaStartTime: '14:00', agendaEndTime: '16:00', agendaTitle: { vi: 'Gặp gỡ nhà cung cấp trực tuyến', en: 'Online supplier meetings' } },
+      { agendaStartTime: '14:00', agendaEndTime: '16:00', agendaTitle: { vi: 'Gặp gỡ nhà cung cấp trực tuyến', en: 'Online business meetings' } },
     ],
   },
   {
@@ -999,7 +1005,7 @@ export const sponsors: { id: string; name: string; mark: string; tier: SponsorTi
 export const testimonials: { id: string; name: string; company: string; country: string; countryName: Bilingual; role: Bilingual; rating: number; event: Bilingual; quote: Bilingual; accent: string }[] = [
   { id: 't1', name: 'Kim Ji-ho', company: 'Seoul Fresh Mart', country: 'KR', countryName: { vi: 'Hàn Quốc', en: 'South Korea', ko: '대한민국' }, role: { vi: 'Trưởng phòng thu mua', en: 'Head of Sourcing', ko: '구매 총괄' }, rating: 5, accent: '#2563eb',
     event: { vi: 'Livestream Việt Nam – Hàn Quốc 2026', en: 'Vietnam – Korea Livestream 2026', ko: '2026 베트남–한국 라이브 방송' },
-    quote: { vi: 'Chỉ trong một buổi livestream, chúng tôi đã chốt được hai nhà cung cấp tôm đạt chuẩn BRC. Huy hiệu xác thực VCCI giúp tiết kiệm hàng tuần kiểm tra hồ sơ.', en: 'In a single livestream we shortlisted two BRC-certified shrimp suppliers. The VCCI Verified badge saved us weeks of due diligence.', ko: '라이브 방송 한 번으로 BRC 인증 새우 공급업체 두 곳을 선정했습니다. VCCI 인증 배지 덕분에 몇 주가 걸리던 실사 기간을 줄일 수 있었습니다.' } },
+    quote: { vi: 'Chỉ trong một buổi livestream, chúng tôi đã chốt được hai nhà cung cấp tôm đạt chuẩn BRC. Huy hiệu xác thực VCCI giúp tiết kiệm hàng tuần kiểm tra hồ sơ.', en: 'In a single livestream we shortlisted two BRC-certified shrimp businesses. The VCCI Verified badge saved us weeks of due diligence.', ko: '라이브 방송 한 번으로 BRC 인증 새우 기업 두 곳을 선정했습니다. VCCI 인증 배지 덕분에 몇 주가 걸리던 실사 기간을 줄일 수 있었습니다.' } },
   { id: 't2', name: 'Erik Lindqvist', company: 'Nordic Home AB', country: 'SE', countryName: { vi: 'Thuỵ Điển', en: 'Sweden', ko: '스웨덴' }, role: { vi: 'Giám đốc sản phẩm', en: 'Product Director', ko: '제품 디렉터' }, rating: 5, accent: '#0f766e',
     event: { vi: 'Vietnam Furniture Sourcing Week', en: 'Vietnam Furniture Sourcing Week', ko: '베트남 가구 소싱 위크' },
     quote: { vi: 'Yêu cầu nhập khẩu của chúng tôi nhận 9 báo giá trong 48 giờ, tất cả đều có chứng nhận FSC đính kèm. Quy trình rõ ràng hơn nhiều so với các sàn khác.', en: 'Our import request got 9 quotes within 48 hours, every one with FSC certificates attached. Far clearer than other marketplaces.', ko: '수입 요청 하나에 48시간 만에 9건의 견적을 받았고, 모두 FSC 인증서가 첨부되어 있었습니다. 다른 플랫폼보다 훨씬 명확합니다.' } },

@@ -6,9 +6,9 @@ import {
 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { searchBusinesses, useEvents, useFeaturedBusinesses, useHomeTestimonials, useOrgProducts, useRemote } from '@/api'
+import { liveApi, searchBusinesses, USE_MOCK, useEvents, useFeaturedBusinesses, useHomeTestimonials, useOrgProducts, useRemote } from '@/api'
 import { countryName, type Business } from '@/data/mock'
-import { SectionHeader, VerifiedBadge } from '@/components/brand'
+import { CompanyMark, SectionHeader, VerifiedBadge } from '@/components/brand'
 import { LiveDot, Marquee, Reveal, Stagger, StaggerItem } from '@/components/effects'
 import { goldSponsors, mainSponsor, partnerSponsors } from '@/components/sponsor'
 import { buttonClass } from '@/components/ui/primitives'
@@ -68,9 +68,11 @@ export function HomeEmpty({ what, dark, className }: { what: keyof ReturnType<ty
 export function FeaturedBusiness() {
   const { t } = useI18n()
   const { data: featured, loading: featuredLoading } = useFeaturedBusinesses()
-  // featured suppliers may have no products (BE currently returns importers only), so the directory fills the gaps
+  // the featured list can be short, so the directory fills the gaps; businesses that have products come first
   const { data: directory, loading: directoryLoading } = useRemote('home:biz-directory', searchBusinesses)
-  const list = [...(featured ?? []), ...(directory ?? []).filter((d) => !featured?.some((f) => f.id === d.id))]
+  const merged = [...(featured ?? []), ...(directory ?? []).filter((d) => !featured?.some((f) => f.id === d.id))]
+  const count = (b: Business) => (USE_MOCK ? 1 : liveApi.embeddedProductCount(b.id))
+  const list = merged.map((b, i) => ({ b, i })).sort((x, y) => Number(count(y.b) > 0) - Number(count(x.b) > 0) || x.i - y.i).map((x) => x.b)
   return (
     <section className="container-page mt-24">
       <Reveal className="mb-8 flex flex-wrap items-end justify-between gap-x-10 gap-y-4">
@@ -79,14 +81,13 @@ export function FeaturedBusiness() {
           <p className="mt-3 text-muted-foreground">{t.home.featuredSub}</p>
         </div>
         <Link to="/suppliers" className="group inline-flex min-h-11 items-center gap-2 text-[15px] font-semibold text-primary">
-          {t.supplier.directoryTitle}
+          {t.common.viewAll}
           <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" />
         </Link>
       </Reveal>
-      {/* rows without products render nothing (a hidden marker while loading), so nth-of-type keeps the first three articles.
-          shortcut: one product request per candidate (up to 12); upgrade when the BE returns featured suppliers with products */}
-      <div className="peer grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3 [&>article:nth-of-type(n+4)]:hidden">
-        {list.slice(0, 12).map((b) => <FeaturedBusinessRow key={b.id} business={b} />)}
+      {/* six cards: those with products show three of them, the rest show the company header only (no product request is made for them) */}
+      <div className="peer grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
+        {list.slice(0, 6).map((b) => <FeaturedBusinessRow key={b.id} business={b} />)}
       </div>
       {!featuredLoading && !directoryLoading && <HomeEmpty what="businesses" className="hidden peer-[:not(:has(article,[data-loading]))]:flex" />}
     </section>
@@ -95,15 +96,16 @@ export function FeaturedBusiness() {
 
 function FeaturedBusinessRow({ business: b }: { business: Business }) {
   const { t, L } = useI18n()
-  const { data, loading } = useOrgProducts(b.id)
-  const items = (data ?? []).slice(0, 3)
-  if (loading) return <span data-loading hidden />
-  if (!items.length) return null
+  const items = (useOrgProducts(b.id, USE_MOCK || liveApi.hasEmbeddedProducts(b.id)).data ?? []).slice(0, 3)
   const country = countryName[b.country] ? L(countryName[b.country]) : b.country
   return (
     <article className="flex flex-col rounded-3xl bg-muted/60 p-4 md:p-5">
       <div className="flex items-center gap-4">
-        <img src={img(b.coverImage, 160, 160)} alt="" loading="lazy" className="size-16 shrink-0 rounded-2xl object-cover" />
+        {b.logoUrl || b.hasCover === false ? (
+          <CompanyMark name={b.nameEn} accent={b.accent} logo={b.logoUrl} className="size-16 rounded-2xl text-lg" />
+        ) : (
+          <img src={img(b.coverImage, 160, 160)} alt="" loading="lazy" className="size-16 shrink-0 rounded-2xl object-cover" />
+        )}
         <div className="min-w-0">
           <p className="flex items-center gap-2 text-sm text-muted-foreground">
             <img src={`https://flagcdn.com/${b.country.toLowerCase()}.svg`} alt="" width={20} height={14} className="h-3.5 w-5 rounded-[2px] object-cover" />
@@ -115,7 +117,7 @@ function FeaturedBusinessRow({ business: b }: { business: Business }) {
           </h3>
         </div>
       </div>
-      <ul className="mt-4 grid grid-cols-3 gap-2.5">
+      {items.length > 0 && <ul className="mt-4 grid grid-cols-3 gap-2.5">
         {items.map((p) => (
           <li key={p.id}>
             {/* image only at rest; name and price show on hover or keyboard focus (touch opens the product) */}
@@ -128,8 +130,8 @@ function FeaturedBusinessRow({ business: b }: { business: Business }) {
             </Link>
           </li>
         ))}
-      </ul>
-      <Link to={`/suppliers/${b.id}`} className="group mt-4 inline-flex min-h-9 items-center gap-1.5 self-start text-sm font-semibold text-primary">
+      </ul>}
+      <Link to={`/suppliers/${b.id}`} className="group mt-auto inline-flex pt-4 min-h-9 items-center gap-1.5 self-start text-sm font-semibold text-primary">
         {t.product.visitProfile}
         <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" />
       </Link>

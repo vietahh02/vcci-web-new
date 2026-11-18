@@ -47,7 +47,9 @@ export const useBusiness = (bid: string) =>
   useBoth(bid ? 'biz:' + bid : null, () => ({ business: mockApi.getBusiness(bid), profile: null }), () => liveApi.fetchBusiness(bid))
 /** `enabled=false` skips the request (list cards avoid an N+1 fetch; BE does not embed featured products in business cards yet). */
 export const useOrgProducts = (orgId: string, enabled = true) => useBoth(orgId && enabled ? 'orgp:' + orgId : null, () => mockApi.productsOf(orgId), () => liveApi.fetchOrgProducts(orgId))
-export const useFeaturedBusinesses = () => useBoth('featured', () => mockApi.featuredBusinesses(), () => liveApi.fetchFeaturedBusinesses())
+/** Every product of a company (detail page). Separate cache key: `useOrgProducts` may hold only the 3 products embedded in directory cards. */
+export const useAllOrgProducts = (orgId: string) => useBoth(orgId ? 'orgp-all:' + orgId : null, () => mockApi.productsOf(orgId), () => liveApi.fetchAllOrgProducts(orgId))
+export const useFeaturedBusinesses =() => useBoth('featured', () => mockApi.featuredBusinesses(), () => liveApi.fetchFeaturedBusinesses())
 export const useImportRequest = (rid: string) => useBoth(rid ? 'ir:' + rid : null, () => mockApi.getImportRequest(rid), () => liveApi.fetchImportRequest(rid))
 export const useEvent = (eid: string) => useBoth(eid ? 'ev:' + eid : null, () => mockApi.getEvent(eid), () => liveApi.fetchEvent(eid))
 export const useEvents = () => useRemote('events', USE_MOCK ? mockApi.searchEvents : liveApi.searchEvents)
@@ -60,12 +62,19 @@ export const useHomeActivity = () => useRemote('home:activity', m(mockApi.homeAc
 export const useHomeTestimonials = () => useRemote('home:testimonials', m(mockApi.homeTestimonials, liveApi.homeTestimonials))
 export const useHomeSponsors = () => useRemote('home:sponsors', m(mockApi.homeSponsors, liveApi.homeSponsors))
 
-/** Products from the same category (product detail "related"). */
-export const useRelatedProducts = (pid: string, categoryId: string) =>
+/** Similar products (product detail): same category when the row has one, topped up from the same industry (live rows often carry only the industry). Never an unfiltered list. */
+export const useRelatedProducts = (pid: string, categoryId: string, industry = '') =>
   useRemote('rel:' + pid, useCallback(async () => {
-    const list = await (USE_MOCK ? mockApi.searchProducts : liveApi.searchProducts)({ categoryId })
-    return list.filter((p) => p.id !== pid).slice(0, 5)
-  }, [pid, categoryId]))
+    const want = 5
+    if (USE_MOCK) return (await mockApi.searchProducts({ categoryId })).filter((p) => p.id !== pid).slice(0, want)
+    const picked = new Map<string, Awaited<ReturnType<typeof liveApi.searchProducts>>[number]>()
+    const take = async (q: liveApi.ProductQuery) => {
+      for (const p of await liveApi.searchProducts({ ...q, size: want + 1 })) if (p.id !== pid && picked.size < want) picked.set(p.id, p)
+    }
+    if (categoryId) await take({ categoryId })
+    if (picked.size < want && industry) await take({ industry })
+    return [...picked.values()]
+  }, [pid, categoryId, industry]))
 
 /** Home product tabs (GET /api/public/home/products?tab=) and request ticker (browse?sort=newest&size=8). */
 export const useHomeProducts = (tab: 'popular' | 'newest' | 'certified') => useRemote('home:products:' + tab, useCallback(() => (USE_MOCK ? mockApi.homeProducts : liveApi.homeProducts)(tab), [tab]))

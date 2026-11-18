@@ -169,6 +169,11 @@
   to { opacity: 0; transform: scale(0.96); }
 }
 
+/* Vietnamese and Korean stack tone marks and wide glyphs: the negative tracking used on bold headings makes letters such as "ươ", "ổ", "ị" collide and look uneven.
+   Unlayered on purpose: it must beat the Tailwind utilities. */
+:lang(vi) :is(.tracking-tight, .tracking-tighter, [class*="tracking-[-"]),
+:lang(ko) :is(.tracking-tight, .tracking-tighter, [class*="tracking-[-"]) { letter-spacing: 0; }
+
 @layer base {
   * { border-color: var(--border); }
   html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }

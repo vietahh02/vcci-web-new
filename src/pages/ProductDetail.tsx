@@ -17,6 +17,7 @@ import { Dialog, DialogContent, DialogTrigger, UnderlineTabs, useToast } from '@
 import { Badge, Button, Field, Input, Skeleton, Textarea } from '@/components/ui/primitives'
 import NotFound from '@/pages/NotFound'
 import { useI18n } from '@/lib/i18n'
+import { RichText } from '@/components/RichText'
 import { useProfile } from '@/lib/profile'
 import { tx } from '@/lib/tx'
 import { cn, formatMoney, formatNumber, img } from '@/lib/utils'
@@ -65,7 +66,7 @@ function ProductView({ product }: { product: Product }) {
   }, [active])
   const [tab, setTab] = useState('overview')
   const [zoom, setZoom] = useState({ on: false, x: 50, y: 50 })
-  const related = useRelatedProducts(product.id, product.categoryId).data ?? []
+  const related = useRelatedProducts(product.id, product.categoryId, product.industry).data ?? []
   const none = tx('Chưa cung cấp', 'Not provided', '미제공')
 
   const images = product.productImages
@@ -218,7 +219,7 @@ function ProductView({ product }: { product: Product }) {
         />
         <AnimatePresence mode="wait">
           <motion.div key={tab} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.2 }} className="py-5">
-            {tab === 'overview' && <p className="leading-relaxed text-foreground/90">{L(product.description) || none}</p>}
+            {tab === 'overview' && (L(product.description) ? <RichText text={L(product.description)} /> : <p className="leading-relaxed text-foreground/90">{none}</p>)}
             {tab === 'specs' && (
               /* cùng kiểu khung với "Thông tin sản phẩm" và "Thông tin doanh nghiệp": ô nhãn tô nền, đường kẻ dọc, hai cột trên màn rộng */
               <dl className="grid overflow-hidden rounded-xl border sm:grid-cols-2">
@@ -245,7 +246,7 @@ function ProductView({ product }: { product: Product }) {
                     <p className="font-semibold">{c}</p>
                   </div>
                 ))}
-              </div> : <p className="text-muted-foreground">{tx('Nhà cung cấp chưa khai chứng nhận cho sản phẩm này.', 'The supplier has not listed certificates for this product.', '공급업체가 이 상품의 인증을 등록하지 않았습니다.')}</p>
+              </div> : <p className="text-muted-foreground">{tx('Nhà cung cấp chưa khai chứng nhận cho sản phẩm này.', 'The business has not listed certificates for this product.', '기업이 이 상품의 인증을 등록하지 않았습니다.')}</p>
             )}
           </motion.div>
         </AnimatePresence>
@@ -273,7 +274,7 @@ function SupplierCard({ product }: { product: Product }) {
     <div className="rounded-2xl border bg-gradient-to-b from-primary-soft/70 to-card p-5 xl:sticky xl:top-32">
       <p className="text-[13px] font-medium text-muted-foreground">{t.product.supplierCard}</p>
       <div className="mt-3 flex items-start gap-3">
-        <CompanyMark name={supplier.nameEn} accent={supplier.accent} className="size-12" />
+        <CompanyMark name={supplier.nameEn} accent={supplier.accent} logo={supplier.logoUrl} className="size-12" />
         <div className="min-w-0">
           <Link to={`/suppliers/${supplier.id}`} className="line-clamp-2 text-base font-bold leading-snug underline-offset-4 hover:text-primary hover:underline">{supplier.name}</Link>
           <div className="mt-1.5 flex flex-wrap items-center gap-2">{supplier.verified && <VerifiedBadge />}<ReputationStars orgId={supplier.id} legacyScore={supplier.reputationScore} /></div>
@@ -352,7 +353,7 @@ function RfqDialog({ product }: { product: Product }) {
         className="max-w-xl"
         icon={<span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-[#1a8cc4] to-primary text-white shadow-lg shadow-primary/30 ring-4 ring-white/60 dark:ring-white/10"><FileText className="size-5" /></span>}
         headerClassName="border-b-primary/15 bg-gradient-to-br from-[#e4f2fb] via-[#f2f9fe] to-[#d6eaf8] py-5 dark:from-[#0b2a4a] dark:via-[#0a2548] dark:to-[#071d3c]"
-        description={session ? tx('Yêu cầu được gửi tới email của nhà cung cấp.', 'The request goes to the supplier by email.', '요청은 공급업체 이메일로 전달됩니다.') : tx('Yêu cầu được gửi tới email của nhà cung cấp. Bạn soạn ngay được; khi gửi, bạn đăng nhập và nội dung đã soạn được giữ nguyên.', 'The request goes to the supplier by email. Write it now; when you send, you sign in and what you wrote is kept.', '요청은 공급업체 이메일로 전달됩니다. 지금 작성하고, 보낼 때 로그인하면 내용이 그대로 유지됩니다.')}>
+        description={session ? tx('Yêu cầu được gửi tới email của nhà cung cấp.', 'The request goes to the business by email.', '요청은 기업 이메일로 전달됩니다.') : tx('Yêu cầu được gửi tới email của nhà cung cấp. Bạn soạn ngay được; khi gửi, bạn đăng nhập và nội dung đã soạn được giữ nguyên.', 'The request goes to the business by email. Write it now; when you send, you sign in and what you wrote is kept.', '요청은 기업 이메일로 전달됩니다. 지금 작성하고, 보낼 때 로그인하면 내용이 그대로 유지됩니다.')}>
         <AnimatePresence mode="wait">
           {sent ? (
             <SuccessState key="ok" title={t.product.sent} desc={t.product.sentDesc} onClose={() => setOpen(false)} />

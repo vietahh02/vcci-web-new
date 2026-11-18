@@ -1,11 +1,11 @@
 /** Trade-show layout: immersive countdown hero + live strip + month-grouped schedule + past recordings. */
 import { motion } from 'motion/react'
-import { ArrowRight, MapPin, Ticket, Video } from 'lucide-react'
+import { ArrowRight, MapPin, Ticket } from 'lucide-react'
 import { useEffect, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { searchEvents } from '@/api'
 import type { EventItem } from '@/data/mock'
-import { EventExplorer, formatLabel } from '@/components/event/EventExplorer'
+import { EventExplorer } from '@/components/event/EventExplorer'
 import { LiveDot, useCountdown } from '@/components/effects'
 import { HeroSearch } from '@/components/HeroSearch'
 import { PageHero } from '@/components/PageHero'
@@ -33,7 +33,9 @@ export default function Events() {
 
   const live = list.find((e) => e.eventStatus === 'ONGOING' && e.eventType === 'LIVESTREAM') ?? list.find((e) => e.eventStatus === 'ONGOING' && e.eventType === 'SHOW')
   const upcoming = list.filter((e) => e.eventStatus === 'UPCOMING').sort((a, b) => a.startDate.localeCompare(b.startDate))
-  const next = upcoming[0]
+  // no upcoming event (e.g. everything is already running): the page keeps its hero, featuring the ongoing event that ends first
+  const running = list.filter((e) => e.eventStatus === 'ONGOING').sort((a, b) => a.endDate.localeCompare(b.endDate))
+  const next = upcoming[0] ?? running[0]
 
   return (
     <>
@@ -68,6 +70,7 @@ function LiveStrip({ ev }: { ev: EventItem }) {
 
 function CountdownHero({ ev, search }: { ev: EventItem; search: ReactNode }) {
   const { t, L, locale } = useI18n()
+  const ongoing = ev.eventStatus === 'ONGOING'
   const c = useCountdown(ev.startDate)
   const time = eventTimeRange(ev)
   const parts: [number, string][] = [[c.d, t.common.countdown[0]], [c.h, t.common.countdown[1]], [c.m, t.common.countdown[2]], [c.s, t.common.countdown[3]]]
@@ -80,16 +83,19 @@ function CountdownHero({ ev, search }: { ev: EventItem; search: ReactNode }) {
       kicker={
         <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mb-2 inline-flex items-center gap-2 rounded-full bg-white/80 px-3.5 py-1 text-[13px] font-bold text-primary ring-1 ring-primary/25 backdrop-blur dark:bg-white/10 dark:text-[#7cc7ee] dark:ring-white/15">
           <span aria-hidden className="size-2 rounded-full bg-primary" />
-          {t.home.upcoming} · {t.events.type[ev.eventType]}
+          {ongoing ? t.events.status.ONGOING : t.home.upcoming} · {t.events.type[ev.eventType]}
         </motion.p>
       }
       title={L(ev.title)}
       titleKey={ev.id}
       subtitle={
         <span className="flex flex-wrap gap-x-5 gap-y-1">
-          <span>{formatDate(ev.startDate, locale, { day: '2-digit', month: 'long', year: 'numeric' })}{time && ` · ${time}`}</span>
+          <span>
+            {formatDate(ev.startDate, locale, { day: '2-digit', month: 'long', year: 'numeric' })}
+            {ongoing && ev.endDate.slice(0, 10) !== ev.startDate.slice(0, 10) && ` – ${formatDate(ev.endDate, locale, { day: '2-digit', month: 'long', year: 'numeric' })}`}
+            {time && ` · ${time}`}
+          </span>
           {/* online-first: format/platform first, venue secondary and only when set */}
-          {ev.format !== 'OFFLINE' && <span className="inline-flex items-center gap-1.5"><Video className="size-4" /> {formatLabel(ev.format)}{ev.platform ? ` · ${ev.platform}` : ''}</span>}
           {L(ev.location) && <span className="inline-flex items-center gap-1.5 opacity-80"><MapPin className="size-4" /> {L(ev.location)}</span>}
         </span>
       }
@@ -98,7 +104,7 @@ function CountdownHero({ ev, search }: { ev: EventItem; search: ReactNode }) {
           to={`/events/${ev.id}`}
           className="group relative block aspect-[16/10] w-full max-w-[560px] overflow-hidden rounded-3xl bg-muted shadow-[0_30px_60px_-30px_rgba(0,70,110,0.5)] ring-1 ring-white/70 dark:ring-white/10"
         >
-          <img src={img(ev.coverImage, 1200, 760)} alt="" className="size-full object-cover transition-transform duration-700 group-hover:scale-105" />
+          <img src={img(ev.coverImage, 1200, 760)} alt="" className="size-full object-cover object-top transition-transform duration-700 group-hover:scale-105" />
           <span aria-hidden className="absolute inset-0 bg-gradient-to-t from-[#041a2b]/55 via-transparent to-transparent" />
           <span className="absolute left-4 top-4 grid min-w-14 place-items-center rounded-2xl bg-white/95 px-3 py-2 text-center shadow-md">
             <span className="text-[11px] font-bold uppercase leading-none tracking-wide text-primary">{formatDate(ev.startDate, locale, { month: 'short' })}</span>
@@ -108,7 +114,7 @@ function CountdownHero({ ev, search }: { ev: EventItem; search: ReactNode }) {
       }
     >
       {/* countdown: four tiles; Be Vietnam Pro has no tabular figures, so each digit gets its own fixed slot */}
-      <div className="flex w-full gap-2 md:gap-3">
+      {!ongoing && <div className="flex w-full gap-2 md:gap-3">
         {parts.map(([v, label]) => {
           const digits = String(v).padStart(2, '0')
           return (
@@ -122,7 +128,7 @@ function CountdownHero({ ev, search }: { ev: EventItem; search: ReactNode }) {
             </div>
           )
         })}
-      </div>
+      </div>}
       <Link to={`/events/${ev.id}`} className={buttonClass('default', 'lg')}><Ticket /> {t.events.register}</Link>
       <Link to={`/events/${ev.id}`} className={buttonClass('ghost', 'lg', 'border border-primary/40 bg-white/70 text-primary hover:bg-white hover:text-primary dark:border-white/25 dark:bg-white/10 dark:text-white dark:hover:bg-white/20 dark:hover:text-white')}>{t.common.viewDetail}</Link>
     </PageHero>

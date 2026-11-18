@@ -275,7 +275,7 @@ export function ShowEventDetail({ show }: { show: Show }) {
       <div className="container-page pb-20 pt-10">
         {tab === 'overview' && show.status === 'ENDED' && <div id="show-recap" className="mb-14 space-y-10"><EventRecap ev={showToEvent(show)} /><ShowMaterials show={show} badge={visitor.badge} /></div>}
         {tab === 'overview' && <Overview show={show} onOpenPavilion={online ? undefined : openPavilion} />}
-        {tab === 'overview' && <div className="-mx-4 mt-14 empty:hidden sm:mx-0"><EventParticipants ev={showToEvent(show)} listed={online ? showOrganisations(show) : undefined} /></div>}
+        {tab === 'overview' && <div className="-mx-4 mt-14 empty:hidden sm:mx-0"><EventParticipants embedded ev={showToEvent(show)} listed={online ? showOrganisations(show) : undefined} /></div>}
         {tab === 'booths' && !online && <Booths key={boothPav} show={show} initialPav={boothPav} onOpen={setBooth} />}
         {tab === 'products' && <ProductsTab show={show} onAsk={openInquiry} onOpenBooth={setBooth} />}
         {tab === 'launches' && <Launches show={show} visitor={visitor} onRegister={() => setRegOpen(true)} onOpenBooth={setBooth} />}

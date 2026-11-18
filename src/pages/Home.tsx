@@ -247,7 +247,7 @@ function RequestRow({ request: r }: { request: ImportRequest }) {
       <div className="relative grid items-center gap-x-6 gap-y-2 overflow-hidden rounded-2xl border bg-card px-5 py-4 transition duration-300 group-hover:-translate-y-0.5 group-hover:border-primary/40 group-hover:shadow-[0_18px_40px_-24px_rgba(0,102,153,0.45)] md:grid-cols-[minmax(0,1fr)_150px_minmax(0,220px)_150px_32px] md:px-6">
       <span aria-hidden className="absolute inset-y-0 left-0 w-1 origin-top scale-y-0 bg-gradient-to-b from-[#1a8cc4] to-primary transition-transform duration-300 group-hover:scale-y-100" />
       <div className="min-w-0">
-        <span className="inline-block rounded-full bg-primary-soft px-2.5 py-0.5 text-[11px] font-semibold text-primary">{cat ? L(cat.categoryName) : r.productType}</span>
+        <span className="inline-block rounded-full bg-primary-soft px-2.5 py-0.5 text-[11px] font-semibold text-primary">{cat ? L(cat.categoryName) : r.categoryName || r.productType}</span>
         <p className="mt-1.5 truncate text-base font-bold leading-snug transition-colors group-hover:text-primary">{L(r.requestName)}</p>
       </div>
       <p className="text-sm font-semibold md:text-[15px]">{formatNumber(r.quantity, locale)} <span className="font-normal text-muted-foreground">{r.unit}</span></p>
