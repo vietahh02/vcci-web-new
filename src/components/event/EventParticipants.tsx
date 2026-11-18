@@ -1,19 +1,20 @@
 /** Participants of an event in three columns — domestic businesses, foreign businesses, sponsors — for every state: not open yet → live → ended. */
 import { ArrowRightLeft, CalendarClock, Globe2, Handshake, Landmark, MapPin, MessageSquare, Radio } from 'lucide-react'
+import { AnimatePresence, motion } from 'motion/react'
 import { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { BusinessChatButton } from '@/components/chat/BusinessChatButton'
 import { CompanyMark, CountryChip, VerifiedBadge } from '@/components/brand'
-import { LiveDot } from '@/components/effects'
+import { LiveDot, Tilt } from '@/components/effects'
 import { useToast } from '@/components/ui/overlay'
 import { Badge, Button, buttonClass } from '@/components/ui/primitives'
-import { tokens, USE_MOCK } from '@/api'
+import { tokens, USE_MOCK, useBusinessDirectory } from '@/api'
 import { connectParticipant, useEventParticipants, type ConnectionType } from '@/api/eventApi'
 import type { Participant, Side } from '@/data/eventParticipants'
 import { businesses, type EventItem } from '@/data/mock'
 import { useI18n } from '@/lib/i18n'
 import { OPTIONS } from '@/lib/profile'
-import { cn } from '@/lib/utils'
+import { cn, img } from '@/lib/utils'
 import { tx } from '@/lib/tx'
 import { isOnlineShowEvent } from '@/lib/eventStatus'
 
@@ -26,6 +27,8 @@ const COLUMNS: { side: Side; icon: typeof MapPin; tone: string; chip: string; ti
 
 /** Featured organisations shown per column before "view all". */
 const FEATURED = 3
+/** Cards shown on the event page before "view more" (3 columns × 3 rows). */
+const GRID = 9
 
 const verifiedIds = new Set(businesses.filter((x) => x.verified).map((x) => x.id))
 
@@ -42,6 +45,12 @@ export function EventParticipants({ ev, onRegister, listed, embedded }: { ev: Ev
   // `listed`: the businesses from the show's own payload, used until the API has a participant list for this show
   const all = remote.length ? remote : listed ?? []
   const onlineShow = isOnlineShowEvent(ev)
+  // the participants API gives a company name, not the business: match it to the directory for the cover and logo shown on the card
+  const directory = useBusinessDirectory().data
+  const norm = (s: string) => s.toLowerCase().replace(/\s+/g, ' ').trim()
+  const bizOf = (p: Participant) =>
+    (p.businessId ? businesses.find((b) => b.id === p.businessId) ?? directory?.find((b) => b.id === p.businessId) : undefined) ??
+    directory?.find((b) => norm(b.name) === norm(p.name) || (!!p.nameEn && norm(b.nameEn) === norm(p.nameEn)))
   const { pathname } = useLocation()
   const [onlineOnly, setOnlineOnly] = useState(false)
   const [showAll, setShowAll] = useState<Partial<Record<Side, boolean>>>({})
@@ -88,14 +97,19 @@ export function EventParticipants({ ev, onRegister, listed, embedded }: { ev: Ev
 
   const row = (p: Participant) => <li key={p.id} className="flex flex-col gap-3 border-b p-4 last:border-b-0">{body(p)}</li>
 
-  const body = (p: Participant, card = false) => (
+  const body = (p: Participant, card = false) => {
+    const biz = card ? bizOf(p) : undefined
+    const bid = p.businessId ?? biz?.id
+    return (
     <>
-      <div className="flex items-start gap-3">
-        <CompanyMark name={p.nameEn ?? p.name} accent={p.accent} className="size-11 shrink-0" />
+      <div className={card ? 'flex flex-col gap-2.5' : 'flex items-start gap-3'}>
+        {card
+          ? <CompanyMark name={p.nameEn ?? p.name} accent={p.accent} logo={biz?.logoUrl} className="-mt-9 size-16 rounded-full border-4 border-card text-lg shadow-md" />
+          : <CompanyMark name={p.nameEn ?? p.name} accent={p.accent} className="size-11 shrink-0" />}
         <div className="min-w-0 flex-1">
           <p className="flex flex-wrap items-center gap-x-2 gap-y-1 font-bold leading-snug">
-            <span className="min-w-0 break-words">{lang === 'vi' ? p.name : p.nameEn ?? p.name}</span>
-            {p.businessId && verifiedIds.has(p.businessId) && <VerifiedBadge compact />}
+            <span className="min-w-0 break-words transition-colors group-hover:text-primary">{lang === 'vi' ? p.name : p.nameEn ?? p.name}</span>
+            {!card && bid && verifiedIds.has(bid) && <VerifiedBadge compact />}
           </p>
           <p className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground"><CountryChip code={p.country} /> {kindLabel(p)}</p>
         </div>
@@ -112,11 +126,12 @@ export function EventParticipants({ ev, onRegister, listed, embedded }: { ev: Ev
         {(live || ended) && p.side === 'SELLER' && p.quotes > 0 && <Badge variant="secondary">{p.quotes} {tx('báo giá', 'quotes', '견적')}</Badge>}
       </div>
       <div className={cn('flex flex-wrap items-center gap-2', card && 'mt-auto border-t pt-3')}>
-        {p.businessId && <Link to={`/suppliers/${p.businessId}`} className={buttonClass('ghost', 'sm', 'text-primary')}>{tx('Hồ sơ', 'Profile', '프로필')}</Link>}
+        {bid && <Link to={`/suppliers/${bid}`} className={buttonClass('ghost', 'sm', 'text-primary')}>{tx('Hồ sơ', 'Profile', '프로필')}</Link>}
         {ev.eventType === 'SHOW' && !USE_MOCK ? contactShow(p) : p.side !== 'SUPPORT' && action(p)}
       </div>
     </>
-  )
+    )
+  }
 
   const columns = onlineShow ? COLUMNS.filter((c) => all.some((p) => columnOf(p) === c.side)) : COLUMNS
   // Show overview: no block without data. Webinar tab (onRegister set) keeps its "no organisations yet" columns and register prompt.
@@ -136,19 +151,18 @@ export function EventParticipants({ ev, onRegister, listed, embedded }: { ev: Ev
   const disclaimer = <p className="mt-3 text-[11px] text-muted-foreground">{tx('Tên doanh nghiệp, nhu cầu và năng lực cung ứng được công khai cho mọi người xem; thông tin liên hệ chỉ mở sau khi hai bên kết nối. '+(USE_MOCK ? 'Danh sách là dữ liệu minh hoạ.' : '')+'', 'Company names, needs and supply are public to everyone; contact details open only after both sides connect.'+(USE_MOCK ? ' The list is sample data.' : ''), '기업명, 수요, 공급 정보는 모두에게 공개되며 연락처는 연결 후에만 공개됩니다.'+(USE_MOCK ? ' 샘플 데이터입니다.' : ''))}</p>
 
   if (!embedded) {
-    const GRID = 9
     const visible = all.filter((p) => !onlineOnly || p.online)
     const counts = COLUMNS.map((c) => ({ ...c, n: visible.filter((p) => columnOf(p) === c.side).length }))
     const chosen = visible.filter((p) => pick === 'ALL' || columnOf(p) === pick)
     const shown = gridAll ? chosen : chosen.slice(0, GRID)
-    const accent: Record<Side, string> = { SELLER: 'border-t-primary', BUYER: 'border-t-gold', SUPPORT: 'border-t-navy' }
+    // same pill look as the Businesses directory filter
     const chip = (key: 'ALL' | Side, label: string, n: number, Icon?: typeof MapPin) => (
-      <button key={key} type="button" aria-pressed={pick === key} disabled={key !== 'ALL' && n === 0}
+      <button key={key} type="button" aria-pressed={pick === key}
         onClick={() => { setPick(key); setGridAll(false) }}
-        className={cn('inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-45',
-          pick === key ? 'border-primary bg-primary text-primary-foreground' : 'bg-card hover:border-primary/40 hover:text-primary')}>
+        className={cn('inline-flex h-11 items-center gap-2 rounded-full border px-5 text-[15px] font-semibold transition-colors', n === 0 && pick !== key && 'opacity-60',
+          pick === key ? 'border-primary bg-primary text-primary-foreground shadow-[0_8px_18px_-10px_rgba(0,102,153,0.9)]' : 'border-primary/50 bg-card text-primary hover:border-primary hover:bg-primary-soft dark:border-white/25 dark:text-[#cfe9f8] dark:hover:bg-white/10')}>
         {Icon && <Icon className="size-4" />} {label}
-        <span className={cn('rounded-full px-1.5 text-xs tabular-nums', pick === key ? 'bg-white/20' : 'bg-muted')}>{n}</span>
+        <span className={cn('rounded-full px-1.5 text-xs tabular-nums', pick === key ? 'bg-white/20' : 'bg-primary/10 dark:bg-white/10')}>{n}</span>
       </button>
     )
     return (
@@ -158,7 +172,7 @@ export function EventParticipants({ ev, onRegister, listed, embedded }: { ev: Ev
             <h2 className="text-2xl font-extrabold tracking-tight">{tx('Đơn vị nổi bật', 'Featured organisations', '주요 참가 기관')}</h2>
             <p className="mt-1 text-sm text-muted-foreground">{subtitle}</p>
           </div>
-          {hasPresence && <label className="flex w-fit items-center gap-2 text-sm font-medium"><input type="checkbox" checked={onlineOnly} onChange={(e) => setOnlineOnly(e.target.checked)} /> {tx('Chỉ hiện đơn vị đang trực tuyến', 'Show only organisations online now', '접속 중인 기관만 보기')}</label>}
+          {hasPresence && <label className="flex w-fit items-center gap-2 text-sm font-medium"><input type="checkbox" checked={onlineOnly} onChange={(e) => { setOnlineOnly(e.target.checked); setGridAll(false) }} /> {tx('Chỉ hiện đơn vị đang trực tuyến', 'Show only organisations online now', '접속 중인 기관만 보기')}</label>}
         </div>
 
         <div className="mt-5 flex flex-wrap gap-2" role="group" aria-label={tx('Lọc theo nhóm', 'Filter by group', '그룹별 보기')}>
@@ -169,17 +183,36 @@ export function EventParticipants({ ev, onRegister, listed, embedded }: { ev: Ev
         {shown.length === 0 ? (
           <div className="mt-6 grid place-items-center gap-2 rounded-3xl border border-dashed bg-muted/30 px-6 py-14 text-center">
             <Handshake className="size-7 text-muted-foreground/50" />
-            <p className="font-semibold">{tx('Chưa có đơn vị nào', 'No organisations yet', '아직 없습니다')}</p>
+            <p className="font-semibold">{pick === 'ALL' ? tx('Chưa có đơn vị nào', 'No organisations yet', '아직 없습니다') : tx('Chưa có đơn vị nào trong nhóm này', 'No organisations in this group yet', '이 그룹에는 아직 없습니다')}</p>
             <p className="max-w-md text-sm text-muted-foreground">{tx('Danh sách hiển thị khi đơn vị được duyệt tham gia.', 'Organisations appear here once approved.', '참가가 승인되면 표시됩니다.')}</p>
           </div>
         ) : (
-          <ul className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            {shown.map((p) => (
-              <li key={p.id} className={cn('flex flex-col gap-3 rounded-2xl border border-t-[3px] bg-card p-4 shadow-[0_14px_32px_-28px_rgba(0,70,110,0.5)] transition-shadow hover:shadow-[0_18px_40px_-26px_rgba(0,70,110,0.55)]', accent[columnOf(p)])}>
-                {body(p, true)}
-              </li>
-            ))}
-          </ul>
+          <div className="mt-6 grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+            <AnimatePresence mode="popLayout">
+              {shown.map((p, i) => (
+                <motion.div key={p.id} layout initial={{ opacity: 0, y: 24, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1, transition: { delay: Math.min(i, 9) * 0.05, duration: 0.5 } }} exit={{ opacity: 0, scale: 0.95 }}>
+                  {/* hover feel of the Businesses card: tilt, border + shadow, name picks up the brand colour */}
+                  <Tilt className="h-full rounded-3xl" max={6}>
+                    <div className="group relative flex h-full flex-col overflow-hidden rounded-2xl border bg-card shadow-sm transition-[box-shadow,border-color] duration-300 hover:border-primary/30 hover:shadow-2xl hover:shadow-navy/12">
+                      {(() => {
+                        const biz = bizOf(p)
+                        return (
+                          <div className="relative h-28 shrink-0 overflow-hidden">
+                            {biz && biz.hasCover !== false && biz.coverImage
+                              ? <img src={img(biz.coverImage, 640, 300)} alt="" loading="lazy" className="size-full object-cover transition-transform duration-700 ease-out group-hover:scale-110" />
+                              : <div className="size-full transition-transform duration-700 ease-out group-hover:scale-110" style={{ background: `radial-gradient(120% 140% at 85% 0%, color-mix(in oklab, ${p.accent} 70%, white) 0%, ${p.accent} 45%, color-mix(in oklab, ${p.accent} 55%, #08082e) 100%)` }} />}
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
+                            {biz?.verified && <VerifiedBadge className="absolute right-3 top-3 bg-white/90 dark:bg-black/50" />}
+                          </div>
+                        )
+                      })()}
+                      <div className="relative flex flex-1 flex-col gap-3 px-4 pb-4">{body(p, true)}</div>
+                    </div>
+                  </Tilt>
+                </motion.div>
+              ))}
+            </AnimatePresence>
+          </div>
         )}
         {chosen.length > GRID && (
           <div className="mt-5 text-center">

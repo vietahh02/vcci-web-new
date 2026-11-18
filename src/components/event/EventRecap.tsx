@@ -16,7 +16,7 @@ import type { EventItem } from '@/data/mock'
 import { useI18n } from '@/lib/i18n'
 import { isOnlineShowEvent } from '@/lib/eventStatus'
 import { tx } from '@/lib/tx'
-import { formatDate, formatNumber, img } from '@/lib/utils'
+import { cn, formatDate, formatNumber, img } from '@/lib/utils'
 
 /** A file we can play on the page: our own storage or a video extension. Anything else (YouTube, Vimeo…) opens in a new tab. */
 const isVideoFile = (u: string) => u.startsWith(API_BASE) || u.includes('/api/files/') || /\.(mp4|webm|ogv|ogg|mov|m4v)(\?|#|$)/i.test(u)
@@ -33,7 +33,16 @@ function galleryTile(i: number, n: number) {
   return 'aspect-[4/3]'
 }
 
-const interestLabel = (n: number) => tx(`${n} doanh nghiệp quan tâm`, `${n} businesses interested`, `${n}개 기업 관심`)
+/** "3 giờ 30" from two HH:mm times; '' when either is missing or the end is not after the start. */
+function sessionLength(from: string, to: string) {
+  const m = (s: string) => { const x = /^(\d{1,2}):(\d{2})/.exec(s); return x ? Number(x[1]) * 60 + Number(x[2]) : NaN }
+  const d = m(to) - m(from)
+  if (!(d > 0)) return ''
+  const h = Math.floor(d / 60), mm = d % 60
+  return tx(`${h ? `${h} giờ` : ''}${h && mm ? ' ' : ''}${mm ? `${mm} phút` : ''}`, `${h ? `${h}h` : ''}${h && mm ? ' ' : ''}${mm ? `${mm}m` : ''}`, `${h ? `${h}시간` : ''}${h && mm ? ' ' : ''}${mm ? `${mm}분` : ''}`)
+}
+
+const interestLabel =(n: number) => tx(`${n} doanh nghiệp quan tâm`, `${n} businesses interested`, `${n}개 기업 관심`)
 
 /** A ranking of products in the recap: same picture-and-name card as the Show product tab, counts only. */
 function RecapProducts({ ev, title, icon: Icon, items, wide, count }: { ev: EventItem; title: string; icon: ComponentType<{ className?: string }>; items: RecapProduct[]; wide: boolean; count: (n: number) => string }) {
@@ -84,9 +93,10 @@ export function EventRecap({ ev }: { ev: EventItem }) {
     <section aria-label="recap" className="space-y-10">
       {r.stats.length > 0 && <div>
         <p className="text-[13px] font-semibold uppercase tracking-[0.16em] text-primary">{tx('Tổng kết sự kiện', 'Event highlights', '행사 하이라이트')}</p>
-        <dl className="mt-3 grid grid-cols-2 gap-3 md:grid-cols-5">
+        {/* as many columns as figures, so a row of three is not left with two empty cells */}
+        <dl className={cn('mt-3 grid grid-cols-2 gap-3', r.stats.length >= 5 ? 'md:grid-cols-5' : r.stats.length === 4 ? 'md:grid-cols-4' : r.stats.length === 3 ? 'md:grid-cols-3' : 'md:grid-cols-2')}>
           {r.stats.map((s) => (
-            <div key={s.label.en} className="rounded-2xl border bg-card p-4">
+            <div key={s.label.en} className="rounded-2xl border bg-gradient-to-br from-primary-soft/70 to-card p-5 max-md:last:odd:col-span-2">
               <dd className="text-3xl font-extrabold tabular-nums tracking-tight text-primary"><CountUp to={s.value} format={(n) => formatNumber(Math.round(n), locale)} />{s.suffix}</dd>
               <dt className="mt-1 text-xs font-semibold text-muted-foreground">{L(s.label)}</dt>
             </div>
@@ -95,7 +105,20 @@ export function EventRecap({ ev }: { ev: EventItem }) {
         {sample && <p className="mt-2 text-[11px] text-muted-foreground">{tx('Số liệu minh hoạ trong bản mẫu.', 'Sample figures in this prototype.', '프로토타입 샘플 수치입니다.')}</p>}
       </div>}
 
-      {(hasVideo || r.takeaways.length > 0) && <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
+      {/* no video: the takeaways take the whole row as numbered cards instead of one card in a two-thirds column */}
+      {!hasVideo && r.takeaways.length > 0 && <div>
+        <h3 className="text-xl font-extrabold">{tx('Điểm nhấn nội dung', 'Key takeaways', '주요 내용')}</h3>
+        <ul className={cn('mt-3 grid gap-4', r.takeaways.length >= 3 ? 'md:grid-cols-3' : r.takeaways.length === 2 ? 'md:grid-cols-2' : '')}>
+          {r.takeaways.map((k, i) => (
+            <li key={i} className="flex flex-col gap-3 rounded-2xl border bg-card p-5 transition-[box-shadow,border-color] duration-300 hover:border-primary/30 hover:shadow-xl hover:shadow-navy/10">
+              <span className="grid size-9 place-items-center rounded-full bg-primary-soft text-sm font-extrabold text-primary">{i + 1}</span>
+              <p className="text-[15px] leading-relaxed">{L(k)}</p>
+            </li>
+          ))}
+        </ul>
+      </div>}
+
+      {hasVideo && <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
         {hasVideo && (r.video.url && isVideoFile(r.video.url) ? <figure>
           <video src={r.video.url} poster={img(ev.coverImage, 1200, 680)} controls playsInline preload="metadata" className="aspect-video w-full rounded-2xl bg-navy" />
           {L(r.video.title) && <figcaption className="mt-2 font-bold">{L(r.video.title)}</figcaption>}
@@ -119,6 +142,7 @@ export function EventRecap({ ev }: { ev: EventItem }) {
             <li key={i} className="flex items-center gap-4 p-4">
               <span className="w-24 shrink-0 font-mono text-xs font-semibold text-primary">{a.agendaStartTime}{a.agendaEndTime && `–${a.agendaEndTime}`}</span>
               <span className="min-w-0 flex-1"><span className="block font-semibold">{L(a.agendaTitle)}</span>{a.speaker && <span className="text-sm text-muted-foreground">{L(a.speaker)}</span>}</span>
+              {!sample && sessionLength(a.agendaStartTime, a.agendaEndTime) && <Badge variant="muted" className="hidden shrink-0 sm:inline-flex">{sessionLength(a.agendaStartTime, a.agendaEndTime)}</Badge>}
               {/* the BE has no per-session recording yet */}
               {sample && <Badge variant="success" className="hidden sm:inline-flex">{tx('Có bản ghi', 'Recorded', '녹화됨')}</Badge>}
               {sample && <Button size="sm" variant="outline" onClick={demo}><PlayCircle /> {tx('Xem lại', 'Watch', '다시보기')}</Button>}
@@ -152,11 +176,12 @@ export function EventRecap({ ev }: { ev: EventItem }) {
         </div>
       </div>}
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        {r.participants.length > 0 && <div>
+      {/* two columns only when there are both organisations and testimonials; alone, each uses the full row */}
+      <div className={cn('grid gap-6', r.participants.length > 0 && (r.testimonials.length > 0 || rating) && 'lg:grid-cols-2')}>
+        {r.participants.length > 0 && <div className="min-w-0">
           <h3 className="flex items-center gap-2 text-xl font-extrabold"><Building2 className="size-5 text-primary" /> {tx('Đơn vị tham gia', 'Participating organisations', '참가 기관')}</h3>
-          <ul className="mt-3 grid gap-2 sm:grid-cols-2">
-            {r.participants.map((p) => <li key={p.name} className="flex items-center justify-between gap-2 rounded-xl border p-3 text-sm"><span className="truncate font-semibold">{p.name}</span><CountryChip code={p.country} /></li>)}
+          <ul className={cn('mt-3 grid grid-cols-[minmax(0,1fr)] gap-2 sm:grid-cols-2', !(r.testimonials.length > 0 || rating) && 'lg:grid-cols-3')}>
+            {r.participants.map((p) => <li key={p.name} className="flex min-w-0 items-center justify-between gap-2 rounded-xl border p-3 text-sm"><span className="min-w-0 truncate font-semibold">{p.name}</span><CountryChip code={p.country} /></li>)}
           </ul>
         </div>}
         {(r.testimonials.length > 0 || rating) && <div>

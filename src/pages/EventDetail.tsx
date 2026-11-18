@@ -1,5 +1,5 @@
 import { motion } from 'motion/react'
-import { ArrowRight, Building2, CalendarClock, CalendarDays, Check, Clock, Globe2, Handshake, Layers, ListOrdered, MapPin, Phone, PlayCircle, Radio, Rocket, Ticket, Users, Video } from 'lucide-react'
+import { ArrowRight, Building2, CalendarClock, CalendarDays, Check, Clock, Compass, Globe2, Handshake, Layers, LayoutGrid, ListOrdered, MapPin, Mic, Package, Phone, PlayCircle, Radio, Rocket, Ticket, Users, Video, type LucideIcon } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { USE_MOCK, useEvent, useEvents, useShow } from '@/api'
@@ -23,7 +23,6 @@ import { EventProducts } from '@/components/event/EventProducts'
 import { EventParticipants } from '@/components/event/EventParticipants'
 import { EventCard } from '@/components/cards'
 import { Countdown, LiveDot, Reveal } from '@/components/effects'
-import { UnderlineTabs } from '@/components/ui/overlay'
 import { Badge, Button, buttonClass, Progress } from '@/components/ui/primitives'
 import NotFound from '@/pages/NotFound'
 import { useI18n } from '@/lib/i18n'
@@ -73,13 +72,13 @@ function WebinarView({ ev }: { ev: EventItem }) {
   const [tab, setTab] = useState<DetailTab>('overview')
   const productCount = useEventProducts(ev).data?.length ?? 0
   const ended = ev.eventStatus === 'ENDED'
-  const tabs: { value: DetailTab; label: string }[] = [
-    { value: 'overview', label: tx('Tổng quan', 'Overview', '개요') },
-    { value: 'program', label: `${tx('Chương trình', 'Programme', '프로그램')}${programme || !ev.agendaOptions.length ? '' : ` (${ev.agendaOptions.length})`}` },
-    ...(ev.speakers ? [{ value: 'speakers' as const, label: `${tx('Diễn giả', 'Speakers', '연사')} (${ev.speakers.length})` }] : []),
-    ...(productCount ? [{ value: 'products' as const, label: `${tx('Sản phẩm', 'Products', '제품')} (${productCount})` }] : []),
-    { value: 'participants', label: tx('Đơn vị nổi bật', 'Featured organisations', '주요 참가 기관') },
-    { value: 'journey', label: ended ? tx('Sau sự kiện', 'After the event', '행사 후') : registered ? tx('Chuẩn bị của tôi', 'My preparation', '내 준비') : tx('Hướng dẫn tham dự', 'How to take part', '참가 안내') },
+  const tabs: { value: DetailTab; label: string; icon: LucideIcon; count?: number }[] = [
+    { value: 'overview', label: tx('Tổng quan', 'Overview', '개요'), icon: LayoutGrid },
+    { value: 'program', label: tx('Chương trình', 'Programme', '프로그램'), icon: ListOrdered, count: programme ? undefined : ev.agendaOptions.length },
+    ...(ev.speakers ? [{ value: 'speakers' as const, label: tx('Diễn giả', 'Speakers', '연사'), icon: Mic, count: ev.speakers.length }] : []),
+    ...(productCount ? [{ value: 'products' as const, label: tx('Sản phẩm', 'Products', '제품'), icon: Package, count: productCount }] : []),
+    { value: 'participants', label: tx('Đơn vị nổi bật', 'Featured organisations', '주요 참가 기관'), icon: Handshake },
+    { value: 'journey', label: ended ? tx('Sau sự kiện', 'After the event', '행사 후') : registered ? tx('Chuẩn bị của tôi', 'My preparation', '내 준비') : tx('Hướng dẫn tham dự', 'How to take part', '참가 안내'), icon: Compass },
   ]
   /** Hero shortcuts to a block inside the journey tab. */
   const goJourney = (anchor: string) => (e: React.MouseEvent) => {
@@ -169,7 +168,26 @@ function WebinarView({ ev }: { ev: EventItem }) {
       </PageHero>
 
       <div className="container-page mt-8">
-        <UnderlineTabs layoutId="ev-tabs" value={tab} onValueChange={(v) => setTab(v as DetailTab)} items={tabs} />
+        <div role="tablist" className="no-scrollbar flex gap-1 overflow-x-auto rounded-2xl border bg-card p-1.5 shadow-[0_14px_32px_-28px_rgba(0,70,110,0.5)]">
+          {tabs.map((it) => {
+            const on = tab === it.value
+            return (
+              <button
+                key={it.value}
+                type="button"
+                role="tab"
+                aria-selected={on}
+                onClick={() => setTab(it.value)}
+                className={cn('relative flex min-w-max flex-1 items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold transition-colors', on ? 'text-primary-foreground' : 'text-muted-foreground hover:bg-primary-soft hover:text-primary')}
+              >
+                {on && <motion.span layoutId="ev-tabs" className="absolute inset-0 rounded-xl bg-primary shadow-[0_10px_22px_-12px_rgba(0,102,153,0.9)]" transition={{ type: 'spring', bounce: 0.18, duration: 0.45 }} />}
+                <it.icon className="relative size-4 shrink-0" />
+                <span className="relative">{it.label}</span>
+                {!!it.count && <span className={cn('relative rounded-full px-2 text-xs tabular-nums', on ? 'bg-white/20' : 'bg-muted')}>{it.count}</span>}
+              </button>
+            )
+          })}
+        </div>
       </div>
 
       {tab === 'overview' && (

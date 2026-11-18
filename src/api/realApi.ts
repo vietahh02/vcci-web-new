@@ -141,6 +141,16 @@ export async function searchBusinessesPage(keyword = '', categoryId?: string, bu
 export async function searchBusinesses(keyword = '', categoryId?: string, businessType?: string): Promise<Business[]> {
   return (await searchBusinessesPage(keyword, categoryId, businessType, 0, 100)).items
 }
+/** The whole directory (pages of 100): an event participant carries only a company name, and the keyword search does not match full names, so its cover and logo are matched from here. */
+export async function fetchBusinessDirectory(): Promise<Business[]> {
+  const all: Business[] = []
+  for (let n = 0; n < 20; n++) {
+    const r = await searchBusinessesPage('', undefined, 'ALL', n, 100)
+    all.push(...r.items)
+    if (r.items.length < 100 || all.length >= r.total) break
+  }
+  return all
+}
 /** true when a list response already carried this business' products (cards then skip the extra request) */
 export const hasEmbeddedProducts = (bid: string) => embeddedProducts.has(bid)
 /** how many products a list response embedded for this business (0 when none or not loaded) */
