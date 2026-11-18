@@ -248,7 +248,7 @@ const PEARL_MESH_LIGHT = [
   'linear-gradient(100deg, #e8eef8 0%, #f1f5fb 55%, #ecf2f8 100%)',
 ].join(',')
 
-/** Bản "azure" (trang hội chợ & sự kiện): nền xanh primary nhạt, không ảnh nền (ảnh sự kiện nằm trong khối aside), tan dần ở đáy. */
+/** Bản "azure" (trang sự kiện): nền xanh primary nhạt, không ảnh nền (ảnh sự kiện nằm trong khối aside), tan dần ở đáy. */
 const AZURE_MESH_LIGHT = [
   'radial-gradient(42% 90% at 0% 0%, rgba(170,216,244,.95) 0%, rgba(170,216,244,0) 70%)',
   'radial-gradient(44% 100% at 100% 0%, rgba(130,200,240,.7) 0%, rgba(130,200,240,0) 70%)',

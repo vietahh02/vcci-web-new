@@ -15,7 +15,7 @@ export default function About() {
   ].filter((s) => s.to > 0)
   const pillars = [
     { icon: ShieldCheck, t: L({ vi: 'Thẩm định & xác thực', en: 'Vetting & verification', ko: '심사 & 인증' }), d: L({ vi: 'Hồ sơ doanh nghiệp, mã số thuế, giấy phép và năng lực được VCCI rà soát trước khi cấp huy hiệu.', en: 'Business records, tax codes, licences and capacity are reviewed before a badge is granted.', ko: '배지 발급 전 기업 정보, 사업자 번호, 인허가 및 역량을 VCCI가 검토합니다.' }) },
-    { icon: Handshake, t: L({ vi: 'Xúc tiến thương mại', en: 'Trade promotion', ko: '무역 진흥' }), d: L({ vi: 'Kết nối người mua qua hội chợ, livestream, webinar và mạng lưới thương vụ.', en: 'Buyer matching through fairs, livestreams, webinars and trade offices.', ko: '박람회, 라이브 방송, 웨비나 및 무역관 네트워크를 통해 바이어와 연결합니다.' }) },
+    { icon: Handshake, t: L({ vi: 'Xúc tiến thương mại', en: 'Trade promotion', ko: '무역 진흥' }), d: L({ vi: 'Kết nối người mua qua sự kiện, livestream, webinar và mạng lưới thương vụ.', en: 'Buyer matching through fairs, livestreams, webinars and trade offices.', ko: '박람회, 라이브 방송, 웨비나 및 무역관 네트워크를 통해 바이어와 연결합니다.' }) },
     { icon: Landmark, t: L({ vi: 'Hỗ trợ pháp lý & chính sách', en: 'Legal & policy support', ko: '법률 & 정책 지원' }), d: L({ vi: 'Chuyên gia VCCI giúp doanh nghiệp hiểu FTA, thủ tục và quy định thị trường.', en: 'VCCI experts help businesses navigate FTAs, procedures and market rules.', ko: 'VCCI 전문가가 FTA, 절차, 시장 규정 이해를 돕습니다.' }) },
   ]
 
@@ -56,7 +56,7 @@ export default function About() {
             <h2 className="text-3xl font-extrabold tracking-tight md:text-4xl">{L({ vi: 'Sứ mệnh', en: 'Our mission', ko: '우리의 사명' })}</h2>
             <span aria-hidden className="mt-2 block h-1 w-14 rounded-full bg-gradient-to-r from-[#1a8cc4] to-gold-bright" />
             <p className="mt-5 text-base leading-relaxed text-foreground/85 md:text-lg">
-              {L({ vi: 'VCCI Trade Hub số hoá các hoạt động xúc tiến thương mại truyền thống của VCCI — từ danh bạ doanh nghiệp, kết nối giao thương đến hội chợ — thành một nền tảng B2B tin cậy, minh bạch và đa ngôn ngữ.', en: "VCCI Trade Hub digitises VCCI's traditional trade promotion — from the business directory to matchmaking and trade fairs — into a trusted, transparent, multilingual B2B platform.", ko: 'VCCI Trade Hub는 기업 디렉터리부터 비즈니스 매칭, 박람회까지 VCCI의 전통적인 무역 진흥 활동을 신뢰할 수 있고 투명한 다국어 B2B 플랫폼으로 디지털화합니다.' })}
+              {L({ vi: 'VCCI Trade Hub số hoá các hoạt động xúc tiến thương mại truyền thống của VCCI — từ danh bạ doanh nghiệp, kết nối giao thương đến sự kiện — thành một nền tảng B2B tin cậy, minh bạch và đa ngôn ngữ.', en: "VCCI Trade Hub digitises VCCI's traditional trade promotion — from the business directory to matchmaking and trade fairs — into a trusted, transparent, multilingual B2B platform.", ko: 'VCCI Trade Hub는 기업 디렉터리부터 비즈니스 매칭, 박람회까지 VCCI의 전통적인 무역 진흥 활동을 신뢰할 수 있고 투명한 다국어 B2B 플랫폼으로 디지털화합니다.' })}
             </p>
           </Reveal>
         </div>

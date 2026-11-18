@@ -1,6 +1,6 @@
 /**
  * Nút nhắn tin doanh nghiệp dùng chung: mở hội thoại B2B trên widget chat (doanh nghiệp của chính mình thì widget báo không tự nhắn được).
- * Chỉ hiện khi đăng nhập và có `organizationId`. `showName` điền sẵn câu mở đầu "Từ hội chợ X" vào ô soạn; người dùng tự gửi.
+ * Chỉ hiện khi đăng nhập và có `organizationId`. `showName` điền sẵn câu mở đầu "Từ sự kiện X" vào ô soạn; người dùng tự gửi.
  * `onOpen`: gọi trước khi mở widget, dùng để đóng hộp thoại modal đang chứa nút (modal chặn thao tác với widget ở ngoài).
  */
 import { MessageSquare } from 'lucide-react'
@@ -12,7 +12,7 @@ import { useProfile } from '@/lib/profile'
 import { tx } from '@/lib/tx'
 import { cn } from '@/lib/utils'
 
-const fromShow = (name: string) => tx(`Từ hội chợ ${name}: `, `From the trade fair ${name}: `, `${name} 박람회에서 연락드립니다: `)
+const fromShow = (name: string) => tx(`Từ sự kiện ${name}: `, `From the trade fair ${name}: `, `${name} 박람회에서 연락드립니다: `)
 
 export function BusinessChatButton({ organizationId, showName, label, onOpen, className }: { organizationId?: string; showName?: string; label?: string; onOpen?: () => void; className?: string }) {
   useI18n()
