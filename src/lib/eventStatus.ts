@@ -44,6 +44,9 @@ export function registrationState(ev: EventItem, now = new Date()): { state: Reg
   if (ev.eventStatus === 'ENDED') return { state: 'NONE', daysLeft: 0 }
   // no explicit deadline: single-day events close at start; multi-day programmes stay open until they end
   const multiDay = ev.endDate.slice(0, 10) !== ev.startDate.slice(0, 10)
+  // already under way and confined to one day: registering now would not let anyone attend it.
+  // startDate/endDate are date-only for some event types, so this can't rely on the deadline math below.
+  if (ev.eventStatus === 'ONGOING' && !multiDay) return { state: 'CLOSED', daysLeft: 0 }
   const deadline = endOfDay(ev.registrationDeadline ?? (multiDay ? ev.endDate : ev.startDate))
   const daysLeft = Math.ceil((deadline.getTime() - now.getTime()) / 86_400_000)
   // Show: the API's label decides, so the list agrees with the detail page; the clock only says how soon it closes
