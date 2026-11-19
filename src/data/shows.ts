@@ -56,9 +56,17 @@ export interface ShowLaunch {
   end: string
   live: boolean
   followers: number
-  /** Live mode: the broadcast behind this launch slot, when one is linked. */
+  /** Live mode: the broadcast behind this launch slot, when one is linked (legacy architecture only). */
   streamEventId?: string
   streamSessionId?: string
+  /** Self-contained launch slot (CR-2026-015): no streamEventId/streamSessionId, broadcast state lives on the slot itself. */
+  broadcastMode?: 'LIVESTREAM' | 'WEBINAR'
+  broadcastStatus?: 'SCHEDULED' | 'READY' | 'LIVE' | 'ENDED'
+  ingestActive?: boolean
+  hasReplay?: boolean
+  replayUrl?: string
+  /** LIVESTREAM self-contained only, while LIVE: direct HLS URL, watched without going through a legacy session. */
+  livePlaybackUrl?: string
   /** Business behind the booth; a co-organiser's day slot (HOSTED show) has no product to name it by. */
   organizationName?: string
 }

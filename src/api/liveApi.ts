@@ -118,6 +118,34 @@ export const getJoinToken = async (eventId: string, joinKey?: string) =>
 export const getObserverToken = async (eventId: string, displayName: string) =>
   toToken(await apiFetch<Raw>(`/api/event/webinar/${encodeURIComponent(eventId)}/observer-token`, { method: 'POST', anon: true, json: { displayName } }))
 
+/* ------------------------------------------------------------------ khung ra mắt TỰ CHỨA (CR-2026-015) */
+export interface ShowLaunchRoomInfo {
+  status: LiveStatus
+  roomOpened: boolean
+  roomClosed: boolean
+  vodUrl: string | null
+  /** Chỉ có khi eventType=LIVESTREAM và đang LIVE. */
+  watchUrl: string | null
+  eventType: 'LIVESTREAM' | 'WEBINAR' | null
+}
+
+const toLaunchRoomInfo = (r: Raw): ShowLaunchRoomInfo => ({
+  status: String(r.status) as LiveStatus,
+  roomOpened: r.roomOpened === true,
+  roomClosed: r.roomClosed === true,
+  vodUrl: text(r.vodUrl),
+  watchUrl: text(r.watchUrl),
+  eventType: r.eventType === 'LIVESTREAM' || r.eventType === 'WEBINAR' ? r.eventType : null,
+})
+
+/** Trạng thái phát hiện tại của khung ra mắt tự chứa — không cần đăng nhập, không có khái niệm đăng ký/joinKey. */
+export const getShowLaunchRoom = async (slotId: string) =>
+  toLaunchRoomInfo(await apiFetch<Raw>(`/api/public/show-launch/${encodeURIComponent(slotId)}`, { anon: true }))
+
+/** Khách dự thính chế độ WEBINAR: token Jitsi, tên hiển thị 1-50 ký tự. Mọi người xem đều là OBSERVER (không có vai PARTICIPANT). */
+export const getShowLaunchObserverToken = async (slotId: string, displayName: string) =>
+  toToken(await apiFetch<Raw>(`/api/public/show-launch/${encodeURIComponent(slotId)}/observer-token`, { method: 'POST', anon: true, json: { displayName } }))
+
 /* ------------------------------------------------------------------ chat phiên */
 export const toChatMessage = (r: Raw): LiveChatMessage => ({
   id: String(r.id),

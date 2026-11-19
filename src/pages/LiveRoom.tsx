@@ -15,6 +15,7 @@ import { LivestreamStage } from '@/components/live/LivestreamStage'
 import { parseLiveEventId, safeHttpUrl, toLiveKind, type LiveKind } from '@/components/live/liveRef'
 import { liveText } from '@/components/live/liveText'
 import { ReplayPlayer } from '@/components/live/HlsPlayer'
+import { SelfContainedLaunchStage } from '@/components/live/SelfContainedLaunchStage'
 import { StagePlaceholder } from '@/components/live/StagePlaceholder'
 import { RestoreVisitorForm } from '@/components/show/RestoreVisitorForm'
 import { useAccountVisit } from '@/components/show/useVisitorRecovery'
@@ -36,8 +37,8 @@ interface LiveTarget {
   title: Bilingual
   org?: Bilingual
   cover: string
-  /** Có phòng phát. Không có mà có recordingUrl thì chỉ xem lại. */
-  stream?: { kind: LiveKind; eventId: string; sessionId?: string }
+  /** Có phòng phát. Không có mà có recordingUrl thì chỉ xem lại. Khung ra mắt tự chứa (CR-2026-015) không có eventId/sessionId, chỉ có slotId riêng. */
+  stream?: { kind: LiveKind; eventId: string; sessionId?: string } | { kind: LiveKind; selfContainedSlotId: string }
   recordingUrl?: string | null
   /** Id gốc để giữ state phòng theo đúng phiên khi đổi đường dẫn. */
   key: string
@@ -62,9 +63,14 @@ function showTarget(show: Show, sessionParam: string | null, launchParam: string
   if (launch) {
     const booth = show.booths.find((b) => b.id === launch.boothId)
     const product = booth?.products.find((p) => p.id === launch.productId)
+    // Khung tự chứa (CR-2026-015): không có streamEventId, trạng thái phát nằm ngay trên khung (broadcastMode/broadcastStatus).
+    const selfContainedKind = !launch.streamEventId ? toLiveKind(launch.broadcastMode ?? '') : null
     return {
       ...base, key: `l${launch.id}`, title: product?.name ?? show.title, org: booth?.org ?? show.title,
-      stream: launch.streamEventId ? { kind: 'LIVESTREAM', eventId: launch.streamEventId, sessionId: launch.streamSessionId } : undefined,
+      recordingUrl: !launch.streamEventId ? safeHttpUrl(launch.replayUrl) : undefined,
+      stream: launch.streamEventId
+        ? { kind: 'LIVESTREAM', eventId: launch.streamEventId, sessionId: launch.streamSessionId }
+        : selfContainedKind ? { kind: selfContainedKind, selfContainedSlotId: launch.id } : undefined,
     }
   }
   return { ...base, key: 'show', title: show.title }
@@ -190,6 +196,8 @@ function RealLiveRoom() {
     <StagePlaceholder poster={poster} icon={Ticket} title={online ? lt.needRegister : lt.needBadge} hint={online ? lt.needRegisterHint : lt.needBadgeHint}>
       <Link to={backTo} className={buttonClass('gold', 'md', 'mt-2')}>{lt.backToEvent}</Link>
     </StagePlaceholder>
+  ) : stream && 'selfContainedSlotId' in stream ? (
+    <SelfContainedLaunchStage key={target.key} slotId={stream.selfContainedSlotId} mode={stream.kind} poster={poster} recordingUrl={target.recordingUrl} onRoom={setRoom} onRole={setRole} />
   ) : stream?.kind === 'LIVESTREAM' ? (
     <LivestreamStage key={target.key} eventId={stream.eventId} sessionId={stream.sessionId} poster={poster} recordingUrl={target.recordingUrl} onRoom={setRoom} />
   ) : stream?.kind === 'WEBINAR' ? (
