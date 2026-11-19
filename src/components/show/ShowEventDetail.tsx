@@ -1,6 +1,6 @@
 /** Detail page of a Show Hub event (online trade show). Rendered by EventDetail when the id is a show. */
 import { motion } from 'motion/react'
-import { ArrowUpRight, Bell, BellRing, CalendarDays, CheckCircle2, ChevronDown, Clock, Globe2, ImageIcon, MapPin, Mic2, PlayCircle, Radio, Search, Send, Store, Ticket, Users, Video, type LucideIcon } from 'lucide-react'
+import { ArrowUpRight, Bell, BellRing, CalendarDays, CheckCircle2, ChevronDown, Clock, Globe2, ImageIcon, LayoutGrid, MapPin, Mic2, Package, PlayCircle, Radio, Rocket, Search, Send, Store, Ticket, Users, Video, type LucideIcon } from 'lucide-react'
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { CompanyMark, CountryChip } from '@/components/brand'
@@ -21,7 +21,7 @@ import { BusinessChatButton } from '@/components/chat/BusinessChatButton'
 import { showLivePath } from '@/components/live/liveRef'
 import { SessionWatch } from '@/components/live/SessionWatch'
 import { BadgeCard, VisitorRegistration } from '@/components/show/VisitorRegistration'
-import { Dialog, DialogContent, UnderlineTabs, useToast } from '@/components/ui/overlay'
+import { Dialog, DialogContent, SegmentTabs, useToast } from '@/components/ui/overlay'
 import { Badge, Button, buttonClass, Field, Input, Progress, Textarea } from '@/components/ui/primitives'
 import { Select } from '@/components/ui/select'
 import { showLabel, type Show, type ShowBooth, type ShowLabel, type ShowProduct, type ShowSession } from '@/data/shows'
@@ -47,11 +47,6 @@ const uniqBy = <T,>(rows: T[], key: (r: T) => string) => rows.filter((r, i) => r
 /** "12/11 – 13/11", or one date when both ends fall on the same day. */
 const dayRange = (start: string, end: string, locale: string, opts: Intl.DateTimeFormatOptions) =>
   start.slice(0, 10) === end.slice(0, 10) ? formatDate(start, locale, opts) : `${formatDate(start, locale, opts)} – ${formatDate(end, locale, opts)}`
-
-/** Tab label with its item count as a pill; a zero count shows no pill. */
-const tabLabel = (text: string, n = 0): ReactNode => (n > 0
-  ? <span className="inline-flex items-center gap-2">{text}<span className="rounded-full bg-muted px-1.5 py-px text-[11px] font-bold tabular-nums text-muted-foreground">{n}</span></span>
-  : text)
 
 /** One hero line: the gold icon carries what the line is, so it needs no label. */
 function HeroLine({ icon: Icon, main, rest }: { icon: LucideIcon; main: string; rest?: string }) {
@@ -128,15 +123,15 @@ export function ShowEventDetail({ show }: { show: Show }) {
 
   const streamCount = coorganizerStreams(show).length
   const launchCount = show.launches.length - streamCount
-  const tabs: { value: Tab; label: ReactNode }[] = [
-    { value: 'overview', label: x.tabs.overview },
-    ...(online ? [] : [{ value: 'booths' as const, label: tabLabel(x.tabs.booths, show.booths.length) }]),
-    { value: 'products', label: tabLabel(x.tabs.products, productCount) },
-    ...(launchCount > 0 ? [{ value: 'launches' as const, label: tabLabel(x.tabs.launches, launchCount) }] : []),
-    ...(streamCount ? [{ value: 'streams' as const, label: tabLabel(tx('Phát trực tiếp', 'Live streams', '라이브 방송'), streamCount) }] : []),
-    { value: 'agenda', label: tabLabel(x.tabs.agenda, show.sessions.length) },
+  const tabs: { value: Tab; label: string; icon: LucideIcon; count?: number }[] = [
+    { value: 'overview', label: x.tabs.overview, icon: LayoutGrid },
+    ...(online ? [] : [{ value: 'booths' as const, label: x.tabs.booths, icon: Store, count: show.booths.length }]),
+    { value: 'products', label: x.tabs.products, icon: Package, count: productCount },
+    ...(launchCount > 0 ? [{ value: 'launches' as const, label: x.tabs.launches, icon: Rocket, count: launchCount }] : []),
+    ...(streamCount ? [{ value: 'streams' as const, label: tx('Phát trực tiếp', 'Live streams', '라이브 방송'), icon: Radio, count: streamCount }] : []),
+    { value: 'agenda', label: x.tabs.agenda, icon: CalendarDays, count: show.sessions.length },
     // an empty speakers tab was a blank page: it only exists when there are speakers
-    ...(show.speakers.length ? [{ value: 'speakers' as const, label: tabLabel(x.tabs.speakers, show.speakers.length) }] : []),
+    ...(show.speakers.length ? [{ value: 'speakers' as const, label: x.tabs.speakers, icon: Mic2, count: show.speakers.length }] : []),
   ]
   // booths tab opened from a pavilion card on the overview starts filtered on it
   const [boothPav, setBoothPav] = useState('ALL')
@@ -267,9 +262,9 @@ export function ShowEventDetail({ show }: { show: Show }) {
 
       {/* tabs stay under the sticky site header (its visible height: 69px below lg, 113px from lg where the category row shows) */}
       <div id={TABS_TOP} className="scroll-mt-[69px] lg:scroll-mt-[113px]" aria-hidden />
-      <div id="show-tabs" className="sticky top-[69px] z-30 border-b bg-background/95 backdrop-blur lg:top-[113px]">
-        <div className="container-page pt-4">
-          <UnderlineTabs layoutId="show-tabs" className="border-b-0" value={tab} onValueChange={(v) => switchTab(v as Tab)} items={tabs} />
+      <div id="show-tabs" className="sticky top-[69px] z-30 bg-background/95 backdrop-blur lg:top-[113px]">
+        <div className="container-page py-3">
+          <SegmentTabs layoutId="show-tabs" value={tab} onValueChange={(v) => switchTab(v as Tab)} items={tabs} />
         </div>
       </div>
       <div className="container-page pb-20 pt-10">

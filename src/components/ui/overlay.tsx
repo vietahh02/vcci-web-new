@@ -189,7 +189,7 @@ export function SegmentTabs<T extends string>({
   className?: string
 }) {
   return (
-    <div role="tablist" className={cn('no-scrollbar flex gap-1 overflow-x-auto rounded-2xl border bg-card p-1.5 shadow-[0_14px_32px_-28px_rgba(0,70,110,0.5)]', className)}>
+    <div role="tablist" className={cn('no-scrollbar flex gap-1 overflow-x-auto rounded-full border bg-card p-1.5 shadow-[0_14px_32px_-28px_rgba(0,70,110,0.5)]', className)}>
       {items.map((it) => {
         const on = value === it.value
         return (
@@ -199,9 +199,9 @@ export function SegmentTabs<T extends string>({
             role="tab"
             aria-selected={on}
             onClick={() => onValueChange(it.value)}
-            className={cn('relative flex min-w-max flex-1 items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold transition-colors', on ? 'text-primary-foreground' : 'text-muted-foreground hover:bg-primary-soft hover:text-primary')}
+            className={cn('relative flex min-w-max flex-1 items-center justify-center gap-2 rounded-full px-4 py-3 text-sm font-semibold transition-colors', on ? 'text-primary-foreground' : 'text-muted-foreground hover:bg-primary-soft hover:text-primary')}
           >
-            {on && <motion.span layoutId={layoutId} className="absolute inset-0 rounded-xl bg-primary shadow-[0_10px_22px_-12px_rgba(0,102,153,0.9)]" transition={{ type: 'spring', bounce: 0.18, duration: 0.45 }} />}
+            {on && <motion.span layoutId={layoutId} className="absolute inset-0 rounded-full bg-primary shadow-[0_10px_22px_-12px_rgba(0,102,153,0.9)]" transition={{ type: 'spring', bounce: 0.18, duration: 0.45 }} />}
             {it.icon && <it.icon className="relative size-4 shrink-0" />}
             <span className="relative">{it.label}</span>
             {!!it.count && <span className={cn('relative rounded-full px-2 text-xs tabular-nums', on ? 'bg-white/20' : 'bg-muted')}>{it.count}</span>}
